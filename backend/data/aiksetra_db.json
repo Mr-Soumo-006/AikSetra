@@ -1,0 +1,356 @@
+{
+  "users": [
+    {
+      "id": "usr_simo_01",
+      "phone": "9876543210",
+      "fullName": "Simo Naskar",
+      "email": "simo@aiksetra.in",
+      "panNumber": "ABCDE1234F",
+      "kycStatus": "VERIFIED",
+      "deviceId": "dev_pixel9_simo_ind",
+      "simId": "sim_jio_404_45",
+      "mpinHash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+      "primaryVpa": "simo@aiksetra",
+      "liteBalance": 1500,
+      "lrsUsedUsd": 12450,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "updatedAt": "2026-10-18T19:21:56.181Z"
+    },
+    {
+      "id": "usr_ramesh_02",
+      "phone": "9811122233",
+      "fullName": "Ramesh Sharma",
+      "email": "ramesh@gmail.com",
+      "panNumber": "BCDEF2345G",
+      "kycStatus": "VERIFIED",
+      "deviceId": "dev_galaxy_s24_ramesh",
+      "simId": "sim_airtel_404_10",
+      "mpinHash": "e0bc60c82713f64ef8a57c0c40d02ce24fd0141d5cc3086259c19b1e62a62bea",
+      "primaryVpa": "ramesh@aiksetra",
+      "liteBalance": 500,
+      "lrsUsedUsd": 0,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "updatedAt": "2026-10-18T19:21:56.181Z"
+    },
+    {
+      "id": "usr_priya_03",
+      "phone": "9822233344",
+      "fullName": "Priya Patel",
+      "email": "priya.patel@outlook.com",
+      "panNumber": "CDEFG3456H",
+      "kycStatus": "VERIFIED",
+      "deviceId": "dev_oneplus_priya",
+      "simId": "sim_vodafone_404_20",
+      "mpinHash": "c7e9988d0ac79f466bf33b7bc5a8e31ebad2fe1f6e17c78919f5717acce44230",
+      "primaryVpa": "priya@aiksetra",
+      "liteBalance": 800,
+      "lrsUsedUsd": 42000,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "updatedAt": "2026-10-18T19:21:56.181Z"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "acc_sbi_01",
+      "userId": "usr_simo_01",
+      "bankName": "State Bank of India",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "maskedAccountNumber": "•••• •••• 4519",
+      "accountType": "SAVINGS",
+      "isPrimary": true,
+      "balance": 84500.5,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_hdfc_02",
+      "userId": "usr_simo_01",
+      "bankName": "HDFC Bank",
+      "bankCode": "HDFC",
+      "ifsc": "HDFC0005678",
+      "maskedAccountNumber": "•••• •••• 9821",
+      "accountType": "SAVINGS",
+      "isPrimary": false,
+      "balance": 23100,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_icici_03",
+      "userId": "usr_ramesh_02",
+      "bankName": "ICICI Bank",
+      "bankCode": "ICIC",
+      "ifsc": "ICIC0003456",
+      "maskedAccountNumber": "•••• •••• 3341",
+      "accountType": "SAVINGS",
+      "isPrimary": true,
+      "balance": 51200.75,
+      "upiPinSet": true
+    }
+  ],
+  "vpas": [
+    {
+      "vpa": "simo@aiksetra",
+      "userId": "usr_simo_01",
+      "fullName": "Simo Naskar",
+      "accountId": "acc_sbi_01",
+      "isPrimary": true,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "trustScore": 98,
+      "fraudReportCount": 0,
+      "isMerchant": false
+    },
+    {
+      "vpa": "ramesh@aiksetra",
+      "userId": "usr_ramesh_02",
+      "fullName": "Ramesh Sharma",
+      "accountId": "acc_icici_03",
+      "isPrimary": true,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "trustScore": 92,
+      "fraudReportCount": 0,
+      "isMerchant": false
+    },
+    {
+      "vpa": "priya@aiksetra",
+      "userId": "usr_priya_03",
+      "fullName": "Priya Patel",
+      "accountId": "acc_priya_01",
+      "isPrimary": true,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "trustScore": 95,
+      "fraudReportCount": 0,
+      "isMerchant": false
+    },
+    {
+      "vpa": "chaipoint@aiksetra",
+      "userId": "usr_merchant_01",
+      "fullName": "Chai Point Koramangala",
+      "accountId": "acc_merchant_01",
+      "isPrimary": true,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "trustScore": 99,
+      "fraudReportCount": 0,
+      "isMerchant": true
+    },
+    {
+      "vpa": "sharmaelectronics@aiksetra",
+      "userId": "usr_merchant_02",
+      "fullName": "Sharma Electronics & Gadgets",
+      "accountId": "acc_merchant_02",
+      "isPrimary": true,
+      "createdAt": "2026-09-18T19:21:56.182Z",
+      "trustScore": 94,
+      "fraudReportCount": 0,
+      "isMerchant": true
+    }
+  ],
+  "transactions": [
+    {
+      "id": "txn_init_01",
+      "txnRef": "BOP202610180001",
+      "upiRrn": "429182749102",
+      "senderUserId": "usr_simo_01",
+      "senderVpa": "simo@aiksetra",
+      "senderAccountId": "acc_sbi_01",
+      "receiverVpa": "chaipoint@aiksetra",
+      "receiverName": "Chai Point Koramangala",
+      "amount": 40,
+      "currency": "INR",
+      "txnType": "P2M",
+      "status": "SUCCESS",
+      "remark": "Ginger chai & biscuit",
+      "scamShieldScore": 5,
+      "createdAt": "2026-10-18T17:21:56.183Z",
+      "completedAt": "2026-10-18T17:21:57.383Z"
+    },
+    {
+      "id": "txn_init_02",
+      "txnRef": "BOP202610180002",
+      "upiRrn": "429182749103",
+      "senderUserId": "usr_simo_01",
+      "senderVpa": "simo@aiksetra",
+      "senderAccountId": "acc_sbi_01",
+      "receiverVpa": "ramesh@aiksetra",
+      "receiverName": "Ramesh Sharma",
+      "amount": 1250,
+      "currency": "INR",
+      "txnType": "P2P",
+      "status": "SUCCESS",
+      "remark": "Weekend dinner contribution",
+      "scamShieldScore": 2,
+      "createdAt": "2026-10-17T19:21:56.183Z",
+      "completedAt": "2026-10-17T19:21:57.283Z"
+    }
+  ],
+  "collectRequests": [],
+  "protectedEscrows": [
+    {
+      "id": "esc_sample_01",
+      "buyerUserId": "usr_simo_01",
+      "buyerVpa": "simo@aiksetra",
+      "sellerVpa": "sharmaelectronics@aiksetra",
+      "sellerName": "Sharma Electronics & Gadgets",
+      "amount": 8500,
+      "itemDescription": "Sony WH-1000XM4 Refurbished Headphones (Tested)",
+      "status": "HELD_IN_ESCROW",
+      "expiresAt": "2026-10-24T19:21:56.183Z",
+      "autoReleaseDays": 7,
+      "trackingNumber": "DTDC-BLR-892147",
+      "createdAt": "2026-10-17T19:21:56.183Z"
+    }
+  ],
+  "merchants": [
+    {
+      "id": "mch_01",
+      "userId": "usr_merchant_01",
+      "businessName": "Chai Point Koramangala",
+      "merchantVpa": "chaipoint@aiksetra",
+      "category": "Food & Beverages",
+      "panOrGst": "29ABCDE1234F1Z5",
+      "apiKey": "bop_live_mch_chai_point_8923a1",
+      "soundboxLanguage": "hi",
+      "totalVolumeInr": 452800,
+      "createdAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "id": "mch_02",
+      "userId": "usr_merchant_02",
+      "businessName": "Sharma Electronics & Gadgets",
+      "merchantVpa": "sharmaelectronics@aiksetra",
+      "category": "Electronics Retail",
+      "panOrGst": "29BCDEF2345G2Z6",
+      "apiKey": "bop_live_mch_sharma_elec_7821b2",
+      "soundboxLanguage": "en",
+      "totalVolumeInr": 1289000,
+      "createdAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "id": "mch_03",
+      "userId": "usr_merchant_03",
+      "businessName": "Kolkata Sweet Hub",
+      "merchantVpa": "kolkatasweets@aiksetra",
+      "category": "Confectionery",
+      "panOrGst": "19CDEFG3456H3Z7",
+      "apiKey": "bop_live_mch_kolkata_sweet_3419c3",
+      "soundboxLanguage": "bn",
+      "totalVolumeInr": 320400,
+      "createdAt": "2026-09-18T19:21:56.182Z"
+    }
+  ],
+  "payLinks": [
+    {
+      "id": "plink_sample_01",
+      "merchantId": "mch_01",
+      "merchantName": "Chai Point Koramangala",
+      "amount": 150,
+      "description": "Snack combo offer (2 Chai + Bun Maska)",
+      "linkUrl": "http://localhost:4000/pay/plink_sample_01",
+      "upiIntentUrl": "upi://pay?pa=chaipoint@aiksetra&pn=Chai%20Point&am=150.00&cu=INR&tn=Combo%20Offer",
+      "status": "ACTIVE",
+      "createdAt": "2026-10-18T19:21:56.181Z"
+    }
+  ],
+  "vaults": [
+    {
+      "id": "vlt_01",
+      "userId": "usr_simo_01",
+      "name": "House Rent & Maintenance",
+      "targetAmount": 30000,
+      "currentBalance": 18500,
+      "category": "RENT",
+      "autoRoundUp": false,
+      "roundUpMultiple": 10,
+      "createdAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "id": "vlt_02",
+      "userId": "usr_simo_01",
+      "name": "Goa Trip Savings",
+      "targetAmount": 25000,
+      "currentBalance": 11200,
+      "category": "TRAVEL",
+      "autoRoundUp": true,
+      "roundUpMultiple": 10,
+      "createdAt": "2026-09-18T19:21:56.182Z"
+    }
+  ],
+  "splitBills": [
+    {
+      "id": "splt_01",
+      "title": "Team Offsite Lunch at Toit",
+      "totalAmount": 3600,
+      "createdByUserId": "usr_simo_01",
+      "status": "OPEN",
+      "createdAt": "2026-10-18T07:21:56.183Z",
+      "participants": [
+        {
+          "id": "sp_1",
+          "name": "Simo Naskar",
+          "vpa": "simo@aiksetra",
+          "shareAmount": 1200,
+          "status": "PAID",
+          "paidAt": "2026-10-18T07:21:56.183Z"
+        },
+        {
+          "id": "sp_2",
+          "name": "Ramesh Sharma",
+          "vpa": "ramesh@aiksetra",
+          "shareAmount": 1200,
+          "status": "PENDING"
+        },
+        {
+          "id": "sp_3",
+          "name": "Priya Patel",
+          "vpa": "priya@aiksetra",
+          "shareAmount": 1200,
+          "status": "PENDING"
+        }
+      ]
+    }
+  ],
+  "disputes": [
+    {
+      "id": "dsp_01",
+      "txnId": "txn_failed_sim_01",
+      "upiRrn": "429188192001",
+      "userId": "usr_simo_01",
+      "amount": 500,
+      "category": "DEBITED_NOT_CREDITED",
+      "status": "INVESTIGATING",
+      "description": "Amount debited at local grocery shop but merchant POS timed out",
+      "slaResolveBy": "2026-10-19T19:21:56.183Z",
+      "bankRefNumber": "SBI-T-2026-99120",
+      "createdAt": "2026-10-18T07:21:56.183Z"
+    }
+  ],
+  "fraudRegistry": [
+    {
+      "vpa": "lotterywinner99@ybl",
+      "phone": "9999888877",
+      "reportCount": 89,
+      "reason": "Fraudulent lottery / KBC prize claim",
+      "flaggedAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "vpa": "electricitybillupdate@paytm",
+      "phone": "9888777665",
+      "reportCount": 154,
+      "reason": "SMS spoofing threatening electricity disconnection",
+      "flaggedAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "vpa": "customs_clearance_gift@okhdfcbank",
+      "phone": "9777666554",
+      "reportCount": 62,
+      "reason": "Courier / customs parcel release fee scam",
+      "flaggedAt": "2026-09-18T19:21:56.182Z"
+    },
+    {
+      "vpa": "workfromhome_daily_payout@icici",
+      "phone": "9666555443",
+      "reportCount": 110,
+      "reason": "Telegram task investment fraud",
+      "flaggedAt": "2026-09-18T19:21:56.182Z"
+    }
+  ]
+}

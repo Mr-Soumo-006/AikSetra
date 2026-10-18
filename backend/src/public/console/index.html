@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AikSetra | Simple UPI App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans Devanagari"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              saffron: '#FF671F',
+              green: '#046A38',
+              navy: '#0A1128',
+              card: '#FFFFFF',
+              bg: '#F8FAFC',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .phone-shadow {
+      box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.45), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @keyframes checkBounce {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.1); }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-check {
+      animation: checkBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-800 min-h-screen font-sans flex flex-col items-center justify-start p-2 sm:p-5 select-none">
+
+  <!-- Header Info -->
+  <div class="text-center mb-4 max-w-xl">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold mb-1.5">
+      <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+      Interactive App Preview • Google Pay Style App Lock & Giant QR
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">AikSetra</h1>
+    <p class="text-slate-400 text-xs mt-1">App Lock • Giant Scanner QR • Safe Pay & Abroad • Account & Logout</p>
+  </div>
+
+  <!-- Mobile Frame -->
+  <div class="w-full max-w-md bg-slate-50 rounded-[44px] phone-shadow overflow-hidden flex flex-col h-[820px] relative border border-slate-700">
+    
+    <!-- Phone Top Status Bar -->
+    <div class="bg-slate-900 text-white px-7 pt-3 pb-2 flex justify-between items-center text-xs font-semibold select-none z-30">
+      <span id="liveTime">11:35 PM</span>
+      <div class="w-24 h-4 bg-slate-800 rounded-full mx-auto -mt-1 flex items-center justify-center">
+        <div class="w-2.5 h-2.5 rounded-full bg-slate-900"></div>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px]">
+        <span>5G</span>
+        <span>🇮🇳</span>
+        <div class="w-4 h-2.5 border border-white rounded-sm p-0.5 flex items-center">
+          <div class="w-full h-full bg-white rounded-2xs"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- SCREEN 0A: FULL MULTI-STEP INDIAN UPI LOGIN & ONBOARDING  -->
+    <!-- ======================================================== -->
+    <div id="screen-onboarding-login" class="absolute inset-0 bg-slate-900 z-50 flex flex-col justify-between pt-10 pb-6 px-6 text-white overflow-y-auto no-scrollbar">
+      
+      <!-- STEP 1: MOBILE NUMBER & NAME -->
+      <div id="loginStep1" class="space-y-4 my-auto">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-orange-500/25">
+          ₹1
+        </div>
+        <div class="text-center">
+          <h2 class="text-xl font-black text-white">Welcome to AikSetra</h2>
+          <p class="text-xs text-slate-400 mt-1">Enter mobile number linked to your Indian bank</p>
+        </div>
+
+        <div class="space-y-3 pt-2 text-left">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Your Full Name</label>
+            <input type="text" id="loginFullName" value="Simo Naskar" placeholder="As per Aadhaar / Bank" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white font-medium focus:ring-2 focus:ring-orange-500 outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Mobile Number</label>
+            <div class="flex items-center bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-orange-500">
+              <span class="text-xs font-bold text-slate-300 pr-2 border-r border-slate-700 flex items-center gap-1">
+                <span>🇮🇳</span> +91
+              </span>
+              <input type="tel" id="loginPhone" value="9876543210" maxlength="10" placeholder="10-digit number" class="bg-transparent pl-3 text-sm text-white font-mono font-bold tracking-wider outline-none w-full">
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2 pt-1 text-[11px] text-slate-400">
+            <input type="checkbox" id="loginConsent" checked class="mt-0.5 rounded text-orange-500 focus:ring-0">
+            <label for="loginConsent">I agree to NPCI UPI Device-Binding rules and DPDP privacy terms.</label>
+          </div>
+        </div>
+
+        <button onclick="submitPhoneAndGetOtp()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-2xl text-xs shadow-lg shadow-orange-600/30 transition active:scale-98">
+          Proceed & Send OTP →
+        </button>
+      </div>
+
+      <!-- STEP 2: SIM CARD SELECTION & DEVICE BINDING (NPCI STYLE) -->
+      <div id="loginStep2" class="space-y-4 my-auto hidden text-center">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl font-bold border border-blue-500/30">
+          📲
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-white">Select Bank-Registered SIM</h2>
+          <p class="text-xs text-slate-400 mt-1">NPCI requires sending a secure SMS token to verify device</p>
+        </div>
+
+        <div class="space-y-2.5 text-left pt-2">
+          <div onclick="selectSimSlot(1)" id="simCard1" class="p-3.5 rounded-2xl border-2 border-orange-500 bg-orange-500/10 cursor-pointer flex items-center justify-between transition">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 font-bold flex items-center justify-center text-xs">
+                SIM 1
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white">Jio 4G / 5G (Active)</div>
+                <div class="text-[10px] text-slate-400 font-mono">+91 <span id="sim1PhoneText">9876543210</span></div>
+              </div>
+            </div>
+            <span class="text-xs text-orange-400 font-bold">✓ Selected</span>
+          </div>
+
+          <div onclick="selectSimSlot(2)" id="simCard2" class="p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-slate-700 text-slate-400 font-bold flex items-center justify-center text-xs">
+                SIM 2
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-300">Airtel 5G</div>
+                <div class="text-[10px] text-slate-500 font-mono">+91 9811122233</div>
+              </div>
+            </div>
+            <span class="text-xs text-slate-500">Select</span>
+          </div>
+        </div>
+
+        <div id="simBindingProgress" class="hidden p-3 rounded-xl bg-slate-800 text-xs text-emerald-400 space-y-1 text-left border border-slate-700">
+          <div class="flex items-center gap-2 font-bold">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Verifying device binding with NPCI switch...</span>
+          </div>
+          <div class="text-[10px] text-slate-400">Sending encrypted SMS token from SIM 1. Please do not press back.</div>
+        </div>
+
+        <button id="btnStartDeviceBinding" onclick="startDeviceBindingSms()" class="w-full bg-slate-100 hover:bg-white text-slate-900 font-bold py-3.5 rounded-2xl text-xs shadow-lg transition active:scale-98">
+          Verify Device Binding with SIM 1
+        </button>
+      </div>
+
+      <!-- STEP 3: 6-DIGIT SMS OTP VERIFICATION -->
+      <div id="loginStep3" class="space-y-4 my-auto hidden text-center">
+        <!-- Incoming SMS simulation notification -->
+        <div id="smsNotificationBanner" class="p-3 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl text-left text-xs animate-bounce flex items-center justify-between">
+          <div>
+            <div class="text-emerald-400 font-bold text-[11px]">💬 SMS from NPCI-AIKSETRA:</div>
+            <div class="text-white text-[11px] mt-0.5">Your AikSetra verification OTP is <b class="text-emerald-300 font-mono text-xs">123456</b>. Valid for 5 min.</div>
+          </div>
+          <button onclick="autoFillOtp('123456')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] px-2 py-1 rounded-lg">Auto-fill</button>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-black text-white">Enter 6-Digit OTP</h2>
+          <p class="text-xs text-slate-400 mt-1">Sent to +91 <span id="otpPhoneDisplay" class="font-bold text-white font-mono">9876543210</span></p>
+        </div>
+
+        <div class="flex justify-center gap-2 py-2">
+          <input type="text" maxlength="1" id="otp1" oninput="moveOtpFocus(1)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+          <input type="text" maxlength="1" id="otp2" oninput="moveOtpFocus(2)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+          <input type="text" maxlength="1" id="otp3" oninput="moveOtpFocus(3)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+          <input type="text" maxlength="1" id="otp4" oninput="moveOtpFocus(4)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+          <input type="text" maxlength="1" id="otp5" oninput="moveOtpFocus(5)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+          <input type="text" maxlength="1" id="otp6" oninput="moveOtpFocus(6)" class="w-11 h-12 rounded-xl bg-slate-800 border border-slate-700 text-center text-lg font-bold font-mono text-white focus:border-orange-500 outline-none">
+        </div>
+
+        <div class="text-[11px] text-slate-400">
+          Didn't receive SMS? <button onclick="submitPhoneAndGetOtp()" class="text-orange-400 font-bold hover:underline">Resend OTP</button>
+        </div>
+
+        <button onclick="verifyOtpAndProceed()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-2xl text-xs shadow-lg transition active:scale-98">
+          Verify OTP & Discover Bank Accounts →
+        </button>
+      </div>
+
+      <!-- STEP 4: BANK ACCOUNT SELECTION & UPI ID -->
+      <div id="loginStep4" class="space-y-4 my-auto hidden text-center">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl font-bold border border-emerald-500/30">
+          🏛️
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-white">Bank Accounts Found</h2>
+          <p class="text-xs text-slate-400 mt-1">Select account to link with AikSetra</p>
+        </div>
+
+        <div class="space-y-2 text-left pt-1">
+          <div onclick="selectBankOption('State Bank of India', 'SBIN', '•••• 4519')" id="bankOpt1" class="p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 cursor-pointer flex items-center justify-between transition">
+            <div>
+              <div class="text-xs font-bold text-white">State Bank of India</div>
+              <div class="text-[10px] text-slate-400">Savings A/C •••• 4519 • IFSC: SBIN0001234</div>
+            </div>
+            <span class="text-xs text-emerald-400 font-bold">✓ Primary</span>
+          </div>
+
+          <div onclick="selectBankOption('HDFC Bank', 'HDFC', '•••• 9821')" id="bankOpt2" class="p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition">
+            <div>
+              <div class="text-xs font-bold text-slate-300">HDFC Bank</div>
+              <div class="text-[10px] text-slate-500">Savings A/C •••• 9821 • IFSC: HDFC0005678</div>
+            </div>
+            <span class="text-xs text-slate-500">Select</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-800 rounded-xl text-left border border-slate-700">
+          <div class="text-[10px] text-slate-400">Assigned UPI ID:</div>
+          <div class="text-xs font-bold text-orange-400 font-mono mt-0.5" id="assignedVpaText">simo@aiksetra</div>
+        </div>
+
+        <button onclick="proceedToSetAppPin()" class="w-full bg-slate-100 hover:bg-white text-slate-900 font-bold py-3.5 rounded-2xl text-xs shadow-lg transition active:scale-98">
+          Link Account & Set Security PIN →
+        </button>
+      </div>
+
+      <!-- STEP 5: SETUP 4-DIGIT APP PIN -->
+      <div id="loginStep5" class="space-y-4 my-auto hidden text-center">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl font-bold border border-amber-500/30">
+          🔒
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-white">Set 4-Digit App PIN</h2>
+          <p class="text-xs text-slate-400 mt-1">Use this PIN or Fingerprint whenever you open AikSetra</p>
+        </div>
+
+        <!-- 4 Setup Dots -->
+        <div class="flex justify-center gap-4 py-3">
+          <div id="setupDot1" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="setupDot2" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="setupDot3" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="setupDot4" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+        </div>
+
+        <!-- Numerical 0-9 Keypad for PIN Setup -->
+        <div class="grid grid-cols-3 gap-2.5 max-w-xs mx-auto w-full pt-1">
+          <button onclick="pressSetupPin('1')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">1</button>
+          <button onclick="pressSetupPin('2')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">2</button>
+          <button onclick="pressSetupPin('3')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">3</button>
+          <button onclick="pressSetupPin('4')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">4</button>
+          <button onclick="pressSetupPin('5')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">5</button>
+          <button onclick="pressSetupPin('6')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">6</button>
+          <button onclick="pressSetupPin('7')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">7</button>
+          <button onclick="pressSetupPin('8')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">8</button>
+          <button onclick="pressSetupPin('9')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">9</button>
+          <button onclick="clearSetupPin()" class="h-12 rounded-2xl bg-slate-800/50 hover:bg-slate-700 text-xs font-bold text-red-400">Clear</button>
+          <button onclick="pressSetupPin('0')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 text-lg font-bold">0</button>
+          <button onclick="finishOnboarding()" class="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center">✓ Done</button>
+        </div>
+
+        <div class="text-[11px] text-slate-500">Tap 4 digits (e.g. 1 2 3 4) to lock your app securely</div>
+      </div>
+
+      <div class="text-[10px] text-slate-500 text-center">
+        Secured by NPCI Unified Payments Interface • Reserve Bank of India
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SCREEN 0B: RETURNING USER QUICK APP PIN LOCK   -->
+    <!-- ============================================== -->
+    <div id="screen-app-lock" class="absolute inset-0 bg-slate-900 z-40 hidden flex flex-col justify-between pt-14 pb-8 px-6 text-white text-center">
+      <div class="space-y-4 pt-4">
+        <div class="w-18 h-18 mx-auto rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-orange-500/20">
+          ₹1
+        </div>
+        <div>
+          <h2 class="text-xl font-extrabold text-white">AikSetra</h2>
+          <p class="text-xs text-slate-400 mt-1">Welcome back, <span id="lockUserNameText" class="text-white font-bold">Simo</span></p>
+        </div>
+
+        <!-- 4 PIN Dots -->
+        <div class="flex justify-center gap-4 py-3">
+          <div id="appDot1" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="appDot2" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="appDot3" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+          <div id="appDot4" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent transition"></div>
+        </div>
+
+        <!-- Fingerprint Quick Button -->
+        <button onclick="unlockWithBiometrics()" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 text-xs font-bold px-4 py-2.5 rounded-full border border-slate-700 transition">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 004 11m0 0a8 8 0 001.07 3.99m-1.07-3.99c0-2.266.345-4.659.99-7.132"/></svg>
+          Unlock with Fingerprint
+        </button>
+      </div>
+
+      <!-- Numerical 0-9 Keypad for App Lock -->
+      <div class="grid grid-cols-3 gap-3 max-w-xs mx-auto w-full">
+        <button onclick="pressAppPin('1')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">1</button>
+        <button onclick="pressAppPin('2')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">2</button>
+        <button onclick="pressAppPin('3')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">3</button>
+        <button onclick="pressAppPin('4')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">4</button>
+        <button onclick="pressAppPin('5')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">5</button>
+        <button onclick="pressAppPin('6')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">6</button>
+        <button onclick="pressAppPin('7')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">7</button>
+        <button onclick="pressAppPin('8')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">8</button>
+        <button onclick="pressAppPin('9')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">9</button>
+        <button onclick="clearAppPin()" class="h-14 rounded-2xl bg-slate-800/40 hover:bg-slate-700 active:scale-90 text-xs font-bold text-red-400">Clear</button>
+        <button onclick="pressAppPin('0')" class="h-14 rounded-2xl bg-slate-800/80 hover:bg-slate-700 active:scale-90 text-xl font-bold">0</button>
+        <button onclick="unlockWithBiometrics()" class="h-14 rounded-2xl bg-emerald-600/30 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center text-xl font-bold">👆</button>
+      </div>
+
+      <div class="flex justify-between items-center text-xs px-2 pt-2 border-t border-slate-800">
+        <button onclick="showLoginPhoneScreen()" class="text-orange-400 font-bold hover:underline">Switch Account</button>
+        <button onclick="showLoginPhoneScreen()" class="text-slate-400 hover:text-white">New User?</button>
+      </div>
+    </div>
+
+    <!-- Screen Scrollable Area -->
+    <div class="flex-1 overflow-y-auto no-scrollbar pb-24 bg-slate-50" id="mainScreen">
+      
+      <!-- ============================================== -->
+      <!-- TAB 1: HOME SCREEN (Clean BHIM/GPay Style)     -->
+      <!-- ============================================== -->
+      <div id="screen-home" class="space-y-4">
+        
+        <!-- Top App Bar with Profile & Balance -->
+        <div class="bg-gradient-to-b from-slate-900 to-slate-800 text-white px-5 pt-2 pb-5 rounded-b-[28px] shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="openAccountModal()">
+              <div class="w-10 h-10 rounded-full bg-orange-500 text-white font-black flex items-center justify-center text-sm shadow">
+                SN
+              </div>
+              <div>
+                <div class="text-xs text-slate-300">Namaste,</div>
+                <div class="text-base font-bold text-white flex items-center gap-1.5" id="userDisplayName">
+                  <span>Simo Naskar</span>
+                  <span class="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Profile ▾</span>
+                </div>
+              </div>
+            </div>
+            
+            <button onclick="openAccountModal()" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-sm text-slate-300 hover:text-white">
+              ⚙️
+            </button>
+          </div>
+
+          <!-- Bank Balance Card -->
+          <div class="bg-slate-800/90 border border-slate-700/60 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] text-slate-400 font-medium">State Bank of India (••• 4519)</div>
+              <div class="text-2xl font-black text-white mt-0.5 tracking-tight" id="liveBankBalance">₹84,500.50</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] text-amber-400 font-medium cursor-pointer" onclick="openGullakModal()">Digital Gullak 🐖</div>
+              <div class="text-base font-bold text-amber-300 mt-0.5" id="liveGullakBalance">₹11,200</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- HERO SECTION: GIANT QR ON LEFT, SAFE PAY & ABROAD ON RIGHT -->
+        <!-- ======================================================== -->
+        <div class="px-5">
+          <div class="grid grid-cols-12 gap-3 items-stretch">
+            
+            <!-- GIANT QR OPTION (Takes prominent 6-columns on left) -->
+            <div onclick="openScanQrModal()" class="col-span-6 bg-gradient-to-br from-white to-orange-50/60 p-4 rounded-3xl border-2 border-orange-200/80 shadow-sm flex flex-col items-center justify-between cursor-pointer hover:border-orange-500 hover:shadow-md transition active:scale-98 text-center group">
+              <div class="w-full flex justify-between items-center text-[10px] font-extrabold uppercase text-orange-600 tracking-wider">
+                <span>Fast Pay</span>
+                <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">Giant QR</span>
+              </div>
+              
+              <!-- Giant visual QR box -->
+              <div class="w-28 h-28 my-2 rounded-2xl bg-white p-2.5 shadow-md border border-orange-100 flex flex-col items-center justify-center relative group-hover:scale-105 transition">
+                <svg class="w-full h-full text-slate-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM14 14h2v2h-2zM14 18h2v2h-2zM18 14h2v2h-2zM18 18h2v2h-2zM9 9h6v6H9z" />
+                </svg>
+                <div class="absolute inset-0 bg-orange-500/10 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <span class="bg-orange-600 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow">Tap Scan</span>
+                </div>
+              </div>
+
+              <div>
+                <span class="text-sm font-extrabold text-slate-900 block leading-tight">Scan Any QR</span>
+                <span class="text-[10px] text-slate-500">Camera / Gallery</span>
+              </div>
+            </div>
+
+            <!-- RIGHT SIDE: SAFE PAY & ABROAD TILES (Stacked 6-columns on right) -->
+            <div class="col-span-6 flex flex-col gap-2.5">
+              
+              <!-- Safe Pay (Top Right) -->
+              <div onclick="switchTab('stranger-pay')" class="flex-1 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between cursor-pointer hover:border-purple-400 hover:bg-purple-50/30 transition active:scale-98">
+                <div>
+                  <div class="flex items-center gap-1.5 text-xs font-extrabold text-purple-900">
+                    <span>🤝</span>
+                    <span>Safe Pay</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Hold funds for strangers</div>
+                </div>
+                <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-sm">
+                  🛡️
+                </div>
+              </div>
+
+              <!-- Send Abroad (Bottom Right) -->
+              <div onclick="switchTab('send-abroad')" class="flex-1 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-sm flex items-center justify-between cursor-pointer hover:border-cyan-400 hover:bg-cyan-50/30 transition active:scale-98">
+                <div>
+                  <div class="flex items-center gap-1.5 text-xs font-extrabold text-cyan-950">
+                    <span>🌍</span>
+                    <span>Abroad</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Rupee-first transfer</div>
+                </div>
+                <div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-sm">
+                  →
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3 Secondary Actions Bar -->
+        <div class="px-5">
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <button onclick="openPayUpiModal()" class="bg-white p-2.5 rounded-2xl border border-slate-200 flex items-center justify-center gap-2 hover:border-emerald-500 transition active:scale-95">
+              <span class="text-base">💸</span>
+              <span class="text-xs font-bold text-slate-800">Pay UPI / Phone</span>
+            </button>
+
+            <button onclick="openMyQrModal()" class="bg-white p-2.5 rounded-2xl border border-slate-200 flex items-center justify-center gap-2 hover:border-orange-500 transition active:scale-95">
+              <span class="text-base">📲</span>
+              <span class="text-xs font-bold text-slate-800">Receive / My QR</span>
+            </button>
+
+            <button onclick="openGullakModal()" class="bg-white p-2.5 rounded-2xl border border-slate-200 flex items-center justify-center gap-2 hover:border-amber-500 transition active:scale-95">
+              <span class="text-base">🐖</span>
+              <span class="text-xs font-bold text-slate-800">Gullak</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- People / Trust Badges (Tap to Pay Instantly) -->
+        <div class="px-5">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500">People You Know</h3>
+            <span class="text-[11px] text-slate-400">Tap to Send</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2.5">
+            <div onclick="startPaymentFlow('chaipoint@aiksetra', 'Chai Point Koramangala', 40)" class="bg-white p-3 rounded-2xl border border-slate-200 text-center cursor-pointer hover:border-emerald-500 hover:shadow-sm transition active:scale-95">
+              <div class="w-11 h-11 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm mb-1">
+                CP
+              </div>
+              <div class="text-xs font-bold text-slate-800 truncate">Chai Point</div>
+              <span class="inline-block text-[10px] text-emerald-600 bg-emerald-50 font-semibold px-1.5 py-0.5 rounded-full mt-1">
+                ✓ Verified
+              </span>
+            </div>
+
+            <div onclick="startPaymentFlow('kolkatasweets@aiksetra', 'Kolkata Sweet Hub', 120)" class="bg-white p-3 rounded-2xl border border-slate-200 text-center cursor-pointer hover:border-emerald-500 hover:shadow-sm transition active:scale-95">
+              <div class="w-11 h-11 mx-auto rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm mb-1">
+                KS
+              </div>
+              <div class="text-xs font-bold text-slate-800 truncate">Kolkata Sweets</div>
+              <span class="inline-block text-[10px] text-amber-700 bg-amber-50 font-semibold px-1.5 py-0.5 rounded-full mt-1">
+                ✓ Shop
+              </span>
+            </div>
+
+            <div onclick="startPaymentFlow('ramesh@aiksetra', 'Ramesh Sharma', 500)" class="bg-white p-3 rounded-2xl border border-slate-200 text-center cursor-pointer hover:border-blue-500 hover:shadow-sm transition active:scale-95">
+              <div class="w-11 h-11 mx-auto rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm mb-1">
+                RS
+              </div>
+              <div class="text-xs font-bold text-slate-800 truncate">Ramesh</div>
+              <span class="inline-block text-[10px] text-blue-600 bg-blue-50 font-semibold px-1.5 py-0.5 rounded-full mt-1">
+                Friend
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Payments History -->
+        <div class="px-5 space-y-2 pb-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Recent Payments</h3>
+            <button onclick="loadLiveHistory()" class="text-[11px] text-orange-600 font-bold hover:underline">Refresh</button>
+          </div>
+          
+          <div id="homeRecentPayments" class="space-y-2">
+            <div class="text-xs text-slate-400 text-center py-4">Loading payments...</div>
+          </div>
+        </div>
+
+      </div>
+
+
+      <!-- ============================================== -->
+      <!-- TAB 2: SURAKSHA CHECK (Plain-English Scam Shield) -->
+      <!-- ============================================== -->
+      <div id="screen-scam-check" class="p-5 space-y-4 hidden">
+        <div class="flex items-center gap-2 mb-1">
+          <button onclick="switchTab('home')" class="text-slate-400 hover:text-slate-700 text-lg">←</button>
+          <h2 class="text-lg font-black text-slate-900">Suraksha Check (Safety)</h2>
+        </div>
+        <p class="text-xs text-slate-500 -mt-2">Checks if the person you are paying has been reported for scams before you enter your MPIN.</p>
+
+        <!-- Test Presets -->
+        <div class="space-y-1.5">
+          <div class="text-[11px] font-bold text-slate-500 uppercase">Try Real Fraud Test Cases:</div>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="fillAndCheckScam('lotterywinner99@ybl', 5000, 'KBC Lottery prize claim processing fee', 'KBC Lottery Office')" class="text-xs bg-red-50 text-red-700 font-bold px-2.5 py-1.5 rounded-xl border border-red-200 active:scale-95">
+              🚨 Fake Lottery Scam
+            </button>
+            <button onclick="fillAndCheckScam('electricitybillupdate@paytm', 1450, 'Electricity bill update avoid disconnection tonight', 'State Electricity Board')" class="text-xs bg-amber-50 text-amber-700 font-bold px-2.5 py-1.5 rounded-xl border border-amber-200 active:scale-95">
+              ⚠️ Electricity Cut Threat
+            </button>
+            <button onclick="fillAndCheckScam('chaipoint@aiksetra', 40, 'Tea with friends', 'Chai Point')" class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1.5 rounded-xl border border-emerald-200 active:scale-95">
+              ✓ Trusted Merchant
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 shadow-sm">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Paying To (UPI ID or Phone)</label>
+            <input type="text" id="chkReceiver" value="lotterywinner99@ybl" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Amount (₹)</label>
+              <input type="number" id="chkAmount" value="5000" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Who you expect</label>
+              <input type="text" id="chkExpected" value="KBC Lottery Office" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Payment Message / Note</label>
+            <input type="text" id="chkNote" value="KBC Lottery prize claim processing fee" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-orange-500 focus:outline-none">
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="checkSafetyNow()" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition active:scale-98">
+              Check Safety
+            </button>
+            <button onclick="startPaymentFlow(document.getElementById('chkReceiver').value, 'Payee', parseFloat(document.getElementById('chkAmount').value), document.getElementById('chkNote').value)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition active:scale-98">
+              Try Paying
+            </button>
+          </div>
+        </div>
+
+        <!-- Big Plain Language Result Card -->
+        <div id="safetyResultCard" class="space-y-3">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+
+      <!-- ============================================== -->
+      <!-- TAB 3: STRANGER PAY (Safe Escrow)              -->
+      <!-- ============================================== -->
+      <div id="screen-stranger-pay" class="p-5 space-y-4 hidden">
+        <div class="flex items-center gap-2 mb-1">
+          <button onclick="switchTab('home')" class="text-slate-400 hover:text-slate-700 text-lg">←</button>
+          <h2 class="text-lg font-black text-slate-900">Safe Pay for Strangers</h2>
+        </div>
+
+        <div class="bg-purple-50 border border-purple-200/80 p-3.5 rounded-2xl space-y-1">
+          <div class="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+            <span>🛡️ Buying from OLX or an unknown seller?</span>
+          </div>
+          <p class="text-[11px] text-purple-700 leading-relaxed">
+            Your money stays locked safely in the bank. Only when you click <b>"I Received My Item"</b> does the seller get paid!
+          </p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 shadow-sm">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-800">New Protected Purchase</span>
+            <button onclick="showGiantSafePayQr()" class="text-[11px] text-purple-700 font-bold bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
+              🔍 Giant QR for Seller
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">Seller UPI ID</label>
+            <input type="text" id="strangerVpa" value="sharmaelectronics@aiksetra" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-1">Amount (₹)</label>
+              <input type="number" id="strangerAmount" value="3499" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-1">Seller Shop Name</label>
+              <input type="text" id="strangerShop" value="Sharma Electronics" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">What are you buying?</label>
+            <input type="text" id="strangerItem" value="Wireless Headphones (Sealed Box)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs">
+          </div>
+
+          <button onclick="createSafePayOrder()" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition active:scale-98">
+            Lock Money Safely in Bank Escrow
+          </button>
+        </div>
+
+        <!-- Active Safe Pay Orders -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-600 uppercase">Your Active Protected Orders</div>
+          <div id="safePayList" class="space-y-2.5">
+            <!-- Populated via API -->
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ============================================== -->
+      <!-- TAB 4: SEND MONEY ABROAD (Rupee-First)        -->
+      <!-- ============================================== -->
+      <div id="screen-send-abroad" class="p-5 space-y-4 hidden">
+        <div class="flex items-center gap-2 mb-1">
+          <button onclick="switchTab('home')" class="text-slate-400 hover:text-slate-700 text-lg">←</button>
+          <h2 class="text-lg font-black text-slate-900">Send Money Abroad</h2>
+        </div>
+
+        <div class="bg-cyan-50 border border-cyan-200/80 p-3.5 rounded-2xl space-y-1">
+          <div class="text-xs font-bold text-cyan-950">Rupee-First International Transfer</div>
+          <p class="text-[11px] text-cyan-800">
+            You pay in Rupees from your Indian bank. The receiver gets their local currency directly. Rate locked for 10 minutes.
+          </p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 shadow-sm">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Destination Country</label>
+            <select id="abroadCurrency" onchange="calculateSimpleFx()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800">
+              <option value="AED">🇦🇪 Dubai / UAE (Dirhams - Direct Rupee Route)</option>
+              <option value="SGD">🇸🇬 Singapore (Dollars - PayNow UPI)</option>
+              <option value="EUR">🇫🇷 France / Europe (Euros - UPI Lyra)</option>
+              <option value="MUR">🇲🇺 Mauritius (Rupees - Direct Bilateral)</option>
+              <option value="NPR">🇳🇵 Nepal (Rupees - Fonepay UPI)</option>
+              <option value="USD">🇺🇸 United States (USD Bank Wire)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">They Get (Foreign Amount)</label>
+            <input type="number" id="abroadForeignAmount" value="500" oninput="calculateSimpleFx()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-black text-slate-900">
+          </div>
+
+          <!-- Plain Language Cost Card -->
+          <div id="abroadQuoteBox" class="p-3.5 bg-slate-900 text-white rounded-xl space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Total You Pay in Rupees:</span>
+              <span class="text-base font-extrabold text-emerald-400" id="abroadTotalInr">₹11,499.50</span>
+            </div>
+            <div class="text-[11px] text-slate-300 border-t border-slate-800 pt-2 flex items-center justify-between">
+              <span>Exchange Rate (Guaranteed):</span>
+              <span class="font-bold text-white" id="abroadRateText">1 AED = ₹22.94</span>
+            </div>
+            <div class="text-[10px] text-cyan-400 flex items-center gap-1">
+              <span>⏱️ Rate locked for 10 minutes (Zero unexpected fees)</span>
+            </div>
+          </div>
+
+          <!-- LRS meter -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div class="flex justify-between text-[11px] font-bold text-slate-700">
+              <span>Yearly Foreign Allowance (RBI)</span>
+              <span id="lrsMeterText">$237,550 left of $250,000</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-1.5">
+              <div id="lrsMeterBar" class="bg-cyan-600 h-1.5 rounded-full" style="width: 5%"></div>
+            </div>
+          </div>
+
+          <button onclick="startAbroadPayment()" class="w-full bg-cyan-700 hover:bg-cyan-800 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition active:scale-98">
+            Lock Rate & Send Money Abroad
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Phone Bottom Navigation Bar (No Voice Box - Clean 4 Tabs) -->
+    <div class="bg-white border-t border-slate-200 px-4 py-2 flex justify-around items-center absolute bottom-0 left-0 right-0 z-20">
+      <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center text-orange-600" data-screen="home">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] font-bold mt-0.5">Home</span>
+      </button>
+
+      <button onclick="switchTab('scam-check')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-600" data-screen="scam-check">
+        <span class="text-lg">🛡️</span>
+        <span class="text-[10px] font-bold mt-0.5">Safety</span>
+      </button>
+
+      <button onclick="switchTab('stranger-pay')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-600" data-screen="stranger-pay">
+        <span class="text-lg">🤝</span>
+        <span class="text-[10px] font-bold mt-0.5">Safe Pay</span>
+      </button>
+
+      <button onclick="switchTab('send-abroad')" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-600" data-screen="send-abroad">
+        <span class="text-lg">🌍</span>
+        <span class="text-[10px] font-bold mt-0.5">Abroad</span>
+      </button>
+
+      <button onclick="openAccountModal()" class="nav-btn flex flex-col items-center text-slate-400 hover:text-slate-600">
+        <span class="text-lg">👤</span>
+        <span class="text-[10px] font-bold mt-0.5">Account</span>
+      </button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 1: PAY UPI & SURAKSHA CHECK  -->
+    <!-- ============================================== -->
+    <div id="modalPayUpi" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end justify-center">
+      <div class="bg-white w-full max-w-md rounded-t-[32px] p-5 space-y-4 shadow-2xl animate-fadeIn">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">💸</span>
+            <h3 class="font-bold text-slate-900 text-sm">Send Money via UPI</h3>
+          </div>
+          <button onclick="closeModal('modalPayUpi')" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center">✕</button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">UPI ID or Mobile Number</label>
+          <div class="flex gap-2">
+            <input type="text" id="modalVpaInput" placeholder="name@aiksetra or 9876543210" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:ring-2 focus:ring-orange-500 outline-none">
+            <button onclick="runModalVpaCheck()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-xl text-xs">Verify</button>
+          </div>
+          <div id="modalPayeeVerifyBadge" class="mt-1.5 text-xs text-slate-500 hidden"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Amount (₹)</label>
+          <input type="number" id="modalAmountInput" value="80" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xl font-black text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Add a Note (Optional)</label>
+          <input type="text" id="modalNoteInput" placeholder="Chai, Dinner, Rent, etc." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-orange-500 outline-none">
+        </div>
+
+        <!-- Real-time Suraksha check notice -->
+        <div id="modalScamShieldNotice" class="p-3 rounded-xl text-xs space-y-1 hidden">
+          <!-- Live Safety Badge -->
+        </div>
+
+        <button id="modalProceedBtn" onclick="openMpinKeypad()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-98">
+          Proceed to Enter MPIN
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 2: SCAN QR SCANNER SIMULATOR -->
+    <!-- ============================================== -->
+    <div id="modalScanQr" class="fixed inset-0 bg-black/80 z-50 hidden flex flex-col items-center justify-center p-4">
+      <div class="bg-slate-900 w-full max-w-sm rounded-3xl p-5 text-white space-y-4 text-center border border-slate-800">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-400">Scan Bharat UPI QR</span>
+          <button onclick="closeModal('modalScanQr')" class="text-slate-400 text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Scanner Viewfinder Box -->
+        <div class="w-60 h-60 mx-auto border-4 border-orange-400 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden bg-slate-950 p-2 shadow-2xl">
+          <div class="w-full h-1 bg-orange-400/80 animate-pulse absolute top-14 shadow-lg shadow-orange-500"></div>
+          <span class="text-4xl mb-1">📷</span>
+          <span class="text-xs font-bold text-white mt-1">Point at any UPI QR</span>
+          <span class="text-[10px] text-slate-400">Google Pay, PhonePe, Paytm, BHIM</span>
+        </div>
+
+        <div class="text-xs text-slate-400">Or Tap a Test Shop QR to scan instantly:</div>
+        
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button onclick="simulateQrScan('chaipoint@aiksetra', 'Chai Point Koramangala', 40)" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold border border-slate-700 text-left">
+            ☕ Chai Point (₹40)
+          </button>
+          <button onclick="simulateQrScan('kolkatasweets@aiksetra', 'Kolkata Sweet Hub', 150)" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold border border-slate-700 text-left">
+            🍬 Sweet Hub (₹150)
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 3: UPI MPIN SECURE KEYPAD    -->
+    <!-- ============================================== -->
+    <div id="modalMpinKeypad" class="fixed inset-0 bg-black/75 z-50 hidden flex items-end justify-center">
+      <div class="bg-slate-900 text-white w-full max-w-md rounded-t-[32px] p-6 space-y-5 animate-fadeIn border-t border-slate-700">
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="text-xs text-slate-400">Paying from <span class="text-white font-bold">State Bank of India</span></div>
+            <div class="text-xl font-black text-white mt-0.5" id="mpinDisplayAmount">₹80.00</div>
+          </div>
+          <button onclick="closeModal('modalMpinKeypad')" class="text-slate-400 text-sm font-bold">Cancel</button>
+        </div>
+
+        <div class="text-center py-2 space-y-2">
+          <div class="text-xs font-semibold text-slate-300">ENTER 6-DIGIT UPI MPIN</div>
+          <div class="flex justify-center gap-3 py-2">
+            <div id="dot1" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+            <div id="dot2" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+            <div id="dot3" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+            <div id="dot4" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+            <div id="dot5" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+            <div id="dot6" class="w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent"></div>
+          </div>
+          <div class="text-[11px] text-slate-500">Default Test PIN: <code class="text-orange-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">123456</code></div>
+        </div>
+
+        <!-- Numerical Keypad -->
+        <div class="grid grid-cols-3 gap-2.5 max-w-xs mx-auto pb-4">
+          <button onclick="pressPinKey('1')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">1</button>
+          <button onclick="pressPinKey('2')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">2</button>
+          <button onclick="pressPinKey('3')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">3</button>
+          <button onclick="pressPinKey('4')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">4</button>
+          <button onclick="pressPinKey('5')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">5</button>
+          <button onclick="pressPinKey('6')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">6</button>
+          <button onclick="pressPinKey('7')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">7</button>
+          <button onclick="pressPinKey('8')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">8</button>
+          <button onclick="pressPinKey('9')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">9</button>
+          <button onclick="clearPinKey()" class="h-12 rounded-2xl bg-slate-800/50 hover:bg-slate-700 text-xs font-bold text-red-400">Clear</button>
+          <button onclick="pressPinKey('0')" class="h-12 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-90 text-lg font-bold">0</button>
+          <button onclick="submitPinKey()" class="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-90 text-sm font-bold text-white flex items-center justify-center">✓</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 4: PAYMENT SUCCESS RECEIPT   -->
+    <!-- ============================================== -->
+    <div id="modalReceipt" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-[32px] p-6 text-center space-y-4 shadow-2xl animate-check border border-slate-100">
+        
+        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30">
+          ✓
+        </div>
+
+        <div>
+          <div class="text-xs uppercase font-bold text-emerald-600 tracking-wider">Payment Successful</div>
+          <div class="text-3xl font-black text-slate-900 mt-1" id="receiptAmount">₹80.00</div>
+          <div class="text-xs text-slate-500 mt-0.5" id="receiptPayee">Paid to Chai Point Koramangala</div>
+        </div>
+
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-left text-xs font-mono">
+          <div class="flex justify-between text-slate-500">
+            <span>UPI Ref (RRN):</span>
+            <span class="text-slate-800 font-bold" id="receiptRrn">429188219401</span>
+          </div>
+          <div class="flex justify-between text-slate-500">
+            <span>Debited From:</span>
+            <span class="text-slate-800 font-bold">SBI (••• 4519)</span>
+          </div>
+          <div class="flex justify-between text-slate-500" id="receiptGullakRow">
+            <span class="text-amber-600">Saved in Gullak 🐖:</span>
+            <span class="text-amber-600 font-bold" id="receiptGullakVal">+ ₹0.00</span>
+          </div>
+        </div>
+
+        <button onclick="closeReceiptModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-sm transition active:scale-98">
+          Done
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 5: DIGITAL GULLAK SAVINGS    -->
+    <!-- ============================================== -->
+    <div id="modalGullak" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end justify-center">
+      <div class="bg-white w-full max-w-md rounded-t-[32px] p-5 space-y-4 shadow-2xl animate-fadeIn">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🐖</span>
+            <h3 class="font-bold text-slate-900 text-sm">Digital Gullak (Piggy Bank)</h3>
+          </div>
+          <button onclick="closeModal('modalGullak')" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center">✕</button>
+        </div>
+
+        <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-center space-y-1">
+          <div class="text-xs text-amber-800 font-semibold">Total Saved Chillar</div>
+          <div class="text-3xl font-black text-amber-900" id="gullakBigBalance">₹11,200</div>
+          <div class="text-[11px] text-amber-700">Goa Trip Savings Goal: ₹25,000 (45% Achieved)</div>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div>
+              <div class="font-bold text-slate-800">Auto Round-Up (Chillar Bachat)</div>
+              <div class="text-slate-500 text-[10px]">Rounds up payments to nearest ₹10</div>
+            </div>
+            <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">ON</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="addMoneyToGullak(500)" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95">
+            + Add ₹500 to Gullak
+          </button>
+          <button onclick="withdrawMoneyFromGullak(500)" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95">
+            Withdraw ₹500 to Bank
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 6: ACCOUNT DETAILS & LOGOUT   -->
+    <!-- ============================================== -->
+    <div id="modalAccount" class="fixed inset-0 bg-black/60 z-50 hidden flex items-end justify-center">
+      <div class="bg-white w-full max-w-md rounded-t-[32px] p-5 space-y-4 shadow-2xl animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 class="font-bold text-slate-900 text-sm">Account & Security</h3>
+          <button onclick="closeModal('modalAccount')" class="w-7 h-7 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center">✕</button>
+        </div>
+
+        <!-- User Profile Card -->
+        <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+          <div class="w-12 h-12 rounded-full bg-orange-500 text-white font-black flex items-center justify-center text-base shadow">
+            SN
+          </div>
+          <div class="flex-1">
+            <div class="font-black text-slate-900 text-sm">Simo Naskar</div>
+            <div class="text-xs text-slate-500 font-mono">+91 98765 43210</div>
+            <div class="text-[11px] text-emerald-600 font-bold mt-0.5">UPI ID: simo@aiksetra</div>
+          </div>
+          <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+            KYC Verified
+          </span>
+        </div>
+
+        <!-- Linked Bank Accounts -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold text-slate-600">
+            <span>Linked Bank Accounts</span>
+            <span class="text-orange-600 text-[11px] cursor-pointer" onclick="alert('Account linking discovery simulated!')">+ Add Bank</span>
+          </div>
+
+          <div class="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-xs text-slate-900">State Bank of India</span>
+              <span class="text-xs font-bold text-emerald-600 font-mono">₹84,500.50</span>
+            </div>
+            <div class="text-[11px] text-slate-500">Savings A/C •••• 4519 • Primary</div>
+          </div>
+
+          <div class="p-3 bg-white rounded-2xl border border-slate-200 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-xs text-slate-900">HDFC Bank</span>
+              <span class="text-xs font-bold text-slate-700 font-mono">₹23,100.00</span>
+            </div>
+            <div class="text-[11px] text-slate-500">Savings A/C •••• 9821</div>
+          </div>
+        </div>
+
+        <!-- Security & Preferences -->
+        <div class="space-y-2 text-xs">
+          <div class="text-xs font-bold text-slate-600">App Security</div>
+          
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+            <div>
+              <div class="font-bold text-slate-800">Biometric / Fingerprint Unlock</div>
+              <div class="text-slate-500 text-[10px]">Require lock on opening app</div>
+            </div>
+            <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">ACTIVE</span>
+          </div>
+
+          <button onclick="lockAppNow()" class="w-full text-left p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between font-bold text-slate-800">
+            <span>🔒 Lock App Screen Now</span>
+            <span>→</span>
+          </button>
+        </div>
+
+        <!-- LOGOUT BUTTON -->
+        <div class="pt-2">
+          <button onclick="logoutApp()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 transition active:scale-98">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Log Out of AikSetra
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 7: GIANT QR DISPLAY MODAL     -->
+    <!-- ============================================== -->
+    <div id="modalGiantQr" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-[32px] p-6 text-center space-y-4 shadow-2xl border border-slate-100">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+          <span class="text-xs font-bold text-purple-900" id="giantQrTitle">Giant Safe Pay QR</span>
+          <button onclick="closeModal('modalGiantQr')" class="text-slate-400 text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Giant High-Contrast QR Code -->
+        <div class="bg-white p-3 rounded-2xl border-4 border-slate-900 shadow-xl inline-block mx-auto">
+          <svg class="w-56 h-56 text-slate-900" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14-2h2v2h-2v-2zm-4 0h2v4h-2v-4zm4 4h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-2h2v4h-2v-4zM6 6h2v2H6V6zm12 0h2v2h-2V6zm-12 12h2v2H6v-2z"/>
+          </svg>
+        </div>
+
+        <div>
+          <div class="text-lg font-black text-slate-900" id="giantQrAmount">₹3,499.00</div>
+          <div class="text-xs text-slate-500" id="giantQrSubtitle">Scan to secure payment in bank escrow</div>
+        </div>
+
+        <button onclick="closeModal('modalGiantQr')" class="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95">
+          Close QR
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- INTERACTIVE MODAL 8: RECEIVE / MY QR MODAL     -->
+    <!-- ============================================== -->
+    <div id="modalMyQr" class="fixed inset-0 bg-black/85 z-50 hidden flex flex-col items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-[32px] p-6 text-center space-y-4 shadow-2xl border border-slate-100">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+          <span class="text-xs font-bold text-slate-800">Your Bharat UPI QR</span>
+          <button onclick="closeModal('modalMyQr')" class="text-slate-400 text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Giant High-Contrast QR Code -->
+        <div class="bg-white p-3 rounded-2xl border-4 border-orange-500 shadow-xl inline-block mx-auto">
+          <svg class="w-56 h-56 text-slate-900" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14-2h2v2h-2v-2zm-4 0h2v4h-2v-4zm4 4h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-2h2v4h-2v-4zM6 6h2v2H6V6zm12 0h2v2h-2V6zm-12 12h2v2H6v-2z"/>
+          </svg>
+        </div>
+
+        <div>
+          <div class="text-base font-black text-slate-900">Simo Naskar</div>
+          <div class="text-xs text-orange-600 font-bold font-mono">simo@aiksetra</div>
+          <div class="text-[10px] text-slate-400 mt-1">Accepts payment from BHIM, GPay, PhonePe, Paytm</div>
+        </div>
+
+        <button onclick="closeModal('modalMyQr')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95">
+          Close
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ==========================================
+    // ONBOARDING & REAL UPI LOGIN SYSTEM
+    // ==========================================
+    let onboardingState = {
+      phone: '9876543210',
+      fullName: 'Simo Naskar',
+      selectedSim: 1,
+      otp: '',
+      selectedBank: 'State Bank of India',
+      vpa: 'simo@aiksetra',
+      setupPin: '',
+    };
+    let isLoggedIn = false;
+
+    async function submitPhoneAndGetOtp() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      const fullName = document.getElementById('loginFullName').value.trim();
+      const consent = document.getElementById('loginConsent').checked;
+
+      if (!consent) {
+        alert('Please accept the UPI terms to continue.');
+        return;
+      }
+      if (phone.length !== 10) {
+        alert('Please enter a valid 10-digit Indian mobile number.');
+        return;
+      }
+
+      onboardingState.phone = phone;
+      onboardingState.fullName = fullName || 'UPI User';
+      document.getElementById('sim1PhoneText').textContent = phone;
+      document.getElementById('otpPhoneDisplay').textContent = phone;
+
+      try {
+        const res = await fetch('/api/v1/auth/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        // Transition to Step 2: SIM & Device Binding
+        document.getElementById('loginStep1').classList.add('hidden');
+        document.getElementById('loginStep2').classList.remove('hidden');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function selectSimSlot(slot) {
+      onboardingState.selectedSim = slot;
+      const c1 = document.getElementById('simCard1');
+      const c2 = document.getElementById('simCard2');
+      const btn = document.getElementById('btnStartDeviceBinding');
+
+      if (slot === 1) {
+        c1.className = 'p-3.5 rounded-2xl border-2 border-orange-500 bg-orange-500/10 cursor-pointer flex items-center justify-between transition';
+        c2.className = 'p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition';
+        btn.textContent = 'Verify Device Binding with SIM 1 (Jio)';
+      } else {
+        c2.className = 'p-3.5 rounded-2xl border-2 border-orange-500 bg-orange-500/10 cursor-pointer flex items-center justify-between transition';
+        c1.className = 'p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition';
+        btn.textContent = 'Verify Device Binding with SIM 2 (Airtel)';
+      }
+    }
+
+    function startDeviceBindingSms() {
+      const progress = document.getElementById('simBindingProgress');
+      const btn = document.getElementById('btnStartDeviceBinding');
+      progress.classList.remove('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Binding Device SIM with NPCI Switch...';
+
+      setTimeout(() => {
+        // Move to Step 3: OTP
+        document.getElementById('loginStep2').classList.add('hidden');
+        document.getElementById('loginStep3').classList.remove('hidden');
+        progress.classList.add('hidden');
+        btn.disabled = false;
+        playUnlockSound();
+      }, 1200);
+    }
+
+    function autoFillOtp(code) {
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById('otp' + i).value = code.charAt(i - 1);
+      }
+      setTimeout(verifyOtpAndProceed, 200);
+    }
+
+    function moveOtpFocus(curr) {
+      const val = document.getElementById('otp' + curr).value;
+      if (val.length === 1 && curr < 6) {
+        document.getElementById('otp' + (curr + 1)).focus();
+      }
+    }
+
+    async function verifyOtpAndProceed() {
+      let otp = '';
+      for (let i = 1; i <= 6; i++) {
+        otp += document.getElementById('otp' + i).value;
+      }
+      if (otp.length < 6) {
+        otp = '123456'; // Fallback
+      }
+
+      try {
+        const res = await fetch('/api/v1/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: onboardingState.phone,
+            otp,
+            fullName: onboardingState.fullName,
+            deviceId: 'dev_android_verified_' + Date.now().toString().slice(-4),
+            simId: 'sim_slot_' + onboardingState.selectedSim,
+            selectedBank: onboardingState.selectedBank,
+          })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        // Setup assigned UPI ID
+        const cleanName = onboardingState.fullName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+        onboardingState.vpa = `${cleanName}@aiksetra`;
+        document.getElementById('assignedVpaText').textContent = onboardingState.vpa;
+
+        // Transition to Step 4: Bank Discovery
+        document.getElementById('loginStep3').classList.add('hidden');
+        document.getElementById('loginStep4').classList.remove('hidden');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function selectBankOption(bankName, code, maskedAcc) {
+      onboardingState.selectedBank = bankName;
+      const b1 = document.getElementById('bankOpt1');
+      const b2 = document.getElementById('bankOpt2');
+      if (bankName.includes('SBI')) {
+        b1.className = 'p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 cursor-pointer flex items-center justify-between transition';
+        b2.className = 'p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition';
+      } else {
+        b2.className = 'p-3.5 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 cursor-pointer flex items-center justify-between transition';
+        b1.className = 'p-3.5 rounded-2xl border border-slate-700 bg-slate-800 cursor-pointer flex items-center justify-between transition';
+      }
+    }
+
+    function proceedToSetAppPin() {
+      document.getElementById('loginStep4').classList.add('hidden');
+      document.getElementById('loginStep5').classList.remove('hidden');
+    }
+
+    function pressSetupPin(digit) {
+      if (onboardingState.setupPin.length < 4) {
+        onboardingState.setupPin += digit;
+        updateSetupPinDots();
+        if (onboardingState.setupPin.length === 4) {
+          setTimeout(finishOnboarding, 200);
+        }
+      }
+    }
+
+    function clearSetupPin() {
+      onboardingState.setupPin = '';
+      updateSetupPinDots();
+    }
+
+    function updateSetupPinDots() {
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('setupDot' + i);
+        if (i <= onboardingState.setupPin.length) {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-amber-400 bg-amber-400 scale-110';
+        } else {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent';
+        }
+      }
+    }
+
+    function finishOnboarding() {
+      // Complete setup!
+      document.getElementById('screen-onboarding-login').classList.add('hidden');
+      document.getElementById('screen-app-lock').classList.add('hidden');
+      isLoggedIn = true;
+
+      // Update UI with real entered details
+      document.getElementById('userDisplayName').innerHTML = `<span>${onboardingState.fullName}</span><span class="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Profile ▾</span>`;
+      document.getElementById('lockUserNameText').textContent = onboardingState.fullName.split(' ')[0];
+
+      playUnlockSound();
+      syncUserBalance();
+      loadLiveHistory();
+      alert(`🎉 Welcome ${onboardingState.fullName}! Bank Account Linked & UPI ID activated: ${onboardingState.vpa}`);
+    }
+
+    function showLoginPhoneScreen() {
+      document.getElementById('screen-app-lock').classList.add('hidden');
+      document.getElementById('screen-onboarding-login').classList.remove('hidden');
+      document.getElementById('loginStep1').classList.remove('hidden');
+      document.getElementById('loginStep2').classList.add('hidden');
+      document.getElementById('loginStep3').classList.add('hidden');
+      document.getElementById('loginStep4').classList.add('hidden');
+      document.getElementById('loginStep5').classList.add('hidden');
+    }
+
+    // ==========================================
+    // RETURNING USER APP LOCK KEYPAD
+    // ==========================================
+    let appEnteredPin = '';
+
+    function pressAppPin(k) {
+      if (appEnteredPin.length < 4) {
+        appEnteredPin += k;
+        updateAppPinDots();
+        if (appEnteredPin.length === 4) {
+          setTimeout(verifyAndUnlockApp, 150);
+        }
+      }
+    }
+
+    function clearAppPin() {
+      appEnteredPin = '';
+      updateAppPinDots();
+    }
+
+    function updateAppPinDots() {
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('appDot' + i);
+        if (i <= appEnteredPin.length) {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-orange-400 bg-orange-400 scale-110';
+        } else {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent';
+        }
+      }
+    }
+
+    function verifyAndUnlockApp() {
+      document.getElementById('screen-app-lock').classList.add('hidden');
+      appEnteredPin = '';
+      updateAppPinDots();
+      playUnlockSound();
+    }
+
+    function unlockWithBiometrics() {
+      document.getElementById('screen-app-lock').classList.add('hidden');
+      appEnteredPin = '';
+      updateAppPinDots();
+      playUnlockSound();
+    }
+
+    function lockAppNow() {
+      closeModal('modalAccount');
+      document.getElementById('screen-app-lock').classList.remove('hidden');
+      appEnteredPin = '';
+      updateAppPinDots();
+    }
+
+    function logoutApp() {
+      closeModal('modalAccount');
+      isLoggedIn = false;
+      showLoginPhoneScreen();
+      alert('✓ Logged out safely. Please enter mobile number to log in.');
+    }
+
+    // Web Audio Synthesizer: Unlock Sound & UPI Payment Chime
+    function playUnlockSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch (e) {}
+    }
+
+    function playUpiSuccessChime() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        osc1.frequency.setValueAtTime(880.00, now + 0.12); // A5
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
+      } catch (e) {
+        console.warn('Audio chime not supported');
+      }
+    }
+
+    // Tab Navigation
+    function switchTab(screenId) {
+      document.querySelectorAll('[id^="screen-"]').forEach(el => {
+        if (el.id !== 'screen-app-lock') el.classList.add('hidden');
+      });
+      document.getElementById('screen-' + screenId).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-orange-600');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeNav = document.querySelector(`[data-screen="${screenId}"]`);
+      if (activeNav) {
+        activeNav.classList.remove('text-slate-400');
+        activeNav.classList.add('text-orange-600');
+      }
+
+      if (screenId === 'home') {
+        loadLiveHistory();
+        syncUserBalance();
+      } else if (screenId === 'stranger-pay') {
+        loadSafePayOrders();
+      }
+    }
+
+    // Modal helpers
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // Account Modal
+    function openAccountModal() { openModal('modalAccount'); }
+
+    // My QR Modal
+    function openMyQrModal() { openModal('modalMyQr'); }
+
+    // Giant Safe Pay QR
+    function showGiantSafePayQr() {
+      document.getElementById('giantQrTitle').textContent = 'Giant Safe Pay QR for Seller';
+      document.getElementById('giantQrAmount').textContent = '₹' + document.getElementById('strangerAmount').value;
+      document.getElementById('giantQrSubtitle').textContent = 'Seller scans this to lock funds in bank escrow';
+      openModal('modalGiantQr');
+    }
+
+    // Live State
+    let currentPendingTxn = { vpa: '', name: '', amount: 0, note: '' };
+    let enteredMpin = '';
+
+    // ==========================================
+    // PAYMENT ORCHESTRATION & FLOW
+    // ==========================================
+    function startPaymentFlow(vpa, name, amount, note = '') {
+      currentPendingTxn = { vpa, name, amount: parseFloat(amount), note: note || 'Payment' };
+      document.getElementById('modalVpaInput').value = vpa;
+      document.getElementById('modalAmountInput').value = amount;
+      document.getElementById('modalNoteInput').value = currentPendingTxn.note;
+      openModal('modalPayUpi');
+      runModalVpaCheck();
+    }
+
+    function openPayUpiModal() {
+      currentPendingTxn = { vpa: 'chaipoint@aiksetra', name: 'Chai Point', amount: 80, note: 'Tea & Snacks' };
+      document.getElementById('modalVpaInput').value = currentPendingTxn.vpa;
+      document.getElementById('modalAmountInput').value = 80;
+      document.getElementById('modalNoteInput').value = currentPendingTxn.note;
+      openModal('modalPayUpi');
+      runModalVpaCheck();
+    }
+
+    function openScanQrModal() {
+      openModal('modalScanQr');
+    }
+
+    function simulateQrScan(vpa, name, amount) {
+      closeModal('modalScanQr');
+      startPaymentFlow(vpa, name, amount, 'Scanned Bharat QR');
+    }
+
+    async function runModalVpaCheck() {
+      const vpa = document.getElementById('modalVpaInput').value.trim();
+      const amount = parseFloat(document.getElementById('modalAmountInput').value) || 0;
+      const note = document.getElementById('modalNoteInput').value;
+      const notice = document.getElementById('modalScamShieldNotice');
+      const badge = document.getElementById('modalPayeeVerifyBadge');
+
+      if (!vpa) return;
+
+      try {
+        const res = await fetch('/api/v1/scam-shield/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ receiverVpa: vpa, amount, remark: note })
+        });
+        const data = await res.json();
+        const a = data.analysis;
+
+        badge.classList.remove('hidden');
+        badge.innerHTML = `Payee: <b class="text-slate-800">${a.verifiedLegalName}</b>`;
+        currentPendingTxn.name = a.verifiedLegalName;
+
+        notice.classList.remove('hidden');
+        if (a.riskLevel === 'HIGH') {
+          notice.className = 'p-3 rounded-xl text-xs space-y-1 bg-red-50 text-red-900 border border-red-200';
+          notice.innerHTML = `<div class="font-bold">🚨 Warning: ${a.warnings[0] || 'Reported Scam Account'}</div>`;
+        } else if (a.riskLevel === 'MODERATE') {
+          notice.className = 'p-3 rounded-xl text-xs space-y-1 bg-amber-50 text-amber-900 border border-amber-200';
+          notice.innerHTML = `<div class="font-bold">⚠️ Caution: First time paying this unverified person.</div>`;
+        } else {
+          notice.className = 'p-3 rounded-xl text-xs space-y-1 bg-emerald-50 text-emerald-900 border border-emerald-200';
+          notice.innerHTML = `<div class="font-bold">✓ Safe & Verified Payee</div>`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function openMpinKeypad() {
+      currentPendingTxn.vpa = document.getElementById('modalVpaInput').value.trim();
+      currentPendingTxn.amount = parseFloat(document.getElementById('modalAmountInput').value) || 0;
+      currentPendingTxn.note = document.getElementById('modalNoteInput').value;
+
+      closeModal('modalPayUpi');
+      document.getElementById('mpinDisplayAmount').textContent = `₹${currentPendingTxn.amount.toFixed(2)}`;
+      enteredMpin = '';
+      updateMpinDots();
+      openModal('modalMpinKeypad');
+    }
+
+    function pressPinKey(k) {
+      if (enteredMpin.length < 6) {
+        enteredMpin += k;
+        updateMpinDots();
+        if (enteredMpin.length === 6) {
+          setTimeout(submitPinKey, 200);
+        }
+      }
+    }
+
+    function clearPinKey() {
+      enteredMpin = '';
+      updateMpinDots();
+    }
+
+    function updateMpinDots() {
+      for (let i = 1; i <= 6; i++) {
+        const dot = document.getElementById('dot' + i);
+        if (i <= enteredMpin.length) {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-emerald-400 bg-emerald-400';
+        } else {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-slate-500 bg-transparent';
+        }
+      }
+    }
+
+    async function submitPinKey() {
+      closeModal('modalMpinKeypad');
+      try {
+        const res = await fetch('/api/v1/payments/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({
+            receiverVpa: currentPendingTxn.vpa,
+            amount: currentPendingTxn.amount,
+            mpin: enteredMpin,
+            remark: currentPendingTxn.note,
+            bypassScamShieldWarning: true
+          })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          alert('❌ Payment Failed: ' + data.message);
+          return;
+        }
+
+        // Play chime!
+        playUpiSuccessChime();
+
+        // Show receipt
+        document.getElementById('receiptAmount').textContent = `₹${data.transaction.amount.toFixed(2)}`;
+        document.getElementById('receiptPayee').textContent = `Paid to ${data.transaction.receiverName} (${data.transaction.receiverVpa})`;
+        document.getElementById('receiptRrn').textContent = data.transaction.upiRrn;
+
+        if (data.roundedUpAmount > 0) {
+          document.getElementById('receiptGullakRow').classList.remove('hidden');
+          document.getElementById('receiptGullakVal').textContent = `+ ₹${data.roundedUpAmount.toFixed(2)}`;
+        } else {
+          document.getElementById('receiptGullakRow').classList.add('hidden');
+        }
+
+        openModal('modalReceipt');
+        syncUserBalance();
+        loadLiveHistory();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function closeReceiptModal() {
+      closeModal('modalReceipt');
+      switchTab('home');
+    }
+
+    // ==========================================
+    // SYNC BALANCE & HISTORY
+    // ==========================================
+    async function syncUserBalance() {
+      try {
+        const res = await fetch('/api/v1/auth/me', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const data = await res.json();
+        if (data.user && data.accounts && data.accounts.length > 0) {
+          const acc = data.accounts[0];
+          document.getElementById('liveBankBalance').textContent = `₹${acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          document.getElementById('userDisplayName').innerHTML = `<span>${data.user.fullName}</span><span class="text-xs bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">Profile ▾</span>`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      // Sync Gullak
+      try {
+        const vres = await fetch('/api/v1/vaults', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const vdata = await vres.json();
+        if (vdata.vaults && vdata.vaults.length > 0) {
+          const totalVault = vdata.vaults.reduce((sum, v) => sum + v.currentBalance, 0);
+          document.getElementById('liveGullakBalance').textContent = `₹${totalVault.toLocaleString('en-IN')}`;
+          document.getElementById('gullakBigBalance').textContent = `₹${totalVault.toLocaleString('en-IN')}`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadLiveHistory() {
+      const container = document.getElementById('homeRecentPayments');
+      try {
+        const res = await fetch('/api/v1/payments/history', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const data = await res.json();
+        if (!data.transactions || data.transactions.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-400 text-center py-2">No payments yet.</div>';
+          return;
+        }
+
+        container.innerHTML = data.transactions.slice(0, 6).map(t => `
+          <div class="bg-white p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg">
+                ${t.txnType === 'P2M' ? '☕' : t.txnType === 'CROSS_BORDER' ? '🌍' : '💸'}
+              </div>
+              <div>
+                <div class="text-xs font-bold text-slate-800">${t.receiverName || t.receiverVpa}</div>
+                <div class="text-[10px] text-slate-400 font-mono">${new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • RRN ${t.upiRrn.slice(-6)}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-black text-slate-900 text-sm font-mono">- ₹${t.amount.toFixed(2)}</div>
+              <span class="text-[10px] text-emerald-600 font-bold">✓ Success</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="text-xs text-red-400">Failed to load history</div>';
+      }
+    }
+
+    // ==========================================
+    // DIGITAL GULLAK ACTIONS
+    // ==========================================
+    function openGullakModal() { openModal('modalGullak'); }
+
+    async function addMoneyToGullak(amt) {
+      try {
+        const vres = await fetch('/api/v1/vaults', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const vdata = await vres.json();
+        const vId = vdata.vaults[0].id;
+
+        await fetch(`/api/v1/vaults/${vId}/deposit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ amount: amt })
+        });
+
+        alert(`✓ ₹${amt} deposited into your Digital Gullak!`);
+        syncUserBalance();
+      } catch (e) { alert(e.message); }
+    }
+
+    async function withdrawMoneyFromGullak(amt) {
+      try {
+        const vres = await fetch('/api/v1/vaults', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const vdata = await vres.json();
+        const vId = vdata.vaults[0].id;
+
+        await fetch(`/api/v1/vaults/${vId}/withdraw`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ amount: amt })
+        });
+
+        alert(`✓ ₹${amt} withdrawn from Gullak back to your SBI Account!`);
+        syncUserBalance();
+      } catch (e) { alert(e.message); }
+    }
+
+    // ==========================================
+    // SEND MONEY ABROAD FLOW
+    // ==========================================
+    async function calculateSimpleFx() {
+      const cur = document.getElementById('abroadCurrency').value;
+      const targetAmt = document.getElementById('abroadForeignAmount').value;
+
+      try {
+        const res = await fetch('/api/v1/cross-border/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ targetCurrency: cur, targetAmount: targetAmt })
+        });
+        const data = await res.json();
+        const q = data.quote;
+        document.getElementById('abroadTotalInr').textContent = `₹${q.totalCostInr.toLocaleString('en-IN')}`;
+        document.getElementById('abroadRateText').textContent = `1 ${q.targetCurrency} = ₹${q.exchangeRate}`;
+        document.getElementById('lrsMeterText').textContent = `$${q.lrsLimitRemainingUsd.toLocaleString()} left of $250,000`;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function startAbroadPayment() {
+      const cur = document.getElementById('abroadCurrency').value;
+      const foreignAmt = document.getElementById('abroadForeignAmount').value;
+      const totalInr = document.getElementById('abroadTotalInr').textContent;
+
+      if (confirm(`Send money abroad?\nTotal Debit: ${totalInr}\nRecipient Receives: ${foreignAmt} ${cur}\nRate locked for 10 minutes.`)) {
+        startPaymentFlow('international_remit@partnerbank', `Foreign Payee (${cur})`, 11499.50, `Remittance ${foreignAmt} ${cur}`);
+      }
+    }
+
+    // ==========================================
+    // SAFE PAY FOR STRANGERS (ESCROW)
+    // ==========================================
+    async function loadSafePayOrders() {
+      const container = document.getElementById('safePayList');
+      try {
+        const res = await fetch('/api/v1/protected-pay/my-escrows', { headers: { 'x-user-id': 'usr_simo_01' } });
+        const data = await res.json();
+        if (!data.escrows || data.escrows.length === 0) {
+          container.innerHTML = '<p class="text-xs text-slate-400">No active orders.</p>';
+          return;
+        }
+
+        container.innerHTML = data.escrows.map(e => `
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2 shadow-sm">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="text-xs font-extrabold text-slate-800">${e.itemDescription}</div>
+                <div class="text-[11px] text-slate-500">Seller: ${e.sellerName}</div>
+              </div>
+              <span class="text-sm font-black text-purple-700 font-mono">₹${e.amount}</span>
+            </div>
+
+            <div class="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px]">
+              <span class="font-bold text-slate-700">${e.simpleStatusText || e.status}</span>
+              <span class="text-slate-400 text-[10px]">Bank Escrow</span>
+            </div>
+
+            ${e.status === 'HELD_IN_ESCROW' ? `
+              <div class="flex gap-2 pt-1">
+                <button onclick="confirmItemReceived('${e.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition active:scale-95">
+                  ✓ I Received My Item
+                </button>
+                <button onclick="reportItemIssue('${e.id}')" class="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-3 py-2 rounded-xl text-xs border border-red-200">
+                  Report Problem
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<p class="text-xs text-red-400">Error loading orders.</p>';
+      }
+    }
+
+    async function createSafePayOrder() {
+      const sellerVpa = document.getElementById('strangerVpa').value;
+      const sellerName = document.getElementById('strangerShop').value;
+      const amount = parseFloat(document.getElementById('strangerAmount').value) || 0;
+      const itemDescription = document.getElementById('strangerItem').value;
+
+      try {
+        const res = await fetch('/api/v1/protected-pay/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ sellerVpa, sellerName, amount, itemDescription })
+        });
+        const data = await res.json();
+        alert('✓ Money securely locked in bank escrow! Seller is notified to ship.');
+        loadSafePayOrders();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function confirmItemReceived(id) {
+      if (confirm('Did you inspect your parcel? Once confirmed, payment is sent to seller.')) {
+        await fetch(`/api/v1/protected-pay/${id}/confirm-delivery`, { method: 'POST', headers: { 'x-user-id': 'usr_simo_01' } });
+        alert('✓ Payment released to seller! Order complete.');
+        loadSafePayOrders();
+      }
+    }
+
+    async function reportItemIssue(id) {
+      const reason = prompt('What was the issue?', 'Damaged or wrong item received');
+      if (!reason) return;
+      await fetch(`/api/v1/protected-pay/${id}/dispute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+        body: JSON.stringify({ disputeReason: reason })
+      });
+      alert('✓ Issue reported! Money is frozen safely in bank escrow.');
+      loadSafePayOrders();
+    }
+
+    // ==========================================
+    // SURAKSHA CHECK
+    // ==========================================
+    function fillAndCheckScam(vpa, amt, note, exp) {
+      document.getElementById('chkReceiver').value = vpa;
+      document.getElementById('chkAmount').value = amt;
+      document.getElementById('chkNote').value = note;
+      document.getElementById('chkExpected').value = exp;
+      checkSafetyNow();
+    }
+
+    async function checkSafetyNow() {
+      const receiverVpa = document.getElementById('chkReceiver').value;
+      const amount = document.getElementById('chkAmount').value;
+      const remark = document.getElementById('chkNote').value;
+      const expectedPayeeName = document.getElementById('chkExpected').value;
+
+      try {
+        const res = await fetch('/api/v1/scam-shield/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-user-id': 'usr_simo_01' },
+          body: JSON.stringify({ receiverVpa, amount, remark, expectedPayeeName })
+        });
+        const data = await res.json();
+        renderSafetyCard(data.analysis);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function renderSafetyCard(a) {
+      const container = document.getElementById('safetyResultCard');
+      const isHigh = a.riskLevel === 'HIGH';
+      const isMod = a.riskLevel === 'MODERATE';
+
+      let statusColor = isHigh ? 'bg-red-50 border-red-300 text-red-900' :
+                        isMod ? 'bg-amber-50 border-amber-300 text-amber-900' :
+                        'bg-emerald-50 border-emerald-300 text-emerald-900';
+
+      let statusTitle = isHigh ? '🚨 STOP! Known Scam Risk' :
+                        isMod ? '⚠️ Caution: Be Careful' :
+                        '✓ Safe Payee Verified';
+
+      let actionAdvice = isHigh ? 'Our bank security advises you NOT to pay this person.' :
+                         isMod ? 'Please verify the recipient before entering your MPIN.' :
+                         'This person is a trusted payee with zero complaints.';
+
+      let warningsHtml = a.warnings.map(w => `<li class="text-xs font-medium leading-relaxed">${w}</li>`).join('');
+
+      container.innerHTML = `
+        <div class="p-4 rounded-2xl border ${statusColor} space-y-2 shadow-sm animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-black">${statusTitle}</span>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${isHigh ? 'bg-red-200' : isMod ? 'bg-amber-200' : 'bg-emerald-200'}">
+              Risk: ${a.riskScore}/100
+            </span>
+          </div>
+          <p class="text-xs font-semibold">${actionAdvice}</p>
+          ${a.warnings.length > 0 ? `<ul class="space-y-1.5 pt-1 border-t border-slate-200/50">${warningsHtml}</ul>` : ''}
+          ${isHigh ? `
+            <div class="pt-2">
+              <div class="p-2.5 bg-red-100 text-red-950 rounded-xl text-[11px] font-bold text-center">
+                ⏱️ 5-Minute Safety Pause Enabled. Think twice before proceeding.
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Initialize state on page load
+    syncUserBalance();
+    loadLiveHistory();
+    calculateSimpleFx();
+  </script>
+</body>
+</html>

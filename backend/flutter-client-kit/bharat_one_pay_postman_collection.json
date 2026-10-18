@@ -1,0 +1,108 @@
+{
+  "info": {
+    "name": "Bharat One Pay UPI API Collection",
+    "description": "Complete REST API collection for Bharat One Pay backend microservices and switch simulator.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Register & Device Binding",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"9876543210\",\n  \"deviceId\": \"dev_pixel_9_pro\",\n  \"simId\": \"sim_jio_404_45\",\n  \"fullName\": \"Simo Naskar\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/auth/register-device" }
+      }
+    },
+    {
+      "name": "Auth - Set MPIN",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-user-id", "value": "usr_simo_01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mpin\": \"123456\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/auth/set-mpin" }
+      }
+    },
+    {
+      "name": "Scam Shield - Analyze Pre-Payment Risk",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-user-id", "value": "usr_simo_01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"receiverVpa\": \"lotterywinner99@ybl\",\n  \"amount\": 5000,\n  \"remark\": \"KBC lottery prize claim urgent\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/scam-shield/analyze" }
+      }
+    },
+    {
+      "name": "Payments - Pay Core UPI",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-user-id", "value": "usr_simo_01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"receiverVpa\": \"chaipoint@bharatpay\",\n  \"amount\": 80,\n  \"mpin\": \"123456\",\n  \"remark\": \"Morning tea\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/payments/pay" }
+      }
+    },
+    {
+      "name": "Cross-Border - FX Rate Lock Quote",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-user-id", "value": "usr_simo_01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetCurrency\": \"AED\",\n  \"targetAmount\": 500\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/cross-border/quote" }
+      }
+    },
+    {
+      "name": "Protected Pay - Create Escrow",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-user-id", "value": "usr_simo_01" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sellerVpa\": \"sharmaelectronics@bharatpay\",\n  \"sellerName\": \"Sharma Electronics\",\n  \"amount\": 3499,\n  \"itemDescription\": \"Wireless Mechanical Keyboard\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/protected-pay/initiate" }
+      }
+    },
+    {
+      "name": "Merchant - Generate Bharat UPI QR",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vpa\": \"chaipoint@bharatpay\",\n  \"payeeName\": \"Chai Point Koramangala\",\n  \"amount\": 150,\n  \"transactionNote\": \"Combo Offer\"\n}"
+        },
+        "url": { "raw": "http://localhost:4000/api/v1/merchants/qr" }
+      }
+    }
+  ]
+}

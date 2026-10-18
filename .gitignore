@@ -1,0 +1,53 @@
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+*.log
+*.tmp
+*.bak
+
+# Environment variables
+.env
+!.env.example
+
+# Node.js / Backend
+node_modules/
+backend/node_modules/
+backend/dist/
+backend/data/*.log
+
+# Flutter / Dart
+.dart_tool/
+app/.dart_tool/
+.packages
+app/.packages
+.flutter-plugins
+app/.flutter-plugins
+.flutter-plugins-dependencies
+app/.flutter-plugins-dependencies
+
+# Build Outputs
+build/
+app/build/
+
+# Android Studio / IntelliJ
+.idea/
+app/.idea/
+*.iml
+app/*.iml
+app/android/.gradle/
+app/android/local.properties
+app/android/app/build/
+
+# iOS / macOS
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/app.framework
+
+# Windows / Linux desktop
+app/windows/flutter/ephemeral/
+app/linux/flutter/ephemeral/
