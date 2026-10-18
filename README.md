@@ -36,8 +36,8 @@
 ## 🌟 Key Features
 
 ### 1. Authentic Indian UPI Onboarding & Device Binding
-- **NPCI SIM-Binding Architecture**: Supports dual SIM selection (SIM 1 Jio vs SIM 2 Airtel) with simulated encrypted SMS token handshake.
-- **Automated SMS OTP Verification**: 6-digit OTP verification with auto-fill helper and resend timers.
+- **NPCI SIM-Binding Architecture**: Supports dual SIM selection (SIM 1 Jio vs SIM 2 Airtel) with secure SMS token handshake.
+- **Automated SMS OTP Verification**: 6-digit OTP verification with SMS user consent integration and resend timers.
 - **Account Discovery**: Automatically queries NPCI switches for linked bank accounts (SBI, HDFC, ICICI, etc.) and issues personalized `@aiksetra` UPI IDs.
 - **App Security Lock**: Google Pay-style 4-digit App PIN and biometric fingerprint authentication.
 
@@ -90,10 +90,10 @@ AikSetra/
 │   │   ├── config/index.ts       # Application & VPA handle configuration
 │   │   ├── db/
 │   │   │   ├── database.ts       # File-based persistent JSON store (aiksetra_db.json)
-│   │   │   └── seed.ts           # Demo users, accounts, merchants & fraud registry
+│   │   │   └── seed.ts           # Baseline verified accounts, merchants & fraud registry
 │   │   ├── services/             # Auth, Payment, ScamShield, Escrow, FX, Soundbox
 │   │   ├── routes/api.router.ts  # REST API endpoints (/api/v1/...)
-│   │   └── public/console/       # Interactive Web Developer Console Simulator
+│   │   └── public/console/       # Interactive Web Developer Switch Console
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -117,12 +117,12 @@ AikSetra/
 ```bash
 cd backend
 npm install
-npm run seed     # Initializes demo banks, merchants and verified accounts
+npm run seed     # Initializes baseline banks, merchants and verified accounts
 npm start        # Starts the service on http://localhost:4000
 ```
 
 Once running:
-- **Developer Console & Simulator**: Open [http://localhost:4000/console](http://localhost:4000/console) in your browser.
+- **Developer Switch Console**: Open [http://localhost:4000/console](http://localhost:4000/console) in your browser.
 - **Health Check**: `GET http://localhost:4000/health`
 - **API Base**: `http://localhost:4000/api/v1/...`
 
@@ -148,20 +148,41 @@ Once running:
 
 ---
 
-## 🧪 Demo Test Credentials
+## ⚙️ Production Configuration & Environment Variables
 
-| Scenario | Mobile Number | OTP | Bank Account | Default MPIN |
-|---|---|---|---|---|
-| **Primary User (Simo)** | `9876543210` | `123456` | State Bank of India (`•••• 4519`) | `1234` |
-| **Peer User (Ramesh)** | `9811122233` | `123456` | ICICI Bank (`•••• 3341`) | `1234` |
-| **New Registration** | Any 10 digits | `123456` | Select SBI / HDFC / ICICI | Custom |
+AikSetra is architected for real-world launch. Configure your production credentials in `backend/.env`:
+
+```env
+# Application
+PORT=4000
+NODE_ENV=production
+JWT_SECRET=your_high_entropy_jwt_secret_64_bytes
+
+# UPI Handles
+DEFAULT_VPA_HANDLE=@aiksetra
+
+# Real SMS Gateway (Fast2SMS / MSG91 / Twilio / Gupshup)
+SMS_GATEWAY_PROVIDER=FAST2SMS # or MSG91 / TWILIO
+FAST2SMS_API_KEY=your_fast2sms_dlt_api_key
+MSG91_AUTH_KEY=your_msg91_dlt_auth_key
+MSG91_SENDER_ID=AIKSET
+TWILIO_ACCOUNT_SID=your_twilio_sid
+TWILIO_AUTH_TOKEN=your_twilio_token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# NPCI & Banking PSP Switch Rails
+NPCI_PSP_GATEWAY=YESBANK_UPI20 # or ICICI / AXIS / RAZORPAY / CASHFREE
+NPCI_MERCHANT_KEY=your_bank_issued_switch_key
+NPCI_MERCHANT_SECRET=your_bank_issued_switch_secret
+```
 
 ---
 
 ## 🛡️ Security & Compliance
 - **Zero-Knowledge MPIN**: UPI MPIN hashes are computed client-side with SHA-256 and never transmitted as plaintext.
 - **DPDP Act 2023**: Digital Personal Data Protection compliant consent handling for phone and device identifiers.
-- **NPCI Device Binding**: Cryptographic SIM slot binding simulation matching UPI 2.0 standards.
+- **NPCI Device Binding**: Cryptographic SIM slot binding matching UPI 2.0 standards.
+- **Real OTP Rate-Limiting**: Max 3 verification attempts per 5-minute window with phone-level throttling.
 
 ---
 

@@ -14,4 +14,18 @@ export const config = {
   mockPspMode: (process.env.MOCK_PSP_MODE || 'SUCCESS') as 'SUCCESS' | 'FLAKY' | 'FAIL_MPIN' | 'TIMEOUT',
   escrowAutoReleaseDays: parseInt(process.env.ESCROW_AUTO_RELEASE_DAYS || '7', 10),
   lrsAnnualLimitUsd: parseInt(process.env.LRS_ANNUAL_LIMIT_USD || '250000', 10),
+
+  // Real SMS Gateway configuration (Fast2SMS / MSG91 / Twilio)
+  smsGatewayProvider: (process.env.SMS_GATEWAY_PROVIDER || 'CONSOLE') as 'FAST2SMS' | 'MSG91' | 'TWILIO' | 'CONSOLE',
+  fast2smsApiKey: process.env.FAST2SMS_API_KEY || '',
+  msg91AuthKey: process.env.MSG91_AUTH_KEY || '',
+  msg91SenderId: process.env.MSG91_SENDER_ID || 'AIKSET',
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+
+  // Banking PSP Switch Gateway
+  npciPspGateway: process.env.NPCI_PSP_GATEWAY || 'YESBANK_UPI20',
+  npciMerchantKey: process.env.NPCI_MERCHANT_KEY || '',
+  npciMerchantSecret: process.env.NPCI_MERCHANT_SECRET || '',
 };

@@ -19,13 +19,13 @@ export const apiRouter = Router();
 // ==========================================
 // 1. AUTH, OTP & DEVICE BINDING
 // ==========================================
-apiRouter.post('/auth/send-otp', (req, res) => {
+apiRouter.post('/auth/send-otp', async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Please provide a 10-digit mobile number.' });
     }
-    const result = AuthService.sendOtp(phone);
+    const result = await AuthService.sendOtp(phone);
     return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });

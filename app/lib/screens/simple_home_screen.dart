@@ -617,8 +617,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _showPayDialog(BuildContext context) {
-    final vpaController = TextEditingController(text: 'chaipoint@aiksetra');
-    final amtController = TextEditingController(text: '80');
+    final vpaController = TextEditingController();
+    final amtController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -632,8 +632,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           children: [
             const Text('Enter UPI ID or Phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            TextField(controller: vpaController, decoration: const InputDecoration(labelText: 'UPI ID')),
-            TextField(controller: amtController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (₹)')),
+            TextField(controller: vpaController, decoration: const InputDecoration(labelText: 'UPI ID or Mobile Number', hintText: 'username@bank or 10-digit number')),
+            TextField(controller: amtController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (₹)', hintText: 'Enter amount')),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () async {

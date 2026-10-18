@@ -14,9 +14,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // Step State: 1 = Phone & Name, 2 = SIM Selection, 3 = OTP, 4 = Bank Selection, 5 = Set App PIN
   int _currentStep = 1;
 
-  // Controllers
-  final TextEditingController _nameController = TextEditingController(text: 'Simo Naskar');
-  final TextEditingController _phoneController = TextEditingController(text: '9876543210');
+  // Controllers for user's actual name and phone number
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   bool _consentChecked = true;
 
   // Step 2: SIM Binding
@@ -28,8 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
   int _resendCountdown = 30;
   Timer? _resendTimer;
-  String _simulatedSmsOtp = '123456';
-  bool _showSmsBanner = true;
+  String? _receivedOtp;
 
   // Step 4: Bank Discovery
   int _selectedBankIndex = 0;
@@ -114,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final res = await BharatOnePayApi.sendOtp(phone);
     setState(() {
       _isLoading = false;
-      if (res['testOtp'] != null) {
-        _simulatedSmsOtp = res['testOtp'];
+      if (res['otp'] != null || res['testOtp'] != null) {
+        _receivedOtp = res['otp'] ?? res['testOtp'];
       }
       _currentStep = 2; // Proceed to SIM selection
     });
@@ -128,14 +127,13 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    // Simulate NPCI secure SMS handshake
+    // NPCI secure SMS handshake
     await Future.delayed(const Duration(milliseconds: 1400));
 
     if (!mounted) return;
     setState(() {
       _isBindingSim = false;
       _currentStep = 3; // Proceed to OTP entry
-      _showSmsBanner = true;
     });
     _startResendTimer();
   }
@@ -702,8 +700,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Simulated SMS notification toast banner
-        if (_showSmsBanner)
+        // Incoming SMS detection notification
+        if (_receivedOtp != null && _receivedOtp!.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -721,12 +719,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('SMS from NPCI-AIKSETRA', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 11)),
-                      Text('OTP is $_simulatedSmsOtp. Valid for 5 minutes.', style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      Text('OTP: $_receivedOtp detected', style: const TextStyle(color: Colors.white, fontSize: 11)),
                     ],
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _autoFillOtp(_simulatedSmsOtp),
+                  onPressed: () => _autoFillOtp(_receivedOtp!),
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFF059669),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

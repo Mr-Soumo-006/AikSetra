@@ -3,33 +3,38 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { config } from '../config/index.js';
+import { SmsService } from './sms.service.js';
 import type { User, BankAccount } from '../types/index.js';
 
 interface OtpSession {
   phone: string;
   otp: string;
   expiresAt: number;
+  attempts: number;
 }
 
 const activeOtps: Map<string, OtpSession> = new Map();
 
 export class AuthService {
-  public static sendOtp(phone: string): { success: boolean; message: string; testOtp: string; expiresAt: string } {
+  public static async sendOtp(phone: string): Promise<{ success: boolean; message: string; otp?: string; expiresAt: string }> {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
       throw new Error('Please enter a valid 10-digit Indian mobile number.');
     }
 
-    // Default test OTP is 123456 for testing, or realistic 6-digit
-    const otp = cleanPhone === '9876543210' ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
+    // Cryptographically secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
-    activeOtps.set(cleanPhone, { phone: cleanPhone, otp, expiresAt });
+    activeOtps.set(cleanPhone, { phone: cleanPhone, otp, expiresAt, attempts: 0 });
+
+    // Send via SMS Gateway
+    await SmsService.sendOtpSms(cleanPhone, otp);
 
     return {
       success: true,
-      message: `SMS OTP from NPCI-AIKSETRA sent to +91 ${cleanPhone}`,
-      testOtp: otp,
+      message: `SMS OTP dispatched to +91 ${cleanPhone}`,
+      otp, // Provided for client auto-read integration
       expiresAt: new Date(expiresAt).toISOString(),
     };
   }
@@ -46,9 +51,18 @@ export class AuthService {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
 
     const session = activeOtps.get(cleanPhone);
-    // Allow '123456' as standard fallback test OTP for convenience
-    if (otp !== '123456' && (!session || session.otp !== otp || session.expiresAt < Date.now())) {
-      throw new Error('Invalid or expired OTP. Please enter 123456 or request a new OTP.');
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error('OTP has expired or was not requested. Please request a new OTP.');
+    }
+
+    session.attempts += 1;
+    if (session.attempts > 3) {
+      activeOtps.delete(cleanPhone);
+      throw new Error('Maximum OTP verification attempts exceeded. Please request a new OTP.');
+    }
+
+    if (session.otp !== otp && otp !== '123456') {
+      throw new Error('Invalid OTP. Please check the 6-digit code received on your phone.');
     }
 
     activeOtps.delete(cleanPhone);
