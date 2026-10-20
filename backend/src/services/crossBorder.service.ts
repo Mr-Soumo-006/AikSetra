@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+﻿import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { config } from '../config/index.js';
 import type { CrossBorderQuote, CorridorType } from '../types/index.js';
@@ -210,6 +210,132 @@ export class CrossBorderService {
       remainingUsd,
       percentUsed,
       taxImplication: usedUsd > 8500 ? 'Standard 20% TCS applies on excess outward remittance' : 'Exempt from TCS (< ₹7 Lakh equivalent)',
+    };
+  }
+
+  // Real-time FX Rates Cache
+  private static liveRates: Record<string, number> = {};
+  private static lastRatesFetch: number = 0;
+
+  public static async refreshLiveRates(): Promise<void> {
+    if (Date.now() - this.lastRatesFetch < 15 * 60 * 1000 && Object.keys(this.liveRates).length > 0) {
+      return;
+    }
+
+    try {
+      const res = await fetch('https://api.frankfurter.app/latest?from=INR');
+      if (res.ok) {
+        const data = (await res.json()) as { rates: Record<string, number> };
+        for (const [curr, invRate] of Object.entries(data.rates)) {
+          if (invRate > 0) {
+            this.liveRates[curr.toUpperCase()] = Number((1 / invRate).toFixed(4));
+          }
+        }
+        this.lastRatesFetch = Date.now();
+      }
+    } catch (e) {
+      try {
+        const res2 = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/inr.json');
+        if (res2.ok) {
+          const data2 = (await res2.json()) as { inr: Record<string, number> };
+          for (const [curr, invRate] of Object.entries(data2.inr)) {
+            if (invRate > 0) {
+              this.liveRates[curr.toUpperCase()] = Number((1 / invRate).toFixed(4));
+            }
+          }
+          this.lastRatesFetch = Date.now();
+        }
+      } catch (err) {}
+    }
+
+    for (const [code, info] of Object.entries(SUPPORTED_CURRENCIES)) {
+      if (this.liveRates[code]) {
+        info.marketRate = this.liveRates[code];
+      }
+    }
+  }
+
+  public static async executeTransfer(params: {
+    userId: string;
+    quoteId: string;
+    beneficiaryName: string;
+    beneficiaryAccountOrIban: string;
+    purposeCode?: string;
+    mpin: string;
+  }) {
+    const { userId, quoteId, beneficiaryName, beneficiaryAccountOrIban, purposeCode = 'S0301', mpin } = params;
+
+    const quote = this.getValidQuote(quoteId);
+    if (!quote) {
+      throw new Error('FX Quote has expired or does not exist. Please request a fresh rate.');
+    }
+
+    const users = db.get('users');
+    const user = users.find((u) => u.id === userId);
+    if (!user) throw new Error('User not found.');
+
+    const accounts = db.get('accounts');
+    const account = accounts.find((a) => a.userId === userId && a.isPrimary) || accounts.find((a) => a.userId === userId);
+    if (!account) throw new Error('No active bank account linked to perform remittance.');
+
+    if (account.balance < quote.totalCostInr) {
+      throw new Error(`Insufficient funds. Your bank balance is ₹${account.balance.toLocaleString('en-IN')}, required amount is ₹${quote.totalCostInr.toLocaleString('en-IN')}.`);
+    }
+
+    // Deduct funds from account
+    account.balance = Number((account.balance - quote.totalCostInr).toFixed(2));
+
+    // Update user LRS consumption
+    const usdEquivalent = quote.targetCurrency === 'USD' ? quote.targetAmount : quote.totalCostInr / 85.0;
+    user.lrsUsedUsd = Number(((user.lrsUsedUsd || 0) + usdEquivalent).toFixed(2));
+    user.updatedAt = new Date().toISOString();
+
+    const transferId = `remit_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+    const now = new Date().toISOString();
+
+    const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const transactionRecord = {
+      id: transferId,
+      txnRef: `TXN${Date.now()}`,
+      upiRrn: rrn,
+      senderUserId: userId,
+      senderAccountId: account.id,
+      senderVpa: user.primaryVpa,
+      receiverVpa: `${beneficiaryName.toLowerCase().replace(/[^a-z0-9]/g, '')}@${quote.targetCurrency.toLowerCase()}`,
+      receiverName: beneficiaryName,
+      amount: quote.totalCostInr,
+      currency: 'INR',
+      txnType: 'CROSS_BORDER' as const,
+      status: 'SUCCESS' as const,
+      remark: `Abroad Remittance: ${quote.targetAmount} ${quote.targetCurrency} via ${quote.partnerRail}`,
+      createdAt: now,
+      metadata: {
+        isCrossBorder: true,
+        targetCurrency: quote.targetCurrency,
+        targetAmount: quote.targetAmount,
+        exchangeRate: quote.exchangeRate,
+        purposeCode,
+        beneficiaryIban: beneficiaryAccountOrIban,
+        corridorType: quote.corridorType,
+      },
+    };
+
+    db.insert('transactions', transactionRecord);
+    this.activeRateLocks.delete(quoteId);
+    db.save();
+
+    return {
+      success: true,
+      transferId,
+      amountPaidInr: quote.totalCostInr,
+      amountReceivedForeign: quote.targetAmount,
+      foreignCurrency: quote.targetCurrency,
+      beneficiaryName,
+      beneficiaryAccountOrIban,
+      rail: quote.partnerRail,
+      status: 'SETTLED',
+      updatedAccountBalance: account.balance,
+      timestamp: now,
     };
   }
 }

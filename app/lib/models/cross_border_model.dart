@@ -1,4 +1,4 @@
-class CrossBorderQuoteModel {
+﻿class CrossBorderQuoteModel {
   final String quoteId;
   final String targetCurrency;
   final double targetAmount;
@@ -12,6 +12,8 @@ class CrossBorderQuoteModel {
   final String partnerRail;
   final DateTime rateLockExpiresAt;
   final double lrsLimitRemainingUsd;
+  final String routeSimpleName;
+  final String simpleUserSummary;
 
   CrossBorderQuoteModel({
     required this.quoteId,
@@ -27,6 +29,8 @@ class CrossBorderQuoteModel {
     required this.partnerRail,
     required this.rateLockExpiresAt,
     required this.lrsLimitRemainingUsd,
+    this.routeSimpleName = '',
+    this.simpleUserSummary = '',
   });
 
   factory CrossBorderQuoteModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,8 @@ class CrossBorderQuoteModel {
       partnerRail: json['partnerRail'] ?? '',
       rateLockExpiresAt: DateTime.tryParse(json['rateLockExpiresAt'] ?? '') ?? DateTime.now(),
       lrsLimitRemainingUsd: (json['lrsLimitRemainingUsd'] as num?)?.toDouble() ?? 0.0,
+      routeSimpleName: json['routeSimpleName'] ?? json['partnerRail'] ?? '',
+      simpleUserSummary: json['simpleUserSummary'] ?? '',
     );
   }
 }

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../services/bharat_one_pay_api.dart';
 import '../models/scam_shield_model.dart';
+import '../models/cross_border_model.dart';
 import 'login_screen.dart';
 
 class SimpleHomeScreen extends StatefulWidget {
@@ -11,6 +12,9 @@ class SimpleHomeScreen extends StatefulWidget {
 }
 
 class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
+  void _loadFreshUserData() {
+    if (mounted) setState(() {});
+  }
   int _currentIndex = 0;
 
   @override
@@ -616,64 +620,547 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
+  // Real UPI Send Money Flow with Scam Shield Verification & MPIN
   void _showPayDialog(BuildContext context) {
     final vpaController = TextEditingController();
     final amtController = TextEditingController();
+    final remarkController = TextEditingController(text: 'Payment');
+    bool isProcessing = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter UPI ID or Phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextField(controller: vpaController, decoration: const InputDecoration(labelText: 'UPI ID or Mobile Number', hintText: 'username@bank or 10-digit number')),
-            TextField(controller: amtController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (₹)', hintText: 'Enter amount')),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final res = await BharatOnePayApi.analyzeScamRisk(
-                  receiverVpa: vpaController.text,
-                  amount: double.tryParse(amtController.text) ?? 0,
-                  remark: 'Payment test',
-                );
-                if (!mounted) return;
-                _showSurakshaCheckResult(this.context, res);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), minimumSize: const Size.fromHeight(46)),
-              child: const Text('Check Safety & Continue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 20),
-          ],
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 24, right: 24, top: 24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F172A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('💸 Send Money via UPI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: vpaController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Recipient UPI ID or Phone',
+                  labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  hintText: 'e.g. mobile number or name@bank',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFFFF671F)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amtController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  labelText: 'Amount (₹)',
+                  labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  hintText: '0.00',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Icons.currency_rupee, color: Color(0xFF34D399)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: remarkController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Add Note / Remark',
+                  labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  prefixIcon: const Icon(Icons.edit_note, color: Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: isProcessing
+                    ? null
+                    : () async {
+                        final vpa = vpaController.text.trim();
+                        final amt = double.tryParse(amtController.text.trim()) ?? 0;
+                        if (vpa.isEmpty || amt <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a valid recipient UPI ID and amount')),
+                          );
+                          return;
+                        }
+
+                        final nav = Navigator.of(ctx);
+                        setModalState(() => isProcessing = true);
+                        final safety = await BharatOnePayApi.analyzeScamRisk(
+                          receiverVpa: vpa,
+                          amount: amt,
+                          remark: remarkController.text.trim(),
+                        );
+                        setModalState(() => isProcessing = false);
+
+                        if (!mounted) return;
+                        nav.pop();
+                        if (!mounted) return;
+                        
+                        _showPaymentConfirmation(vpa, amt, remarkController.text.trim(), safety);
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF671F),
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: isProcessing
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Verify & Proceed to Pay →', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showSurakshaCheckResult(BuildContext context, ScamShieldResult res) {
-    showDialog(
+  void _showPaymentConfirmation(String vpa, double amt, String remark, ScamShieldResult safety) {
+    final pinController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(res.riskLevel == 'HIGH' ? '🚨 STOP! Known Fraud' : '✓ Safe Payee Verified'),
-        content: Text(res.warnings.isNotEmpty ? res.warnings.first : 'This person is safe to pay.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setConfirmState) => Container(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 24, right: 24, top: 24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F172A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                safety.riskLevel == 'HIGH' ? '🚨 Scam Shield Alert!' : '🔒 Secure NPCI Payment',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: safety.riskLevel == 'HIGH' ? const Color(0xFFEF4444) : const Color(0xFF34D399),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (safety.warnings.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: (safety.riskLevel == 'HIGH' ? Colors.red : Colors.amber).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: safety.riskLevel == 'HIGH' ? Colors.red : Colors.amber),
+                  ),
+                  child: Text(safety.warnings.first, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(vpa, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text('Paying from: ${BharatOnePayApi.currentAccount?.bankName ?? "Bank"}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                      ],
+                    ),
+                    Text('₹${amt.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 20)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 6,
+                style: const TextStyle(color: Colors.white, fontSize: 20, letterSpacing: 8, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  counterText: '',
+                  labelText: 'Enter 4 or 6-digit UPI MPIN',
+                  labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  prefixIcon: const Icon(Icons.lock, color: Color(0xFFFF671F)),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                ),
+              ),
+              const SizedBox(height: 18),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final pin = pinController.text.trim();
+                        if (pin.length < 4) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your UPI MPIN')));
+                          return;
+                        }
+                        final nav = Navigator.of(ctx);
+                        setConfirmState(() => isSubmitting = true);
+                        final payRes = await BharatOnePayApi.payUpi(
+                          receiverVpa: vpa,
+                          amount: amt,
+                          mpin: pin,
+                          remark: remark,
+                          bypassScamWarning: true,
+                        );
+                        setConfirmState(() => isSubmitting = false);
+
+                        if (!mounted) return;
+                        nav.pop();
+
+                        if (payRes['success'] == true) {
+                          if (!mounted) return;
+                          
+                          _showPaymentSuccess(amt, vpa, payRes['transaction']?['upiRrn'] ?? 'UPI Ref #');
+                          _loadFreshUserData();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(backgroundColor: Colors.red, content: Text(payRes['message'] ?? 'Payment failed. Check MPIN.')),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF046A38),
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: isSubmitting
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Authorize & Pay Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  void _showAbroadDialog(BuildContext context) {
+  void _showPaymentSuccess(double amt, String receiver, String rrn) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('🌍 Send Money Abroad'),
-        content: const Text('Pay in Rupees from your Indian bank. The receiver gets their local currency (Dirhams, Euros, Dollars) with guaranteed 10-minute rate lock.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Understood'))],
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xFF10B981))),
+        title: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+            SizedBox(width: 10),
+            Text('Payment Successful!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Paid: ₹${amt.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF34D399), fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('To: $receiver', style: const TextStyle(color: Colors.white, fontSize: 13)),
+            const SizedBox(height: 4),
+            Text('UPI RRN: $rrn', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontFamily: 'monospace')),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Real-Time Live FX Cross-Border Money Transfer Modal
+  void _showAbroadDialog(BuildContext context) {
+    String selectedCurrency = 'USD';
+    final amtController = TextEditingController(text: '100');
+    final beneficiaryNameController = TextEditingController();
+    final beneficiaryIbanController = TextEditingController();
+    CrossBorderQuoteModel? currentQuote;
+    bool isLoadingQuote = false;
+    bool isExecuting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setAbroadState) {
+          void fetchQuote() async {
+            final amt = double.tryParse(amtController.text.trim()) ?? 0;
+            if (amt <= 0) return;
+            setAbroadState(() => isLoadingQuote = true);
+            try {
+              final quote = await BharatOnePayApi.getCrossBorderQuote(
+                targetCurrency: selectedCurrency,
+                targetAmount: amt,
+              );
+              setAbroadState(() {
+                currentQuote = quote;
+                isLoadingQuote = false;
+              });
+            } catch (e) {
+              setAbroadState(() => isLoadingQuote = false);
+            }
+          }
+
+          // Initial quote load on first open
+          if (currentQuote == null && !isLoadingQuote) {
+            fetchQuote();
+          }
+
+          return Container(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 24, right: 24, top: 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('🌍 Send Money Abroad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Text('Live European Central Bank FX rates • Direct Rupee rail settlement', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                  const SizedBox(height: 16),
+
+                  // Currency selector dropdown
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF334155)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedCurrency,
+                              dropdownColor: const Color(0xFF1E293B),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              items: const [
+                                DropdownMenuItem(value: 'USD', child: Text('🇺🇸 USD - US Dollar')),
+                                DropdownMenuItem(value: 'AED', child: Text('🇦🇪 AED - UAE Dirham (Direct Rupee)')),
+                                DropdownMenuItem(value: 'EUR', child: Text('🇪🇺 EUR - Eurozone')),
+                                DropdownMenuItem(value: 'GBP', child: Text('🇬🇧 GBP - British Pound')),
+                                DropdownMenuItem(value: 'SGD', child: Text('🇸🇬 SGD - Singapore PayNow')),
+                                DropdownMenuItem(value: 'CAD', child: Text('🇨🇦 CAD - Canadian Dollar')),
+                                DropdownMenuItem(value: 'AUD', child: Text('🇦🇺 AUD - Australian Dollar')),
+                                DropdownMenuItem(value: 'NPR', child: Text('🇳🇵 NPR - Nepal UPI')),
+                                DropdownMenuItem(value: 'BTN', child: Text('🇧🇹 BTN - Bhutan UPI')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setAbroadState(() {
+                                    selectedCurrency = val;
+                                    currentQuote = null;
+                                  });
+                                  fetchQuote();
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Amount in foreign currency
+                  TextField(
+                    controller: amtController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      labelText: 'Amount to Receive in $selectedCurrency',
+                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E293B),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh, color: Color(0xFFFF671F)),
+                        onPressed: fetchQuote,
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    ),
+                    onSubmitted: (_) => fetchQuote(),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Live Rate breakdown card
+                  if (isLoadingQuote)
+                    const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: Color(0xFFFF671F))))
+                  else if (currentQuote != null)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF046A38).withValues(alpha: 0.6)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Live FX Rate (INR/$selectedCurrency)', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(6)),
+                                child: const Text('LIVE RATE', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text('1 $selectedCurrency = ₹${currentQuote!.exchangeRate.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Divider(color: Color(0xFF334155), height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total Cost in INR:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text('₹${currentQuote!.totalCostInr.toStringAsFixed(2)}', style: const TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold, fontSize: 16)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(currentQuote!.routeSimpleName, style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+
+                  // Beneficiary Details
+                  TextField(
+                    controller: beneficiaryNameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Beneficiary Full Name',
+                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E293B),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: beneficiaryIbanController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Beneficiary IBAN / Account #',
+                      labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E293B),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  ElevatedButton(
+                    onPressed: isExecuting || currentQuote == null
+                        ? null
+                        : () async {
+                            final name = beneficiaryNameController.text.trim();
+                            final iban = beneficiaryIbanController.text.trim();
+                            if (name.isEmpty || iban.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please fill in beneficiary name and IBAN/Account')),
+                              );
+                              return;
+                            }
+
+                            final nav = Navigator.of(ctx);
+                            setAbroadState(() => isExecuting = true);
+                            final res = await BharatOnePayApi.executeCrossBorder(
+                              quoteId: currentQuote!.quoteId,
+                              beneficiaryName: name,
+                              beneficiaryAccountOrIban: iban,
+                            );
+                            setAbroadState(() => isExecuting = false);
+
+                            nav.pop();
+                            if (!mounted) return;
+
+                            if (res['success'] == true) {
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (c) => AlertDialog(
+                                    backgroundColor: const Color(0xFF0F172A),
+                                    title: const Text('🎉 Remittance Initiated!', style: TextStyle(color: Colors.white)),
+                                    content: Text(
+                                      'Paid ₹${res['amountPaidInr']} for ${res['amountReceivedForeign']} ${res['foreignCurrency']} to $name via ${res['rail']}. Ref #${res['transferId']}',
+                                      style: const TextStyle(color: Color(0xFF94A3B8)),
+                                    ),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('Done', style: TextStyle(color: Color(0xFF34D399)))),
+                                    ],
+                                  ),
+                                );
+                                _loadFreshUserData();
+                              }
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(backgroundColor: Colors.red, content: Text(res['message'] ?? 'Transfer failed')),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF046A38),
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: isExecuting
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Lock Rate & Send Remittance', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

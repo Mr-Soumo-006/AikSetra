@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../api_config.dart';
 import '../models/user_model.dart';
@@ -256,6 +256,49 @@ class BharatOnePayApi {
     );
     final data = jsonDecode(response.body);
     return CrossBorderQuoteModel.fromJson(data['quote']);
+  }
+
+  // 9b. Execute Cross-Border Transfer
+  static Future<Map<String, dynamic>> executeCrossBorder({
+    required String quoteId,
+    required String beneficiaryName,
+    required String beneficiaryAccountOrIban,
+    String? purposeCode,
+    String? mpin,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/cross-border/execute'),
+        headers: _headers,
+        body: jsonEncode({
+          'quoteId': quoteId,
+          'beneficiaryName': beneficiaryName,
+          'beneficiaryAccountOrIban': beneficiaryAccountOrIban,
+          'purposeCode': purposeCode ?? 'S0301',
+          'mpin': mpin ?? configuredAppPin,
+        }),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Network error executing remittance: $e'};
+    }
+  }
+
+  // 9c. Get Supported Foreign Currencies
+  static Future<List<Map<String, dynamic>>> getSupportedCurrencies() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/cross-border/currencies'),
+        headers: _headers,
+      );
+      final data = jsonDecode(response.body);
+      if (data['success'] == true && data['currencies'] is List) {
+        return List<Map<String, dynamic>>.from(data['currencies']);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 
   // 10. Protected Pay (Escrow)

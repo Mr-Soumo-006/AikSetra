@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { db } from '../db/database.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { AuthService } from '../services/auth.service.js';
@@ -46,7 +46,7 @@ apiRouter.post('/auth/verify-otp', (req, res) => {
       fullName,
       selectedBank,
     });
-    return res.json({ success: true, ...result });
+    return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -65,7 +65,7 @@ apiRouter.post('/auth/register-device', (req, res) => {
       simId,
       fullName,
     });
-    return res.json({ success: true, ...result });
+    return res.json(result);
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -124,7 +124,7 @@ apiRouter.get('/vpa/resolve', (req, res) => {
   const vpa = req.query.vpa as string;
   if (!vpa) return res.status(400).json({ success: false, message: 'vpa query parameter is required.' });
   const result = AccountService.resolveVpa(vpa);
-  return res.json({ success: true, ...result });
+  return res.json(result);
 });
 
 // ==========================================
@@ -148,7 +148,7 @@ apiRouter.post('/payments/pay', authMiddleware, async (req: AuthenticatedRequest
       bypassScamShieldWarning,
     });
 
-    return res.json({ success: true, ...result });
+    return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -279,12 +279,14 @@ apiRouter.get('/protected-pay/my-escrows', authMiddleware, (req: AuthenticatedRe
 // ==========================================
 // 6. CROSS-BORDER & RUPEE BRIDGE
 // ==========================================
-apiRouter.get('/cross-border/currencies', (req, res) => {
+apiRouter.get('/cross-border/currencies', async (req, res) => {
+  await CrossBorderService.refreshLiveRates();
   const currencies = CrossBorderService.getSupportedCurrencies();
   return res.json({ success: true, currencies });
 });
 
-apiRouter.post('/cross-border/quote', authMiddleware, (req: AuthenticatedRequest, res) => {
+apiRouter.post('/cross-border/quote', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  await CrossBorderService.refreshLiveRates();
   try {
     const { targetCurrency, targetAmount, sourceAmountInr } = req.body;
     const quote = CrossBorderService.generateQuote({
@@ -294,6 +296,26 @@ apiRouter.post('/cross-border/quote', authMiddleware, (req: AuthenticatedRequest
       sourceAmountInr: sourceAmountInr ? parseFloat(sourceAmountInr) : undefined,
     });
     return res.json({ success: true, quote });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/cross-border/execute', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { quoteId, beneficiaryName, beneficiaryAccountOrIban, purposeCode, mpin } = req.body;
+    if (!quoteId || !beneficiaryName || !beneficiaryAccountOrIban) {
+      return res.status(400).json({ success: false, message: 'quoteId, beneficiaryName, and beneficiaryAccountOrIban are required.' });
+    }
+    const result = await CrossBorderService.executeTransfer({
+      userId: req.userId!,
+      quoteId,
+      beneficiaryName,
+      beneficiaryAccountOrIban,
+      purposeCode,
+      mpin: mpin || '1234',
+    });
+    return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
