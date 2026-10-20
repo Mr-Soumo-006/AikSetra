@@ -36,13 +36,13 @@ class _AppLockScreenState extends State<AppLockScreen> {
   }
 
   void _verifyAndUnlock() {
-    // If configured pin matches or standard dev pin 1234
-    if (_enteredPin == BharatOnePayApi.configuredAppPin || _enteredPin == '1234' || BharatOnePayApi.configuredAppPin.isEmpty) {
+    // Verify PIN against the configured app PIN
+    if (_enteredPin == BharatOnePayApi.configuredAppPin || BharatOnePayApi.configuredAppPin.isEmpty) {
       _unlockApp();
     } else {
       setState(() {
         _enteredPin = '';
-        _pinError = 'Incorrect PIN. Try 1234 or your setup PIN.';
+        _pinError = 'Incorrect PIN. Please try again.';
       });
     }
   }
@@ -171,7 +171,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text('Enter 4-digit PIN (e.g. 1234) or tap Fingerprint', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  const Text('Enter your 4-digit security PIN', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                   const SizedBox(height: 12),
 
                   // Switch Account / Register New User

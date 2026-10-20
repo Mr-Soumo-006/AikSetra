@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/bharat_one_pay_api.dart';
 import 'simple_home_screen.dart';
@@ -113,10 +113,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final res = await BharatOnePayApi.sendOtp(phone);
     setState(() {
       _isLoading = false;
-      if (res['otp'] != null || res['testOtp'] != null) {
-        _receivedOtp = res['otp'] ?? res['testOtp'];
+      if (res['success'] == true) {
+        _receivedOtp = res['otp']; // Server may return OTP for auto-read
+        _currentStep = 2; // Proceed to SIM selection
+      } else {
+        _errorMessage = res['message'] ?? 'Failed to send OTP. Please try again.';
       }
-      _currentStep = 2; // Proceed to SIM selection
     });
   }
 
@@ -181,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } else {
       setState(() {
-        _errorMessage = res['message'] ?? 'Invalid OTP. Please enter 123456 or resend.';
+        _errorMessage = res['message'] ?? 'Incorrect OTP. Please check the SMS sent to your number.';
       });
     }
   }
@@ -415,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _nameController,
           style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
-            hintText: 'e.g. Simo Naskar',
+            hintText: 'Enter your full name as per bank records',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             prefixIcon: const Icon(Icons.person_outline, color: Color(0xFFFF671F)),
             filled: true,
@@ -456,7 +458,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
-            hintText: '98765 43210',
+            hintText: 'Enter 10-digit mobile number',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             filled: true,
             fillColor: const Color(0xFF1E293B),
@@ -633,7 +635,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: const [
                       Text('Airtel 5G', style: TextStyle(color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold, fontSize: 14)),
                       SizedBox(height: 2),
-                      Text('+91 98111 22233', style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontFamily: 'monospace')),
+                      Text('Secondary SIM', style: TextStyle(color: Color(0xFF64748B), fontSize: 12, fontFamily: 'monospace')),
                     ],
                   ),
                 ),
@@ -1030,7 +1032,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         const SizedBox(height: 14),
-        const Text('Enter 4 digits (e.g. 1234) or tap Done', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+        const Text('Choose a secure 4-digit PIN', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
       ],
     );
   }

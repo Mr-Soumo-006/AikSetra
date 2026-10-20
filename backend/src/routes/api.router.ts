@@ -113,8 +113,8 @@ apiRouter.get('/accounts', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.get('/accounts/:id/balance', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const balance = AccountService.getBalance(req.params.id, req.userId!);
-    return res.json({ success: true, accountId: req.params.id, balance });
+    const balance = AccountService.getBalance(req.params.id as string, req.userId!);
+    return res.json({ success: true, accountId: req.params.id as string, balance });
   } catch (err: any) {
     return res.status(404).json({ success: false, message: err.message });
   }
@@ -192,7 +192,7 @@ apiRouter.post('/payments/collect', authMiddleware, (req: AuthenticatedRequest, 
 apiRouter.post('/payments/collect/:id/approve', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { mpin } = req.body;
-    const transaction = await PaymentService.approveCollectRequest(req.params.id, req.userId!, mpin);
+    const transaction = await PaymentService.approveCollectRequest(req.params.id as string, req.userId!, mpin);
     return res.json({ success: true, transaction });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -249,7 +249,7 @@ apiRouter.post('/protected-pay/initiate', authMiddleware, (req: AuthenticatedReq
 
 apiRouter.post('/protected-pay/:id/confirm-delivery', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const escrow = ProtectedPayService.confirmDelivery(req.params.id, req.userId!);
+    const escrow = ProtectedPayService.confirmDelivery(req.params.id as string, req.userId!);
     return res.json({ success: true, escrow, message: 'Delivery confirmed. Escrow funds released to seller.' });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -260,7 +260,7 @@ apiRouter.post('/protected-pay/:id/dispute', authMiddleware, (req: Authenticated
   try {
     const { disputeReason, disputeEvidenceUrl } = req.body;
     const escrow = ProtectedPayService.raiseDispute({
-      escrowId: req.params.id,
+      escrowId: req.params.id as string,
       buyerUserId: req.userId!,
       disputeReason,
       disputeEvidenceUrl,
@@ -392,7 +392,7 @@ apiRouter.post('/vaults', authMiddleware, (req: AuthenticatedRequest, res) => {
 apiRouter.post('/vaults/:id/deposit', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { amount } = req.body;
-    const vault = VaultService.deposit(req.params.id, req.userId!, parseFloat(amount));
+    const vault = VaultService.deposit(req.params.id as string, req.userId!, parseFloat(amount));
     return res.json({ success: true, vault });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -402,7 +402,7 @@ apiRouter.post('/vaults/:id/deposit', authMiddleware, (req: AuthenticatedRequest
 apiRouter.post('/vaults/:id/withdraw', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { amount } = req.body;
-    const vault = VaultService.withdraw(req.params.id, req.userId!, parseFloat(amount));
+    const vault = VaultService.withdraw(req.params.id as string, req.userId!, parseFloat(amount));
     return res.json({ success: true, vault });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -431,7 +431,7 @@ apiRouter.post('/split', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.post('/split/:id/pay/:participantId', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const bill = SplitService.markParticipantPaid(req.params.id, req.params.participantId);
+    const bill = SplitService.markParticipantPaid(req.params.id as string, req.params.participantId as string);
     return res.json({ success: true, splitBill: bill });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });

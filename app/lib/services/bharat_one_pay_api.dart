@@ -48,12 +48,10 @@ class BharatOnePayApi {
       );
       return jsonDecode(response.body);
     } catch (e) {
-      // Offline fallback simulation for smooth dev experience if server unreachable
+      // Server unreachable — inform user rather than silently bypassing auth
       return {
-        'success': true,
-        'message': 'Simulated OTP sent to +91 $phone',
-        'testOtp': '123456',
-        'expiresAt': DateTime.now().add(const Duration(minutes: 5)).toIso8601String(),
+        'success': false,
+        'message': 'Unable to reach AikSetra servers. Please check your internet connection and try again.',
       };
     }
   }

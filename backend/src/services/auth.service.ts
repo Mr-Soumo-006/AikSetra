@@ -33,8 +33,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: `SMS OTP dispatched to +91 ${cleanPhone}`,
-      otp, // Provided for client auto-read integration
+      message: `OTP sent to +91 ${cleanPhone}`,
       expiresAt: new Date(expiresAt).toISOString(),
     };
   }
@@ -61,7 +60,7 @@ export class AuthService {
       throw new Error('Maximum OTP verification attempts exceeded. Please request a new OTP.');
     }
 
-    if (session.otp !== otp && otp !== '123456') {
+    if (session.otp !== otp) {
       throw new Error('Invalid OTP. Please check the 6-digit code received on your phone.');
     }
 
