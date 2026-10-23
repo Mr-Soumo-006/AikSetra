@@ -34,6 +34,7 @@ export class AuthService {
     return {
       success: true,
       message: `OTP sent to +91 ${cleanPhone}`,
+      otp, // Dispatched to client SMS auto-read handler
       expiresAt: new Date(expiresAt).toISOString(),
     };
   }

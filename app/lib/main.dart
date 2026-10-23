@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'api_config.dart';
 import 'services/bharat_one_pay_api.dart';
 import 'screens/app_lock_screen.dart';
 import 'screens/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiConfig.detectAndSetHost();
   runApp(const AikSetraApp());
 }
 
