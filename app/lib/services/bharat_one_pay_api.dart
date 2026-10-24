@@ -213,14 +213,12 @@ class BharatOnePayApi {
     return ScamShieldResult(
       riskScore: 10,
       riskLevel: 'SAFE',
-      recommendation: 'PROCEED',
       warnings: ['Verified NPCI UPI Recipient ($receiverVpa)'],
-      signals: ScamShieldSignals(
-        newPayee: false,
-        unusualAmount: false,
-        urgencyKeywordsDetected: [],
-        nameMismatch: NameMismatchSignal(detected: false),
-      ),
+      recommendation: 'PROCEED',
+      verifiedLegalName: 'Verified Payee',
+      coolingOffRequired: false,
+      coolingOffSeconds: 0,
+      isBlacklisted: false,
     );
   }
 
@@ -368,21 +366,25 @@ class BharatOnePayApi {
                     : targetCurrency == 'AED'
                         ? 23.64
                         : 86.82;
-    final double fxFee = 45.0;
+    final double fee = 45.0;
     final double gst = 8.10;
-    final double inrAmount = (targetAmount ?? 100) * rate + fxFee + gst;
+    final double total = (targetAmount ?? 100) * rate + fee + gst;
     return CrossBorderQuoteModel(
       quoteId: 'cbq_${DateTime.now().millisecondsSinceEpoch}',
-      sourceCurrency: 'INR',
       targetCurrency: targetCurrency,
-      exchangeRate: rate,
-      sourceAmountInr: inrAmount,
       targetAmount: targetAmount ?? 100,
-      fxFeeInr: fxFee,
+      sourceAmountInr: total,
+      exchangeRate: rate,
+      marketReferenceRate: rate - 0.15,
+      adBankFeeInr: fee,
       gstInr: gst,
-      totalPayableInr: inrAmount,
-      guaranteedDurationSeconds: 120,
-      expiresAt: DateTime.now().add(const Duration(seconds: 120)).toIso8601String(),
+      totalCostInr: total,
+      corridorType: 'OUTWARD_LRS',
+      partnerRail: 'UPI-PayNow Global Rail',
+      rateLockExpiresAt: DateTime.now().add(const Duration(seconds: 120)),
+      lrsLimitRemainingUsd: 250000.0,
+      routeSimpleName: 'Direct FX Gateway',
+      simpleUserSummary: 'Instant lock-in rate with RBI LRS compliance.',
     );
   }
 
@@ -470,8 +472,7 @@ class BharatOnePayApi {
       amount: amount,
       itemDescription: itemDescription,
       status: 'HELD_IN_ESCROW',
-      autoReleaseAt: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
-      createdAt: DateTime.now().toIso8601String(),
+      expiresAt: DateTime.now().add(const Duration(days: 3)),
     );
   }
 
