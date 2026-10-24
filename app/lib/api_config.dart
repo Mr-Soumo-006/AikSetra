@@ -13,17 +13,19 @@ class ApiConfig {
       activeHost = 'localhost';
       return;
     }
-    // Check candidate hosts in priority order
-    final candidates = ['192.168.29.90', '192.168.137.1', '10.0.2.2', '127.0.0.1'];
-    for (final host in candidates) {
-      try {
-        final socket = await Socket.connect(host, 4000, timeout: const Duration(milliseconds: 600));
-        socket.destroy();
-        activeHost = host;
-        return;
-      } catch (_) {}
-    }
-    activeHost = '192.168.29.90';
+    try {
+      // Check candidate hosts with fast 300ms timeout
+      final candidates = ['192.168.29.90', '192.168.137.1', '10.0.2.2'];
+      for (final host in candidates) {
+        try {
+          final socket = await Socket.connect(host, 4000, timeout: const Duration(milliseconds: 300));
+          socket.destroy();
+          activeHost = host;
+          return;
+        } catch (_) {}
+      }
+    } catch (_) {}
+    activeHost = lanIp;
   }
 
   static String get baseUrl {
