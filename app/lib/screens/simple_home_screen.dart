@@ -2249,7 +2249,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Linked Bank Accounts',
+                'Linked Bank Accounts (48+ RBI Banks)',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
               ),
               TextButton.icon(
@@ -2278,7 +2278,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        Expanded(
+                          child: Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        ),
                         if (acc.isPrimary)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2317,6 +2319,119 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   ],
                 ),
               )),
+
+          const SizedBox(height: 14),
+
+          // ===================================================================
+          // LINKED DEBIT CARDS & CREDIT CARDS (RuPay Credit on UPI / VISA / MC)
+          // ===================================================================
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Linked Debit & Credit Cards',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+              ),
+              TextButton.icon(
+                onPressed: _showLinkCardModal,
+                icon: const Icon(Icons.add_card_rounded, size: 16),
+                label: const Text('Add Debit / Credit Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          if (BharatOnePayApi.linkedCards.isEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.credit_card_rounded, color: Color(0xFF4F46E5), size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Link RuPay Credit Card on UPI or Debit Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Pay any merchant QR or UPI ID directly using Debit or Credit Card', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showLinkCardModal,
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
+                    child: const Text('Link Card', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...BharatOnePayApi.linkedCards.map((card) {
+              final isCredit = card['cardType'] == 'CREDIT';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isCredit
+                        ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
+                        : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${card['bankName']} • ${card['cardType']} CARD',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            card['network'] ?? 'RuPay UPI',
+                            style: const TextStyle(color: Color(0xFFFCD34D), fontWeight: FontWeight.w900, fontSize: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      card['maskedCardNumber'] ?? '•••• •••• •••• 4821',
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'VALID THRU: ${card['expiry']} • ${card['cardHolderName']}',
+                          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 10, fontFamily: 'monospace'),
+                        ),
+                        Text(
+                          'Limit/Bal: ₹${((card['balanceOrLimit'] as num?) ?? 50000).toStringAsFixed(0)}',
+                          style: const TextStyle(color: Color(0xFF6EE7B7), fontWeight: FontWeight.w900, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
 
           const SizedBox(height: 16),
           const Text('Account, Security & Live Gateways', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
@@ -2431,20 +2546,46 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _parseUpiUriAndPay(String raw) {
-    String vpa = raw.trim();
+    final cleaned = raw.trim();
+    String vpa = cleaned;
     String? name;
     String? amount;
     String? note;
 
-    if (raw.toLowerCase().startsWith('upi://')) {
-      final uri = Uri.tryParse(raw);
-      if (uri != null) {
-        vpa = uri.queryParameters['pa'] ?? vpa;
-        name = uri.queryParameters['pn'];
-        amount = uri.queryParameters['am'];
-        note = uri.queryParameters['tn'];
+    // 1. Universal Query Parameter Extractor (works even if pn=... has unencoded spaces or uppercase keys)
+    String? extractParam(String key) {
+      final reg = RegExp('(?:[?&]|^)$key=([^&]+)', caseSensitive: false);
+      final m = reg.firstMatch(cleaned);
+      if (m != null && m.group(1) != null) {
+        try {
+          return Uri.decodeComponent(m.group(1)!.replaceAll('+', ' ')).trim();
+        } catch (_) {
+          return m.group(1)!.trim();
+        }
+      }
+      return null;
+    }
+
+    final paParam = extractParam('pa');
+    if (paParam != null && paParam.isNotEmpty) {
+      vpa = paParam;
+      name = extractParam('pn');
+      amount = extractParam('am');
+      note = extractParam('tn') ?? extractParam('tr');
+    } else {
+      // 2. Check if BharatQR EMVCo string or arbitrary QR payload embeds a UPI VPA (e.g. merchant@ybl)
+      final vpaMatch = RegExp(r'([a-zA-Z0-9.\-_]{2,64}@[a-zA-Z0-9]{2,32})').firstMatch(cleaned);
+      if (vpaMatch != null) {
+        vpa = vpaMatch.group(1)!;
+      } else {
+        // 3. Check if QR encodes a 10-digit Indian phone number
+        final phoneMatch = RegExp(r'\b([6-9][0-9]{9})\b').firstMatch(cleaned);
+        if (phoneMatch != null) {
+          vpa = '${phoneMatch.group(1)}@aiksetra';
+        }
       }
     }
+
     _showSendMoneyDialog(
       prefillVpa: vpa,
       prefillName: name,
@@ -2548,7 +2689,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   // ===========================================================================
-  // SEND MONEY DIALOG (REAL ANDROID UPI INTENT + AIKSETRA SWITCH + SCAM SHIELD)
+  // SEND MONEY DIALOG (BANK ACCOUNT / DEBIT CARD / CREDIT CARD + UPI INTENT)
   // ===========================================================================
   void _showSendMoneyDialog({
     String? prefillVpa,
@@ -2562,6 +2703,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       text: prefillNote ?? (prefillName != null ? 'Payment to $prefillName' : ''),
     );
     bool useEscrow = false;
+    String? selectedCardId; // null = pay from Primary Bank Account, non-null = pay from Linked Debit/Credit Card
 
     showModalBottomSheet(
       context: context,
@@ -2576,190 +2718,243 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             top: 20,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                prefillName != null ? 'Pay $prefillName' : 'Send Money via NPCI UPI',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-              ),
-              Text(
-                'From: $_bankName ($_maskedAcc) • Bal: ₹${_bankBalance.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF046A38), fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: vpaCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Recipient UPI ID or 10-Digit Mobile No',
-                  hintText: 'e.g. merchant@okaxis, shop@ybl, or 9830113038',
-                  prefixIcon: const Icon(Icons.alternate_email_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prefillName != null ? 'Pay $prefillName' : 'Send Money via NPCI UPI / Card',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amtCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                decoration: InputDecoration(
-                  labelText: 'Amount (₹)',
-                  prefixText: '₹ ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Remark / Purpose',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: useEscrow,
-                activeColor: const Color(0xFF2563EB),
-                title: const Text('🛡️ Hold in Safe Pay Escrow until delivery', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Money is locked safely and released only when you confirm receipt', style: TextStyle(fontSize: 10)),
-                onChanged: (v) => setSheetState(() => useEscrow = v),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    String rawVpa = vpaCtrl.text.trim();
-                    final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
-                    if (rawVpa.isEmpty || amt <= 0) return;
-                    if (!rawVpa.contains('@')) {
-                      rawVpa = '$rawVpa@aiksetra';
-                    }
-                    Navigator.pop(ctx);
+                const SizedBox(height: 8),
 
-                    if (useEscrow) {
-                      await BharatOnePayApi.initiateProtectedPay(
-                        sellerVpa: rawVpa,
-                        sellerName: prefillName ?? rawVpa.split('@').first,
+                // Payment Instrument Selector (Bank Account vs Linked Debit / Credit Cards)
+                const Text('Pay Using:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                const SizedBox(height: 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text('🏦 $_bankName (₹${_bankBalance.toStringAsFixed(0)})'),
+                        selected: selectedCardId == null,
+                        selectedColor: const Color(0xFF046A38),
+                        labelStyle: TextStyle(
+                          color: selectedCardId == null ? Colors.white : const Color(0xFF0F172A),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (_) => setSheetState(() => selectedCardId = null),
+                      ),
+                      const SizedBox(width: 8),
+                      ...BharatOnePayApi.linkedCards.map((c) {
+                        final cid = c['id'].toString();
+                        final isSel = selectedCardId == cid;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text('💳 ${c['network']} ${c['cardType']} (${c['last4']})'),
+                            selected: isSel,
+                            selectedColor: const Color(0xFF4F46E5),
+                            labelStyle: TextStyle(
+                              color: isSel ? Colors.white : const Color(0xFF0F172A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (_) => setSheetState(() => selectedCardId = cid),
+                          ),
+                        );
+                      }),
+                      ActionChip(
+                        label: const Text('+ Add Card', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showLinkCardModal();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: vpaCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Recipient UPI ID or 10-Digit Mobile No',
+                    hintText: 'e.g. merchant@okaxis, shop@ybl, or 9830113038',
+                    prefixIcon: const Icon(Icons.alternate_email_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amtCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  decoration: InputDecoration(
+                    labelText: 'Amount (₹)',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Remark / Purpose',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: useEscrow,
+                  activeColor: const Color(0xFF2563EB),
+                  title: const Text('🛡️ Hold in Safe Pay Escrow until delivery', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Money is locked safely and released only when you confirm receipt', style: TextStyle(fontSize: 10)),
+                  onChanged: (v) => setSheetState(() => useEscrow = v),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      String rawVpa = vpaCtrl.text.trim();
+                      final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
+                      if (rawVpa.isEmpty || amt <= 0) return;
+                      if (!rawVpa.contains('@')) {
+                        rawVpa = '$rawVpa@aiksetra';
+                      }
+                      Navigator.pop(ctx);
+
+                      if (useEscrow) {
+                        await BharatOnePayApi.initiateProtectedPay(
+                          sellerVpa: rawVpa,
+                          sellerName: prefillName ?? rawVpa.split('@').first,
+                          amount: amt,
+                          itemDescription: noteCtrl.text.trim().isEmpty ? 'Escrow Purchase' : noteCtrl.text.trim(),
+                        );
+                        if (!mounted) return;
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF2563EB),
+                            content: Text('🛡️ ₹${amt.toStringAsFixed(0)} locked in Safe Pay Escrow for $rawVpa'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final risk = await BharatOnePayApi.analyzeScamRisk(
+                        receiverVpa: rawVpa,
                         amount: amt,
-                        itemDescription: noteCtrl.text.trim().isEmpty ? 'Escrow Purchase' : noteCtrl.text.trim(),
+                        remark: noteCtrl.text.trim(),
                       );
                       if (!mounted) return;
+                      if (risk.riskLevel == 'HIGH' || risk.riskScore >= 60) {
+                        final proceed = await _showScamWarningConfirmation(risk, rawVpa, amt);
+                        if (proceed != true) return;
+                      }
+
+                      final mpin = await _promptForMpin(
+                        title: selectedCardId != null ? 'Authorize Card / RuPay UPI Payment' : 'Authorize UPI Payment',
+                        subtitle: 'Pay ₹${amt.toStringAsFixed(2)} to $rawVpa',
+                      );
+                      if (mpin == null || mpin.length < 4) return;
+
+                      final payRes = await BharatOnePayApi.payUpi(
+                        receiverVpa: rawVpa,
+                        amount: amt,
+                        mpin: mpin,
+                        cardId: selectedCardId,
+                        remark: noteCtrl.text.trim().isEmpty ? 'UPI Transfer' : noteCtrl.text.trim(),
+                        bypassScamWarning: true,
+                      );
+
+                      if (!mounted) return;
                       setState(() {});
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF2563EB),
-                          content: Text('🛡️ ₹${amt.toStringAsFixed(0)} locked in Safe Pay Escrow for $rawVpa'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    final risk = await BharatOnePayApi.analyzeScamRisk(
-                      receiverVpa: rawVpa,
-                      amount: amt,
-                      remark: noteCtrl.text.trim(),
-                    );
-                    if (!mounted) return;
-                    if (risk.riskLevel == 'HIGH' || risk.riskScore >= 60) {
-                      final proceed = await _showScamWarningConfirmation(risk, rawVpa, amt);
-                      if (proceed != true) return;
-                    }
-
-                    final mpin = await _promptForMpin(
-                      title: 'Authorize UPI Payment',
-                      subtitle: 'Pay ₹${amt.toStringAsFixed(2)} to $rawVpa',
-                    );
-                    if (mpin == null || mpin.length < 4) return;
-
-                    final payRes = await BharatOnePayApi.payUpi(
-                      receiverVpa: rawVpa,
-                      amount: amt,
-                      mpin: mpin,
-                      remark: noteCtrl.text.trim().isEmpty ? 'UPI Transfer' : noteCtrl.text.trim(),
-                      bypassScamWarning: true,
-                    );
-
-                    if (!mounted) return;
-                    setState(() {});
-                    if (payRes['success'] == true) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF046A38),
-                          content: Text('✅ Paid ₹${amt.toStringAsFixed(2)} to $rawVpa!'),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(backgroundColor: Colors.red, content: Text(payRes['message'] ?? 'Payment declined')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF046A38),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Pay Instantly with AikSetra UPI PIN →', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Real Android UPI App Deep-Link Button (GPay / PhonePe / Paytm / BHIM)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    String rawVpa = vpaCtrl.text.trim();
-                    final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
-                    if (rawVpa.isEmpty || amt <= 0) return;
-                    if (!rawVpa.contains('@')) {
-                      rawVpa = '$rawVpa@upi';
-                    }
-                    final payeeName = prefillName ?? rawVpa.split('@').first;
-                    final note = noteCtrl.text.trim().isEmpty ? 'AikSetra UPI' : noteCtrl.text.trim();
-                    Navigator.pop(ctx);
-
-                    // Run AI Scam Shield first
-                    final risk = await BharatOnePayApi.analyzeScamRisk(
-                      receiverVpa: rawVpa,
-                      amount: amt,
-                      remark: note,
-                    );
-                    if (!mounted) return;
-                    if (risk.riskLevel == 'HIGH' || risk.riskScore >= 60) {
-                      final proceed = await _showScamWarningConfirmation(risk, rawVpa, amt);
-                      if (proceed != true) return;
-                    }
-
-                    final upiUri = Uri.parse(
-                      'upi://pay?pa=$rawVpa&pn=${Uri.encodeComponent(payeeName)}&am=${amt.toStringAsFixed(2)}&cu=INR&tn=${Uri.encodeComponent(note)}',
-                    );
-                    try {
-                      final launched = await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-                      if (!launched && mounted) {
+                      if (payRes['success'] == true) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No external UPI app (GPay/PhonePe/Paytm) found on this device.')),
+                          SnackBar(
+                            backgroundColor: const Color(0xFF046A38),
+                            content: Text('✅ Paid ₹${amt.toStringAsFixed(2)} to $rawVpa!'),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(backgroundColor: Colors.red, content: Text(payRes['message'] ?? 'Payment declined')),
                         );
                       }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Could not open external UPI app: $e')),
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text(
-                    'Pay via Installed Bank UPI App (GPay / PhonePe / BHIM)',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedCardId != null ? const Color(0xFF4F46E5) : const Color(0xFF046A38),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(
+                      selectedCardId != null
+                          ? 'Pay Instantly with Linked Card & PIN →'
+                          : 'Pay Instantly with AikSetra UPI PIN →',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                // Real Android UPI App Deep-Link Button (GPay / PhonePe / Paytm / BHIM)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      String rawVpa = vpaCtrl.text.trim();
+                      final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
+                      if (rawVpa.isEmpty || amt <= 0) return;
+                      if (!rawVpa.contains('@')) {
+                        rawVpa = '$rawVpa@upi';
+                      }
+                      final payeeName = prefillName ?? rawVpa.split('@').first;
+                      final note = noteCtrl.text.trim().isEmpty ? 'AikSetra UPI' : noteCtrl.text.trim();
+                      Navigator.pop(ctx);
+
+                      final risk = await BharatOnePayApi.analyzeScamRisk(
+                        receiverVpa: rawVpa,
+                        amount: amt,
+                        remark: note,
+                      );
+                      if (!mounted) return;
+                      if (risk.riskLevel == 'HIGH' || risk.riskScore >= 60) {
+                        final proceed = await _showScamWarningConfirmation(risk, rawVpa, amt);
+                        if (proceed != true) return;
+                      }
+
+                      final upiUri = Uri.parse(
+                        'upi://pay?pa=$rawVpa&pn=${Uri.encodeComponent(payeeName)}&am=${amt.toStringAsFixed(2)}&cu=INR&tn=${Uri.encodeComponent(note)}',
+                      );
+                      try {
+                        final launched = await launchUrl(upiUri, mode: LaunchMode.externalApplication);
+                        if (!launched && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No external UPI app (GPay/PhonePe/Paytm) found on this device.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not open external UPI app: $e')),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: const Text(
+                      'Pay Real Money via Installed UPI App (GPay / PhonePe / BHIM)',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2918,48 +3113,345 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _showLinkAnotherBankModal() {
-    final bankNameCtrl = TextEditingController(text: 'HDFC Bank');
+    Map<String, String> selectedBank = BharatOnePayApi.allIndianBanks.first;
+    final searchCtrl = TextEditingController();
     final accNoCtrl = TextEditingController();
-    final ifscCtrl = TextEditingController(text: 'HDFC0000240');
+    final ifscCtrl = TextEditingController(text: selectedBank['ifsc'] ?? 'SBIN0001024');
+    final holderCtrl = TextEditingController(text: _userName);
+    String searchQuery = '';
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Link Another Bank Account'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: bankNameCtrl, decoration: const InputDecoration(labelText: 'Bank Name')),
-              const SizedBox(height: 8),
-              TextField(
-                controller: accNoCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Account Number (Full or Last 4 Digits)'),
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final filteredBanks = BharatOnePayApi.allIndianBanks.where((b) {
+            if (searchQuery.isEmpty) return true;
+            final q = searchQuery.toLowerCase();
+            return (b['name'] ?? '').toLowerCase().contains(q) ||
+                (b['code'] ?? '').toLowerCase().contains(q) ||
+                (b['ifsc'] ?? '').toLowerCase().contains(q);
+          }).toList();
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('🏦 Link Any Indian Bank Account (48+ Banks)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 4),
+                  const Text('Search Public, Private, Small Finance, Payments, or Co-operative Banks', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: searchCtrl,
+                    onChanged: (v) => setSheetState(() => searchQuery = v.trim()),
+                    decoration: InputDecoration(
+                      hintText: 'Search bank name or IFSC (e.g. SBI, HDFC, Bandhan, UCO...)',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 150,
+                    child: ListView.builder(
+                      itemCount: filteredBanks.length,
+                      itemBuilder: (ctx, idx) {
+                        final bank = filteredBanks[idx];
+                        final isSelected = selectedBank['code'] == bank['code'];
+                        return ListTile(
+                          dense: true,
+                          selected: isSelected,
+                          selectedTileColor: const Color(0xFFECFDF5),
+                          leading: Text(bank['icon'] ?? '🏦', style: const TextStyle(fontSize: 20)),
+                          title: Text(bank['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text('IFSC: ${bank['ifsc']} • @${bank['handle']}', style: const TextStyle(fontSize: 11)),
+                          trailing: isSelected ? const Icon(Icons.check_circle_rounded, color: Color(0xFF046A38)) : null,
+                          onTap: () {
+                            setSheetState(() {
+                              selectedBank = bank;
+                              ifscCtrl.text = bank['ifsc'] ?? 'SBIN0001024';
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(height: 20),
+                  TextField(
+                    controller: holderCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Account Holder Full Name',
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: accNoCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Account Number (or Last 4 Digits)',
+                            hintText: 'e.g. 4829',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: ifscCtrl,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: InputDecoration(
+                            labelText: 'IFSC Code',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final acc = accNoCtrl.text.trim();
+                        if (acc.length < 4) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(backgroundColor: Colors.red, content: Text('Enter at least the last 4 digits of your account number.')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        await BharatOnePayApi.linkBankAccount(
+                          bankName: selectedBank['name'] ?? 'State Bank of India',
+                          bankCode: selectedBank['code'],
+                          ifsc: ifscCtrl.text.trim().isNotEmpty ? ifscCtrl.text.trim() : (selectedBank['ifsc'] ?? 'SBIN0001024'),
+                          accountNumber: acc,
+                          setAsPrimary: true,
+                        );
+                        if (!mounted) return;
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF046A38),
+                            content: Text('✅ Linked ${selectedBank['name']} (•••• ${acc.substring(acc.length - 4)}) as Primary Bank!'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.verified_rounded),
+                      label: const Text('Link Bank Account & Set Primary', style: TextStyle(fontWeight: FontWeight.w900)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              TextField(controller: ifscCtrl, decoration: const InputDecoration(labelText: 'IFSC Code')),
-            ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showLinkCardModal() {
+    String cardType = 'DEBIT';
+    String network = 'RuPay UPI';
+    String issuerBank = _bankName;
+    final cardNumCtrl = TextEditingController();
+    final expiryCtrl = TextEditingController();
+    final cvvCtrl = TextEditingController();
+    final holderCtrl = TextEditingController(text: _userName);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 22,
+            right: 22,
+            top: 22,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('💳 Link Debit or Credit Card for UPI & Payments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                const Text('Supports RuPay Credit Card on UPI, Debit Cards, VISA & Mastercard', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Text('💳 Debit / ATM Card', style: TextStyle(fontWeight: FontWeight.bold)),
+                        selected: cardType == 'DEBIT',
+                        selectedColor: const Color(0xFFDBEAFE),
+                        onSelected: (_) => setSheetState(() => cardType = 'DEBIT'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Text('✨ Credit Card (UPI)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        selected: cardType == 'CREDIT',
+                        selectedColor: const Color(0xFFEDE9FE),
+                        onSelected: (_) => setSheetState(() {
+                          cardType = 'CREDIT';
+                          network = 'RuPay UPI';
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  children: ['RuPay UPI', 'VISA', 'Mastercard'].map((net) {
+                    return ChoiceChip(
+                      label: Text(net, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      selected: network == net,
+                      onSelected: (_) => setSheetState(() => network = net),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: BharatOnePayApi.allIndianBanks.any((b) => b['name'] == issuerBank)
+                      ? issuerBank
+                      : BharatOnePayApi.allIndianBanks.first['name'],
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Issuing Bank',
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: BharatOnePayApi.allIndianBanks
+                      .map((b) => DropdownMenuItem<String>(
+                            value: b['name'],
+                            child: Text('${b['icon']} ${b['name']}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setSheetState(() => issuerBank = v);
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: cardNumCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 16,
+                  decoration: InputDecoration(
+                    labelText: 'Card Number (16 Digits or Last 6 Digits)',
+                    hintText: '4591 •••• •••• 8821',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.credit_card_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: expiryCtrl,
+                        keyboardType: TextInputType.datetime,
+                        maxLength: 5,
+                        decoration: InputDecoration(
+                          labelText: 'Expiry (MM/YY)',
+                          hintText: '08/29',
+                          counterText: '',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: cvvCtrl,
+                        keyboardType: TextInputType.number,
+                        obscureText: true,
+                        maxLength: 3,
+                        decoration: InputDecoration(
+                          labelText: 'CVV',
+                          hintText: '•••',
+                          counterText: '',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: holderCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Name on Card',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final digits = cardNumCtrl.text.replaceAll(RegExp(r'\D'), '');
+                      if (digits.length < 4) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(backgroundColor: Colors.red, content: Text('Please enter at least the last 4 digits of your card.')),
+                        );
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      await BharatOnePayApi.linkCard(
+                        cardType: cardType,
+                        network: network,
+                        bankName: issuerBank,
+                        cardNumber: digits,
+                        expiry: expiryCtrl.text.trim().isNotEmpty ? expiryCtrl.text.trim() : '08/29',
+                        cardHolderName: holderCtrl.text.trim(),
+                      );
+                      if (!mounted) return;
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF046A38),
+                          content: Text('💳 Linked $issuerBank $network $cardType Card (•••• ${digits.substring(digits.length - 4)})!'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add_card_rounded),
+                    label: Text('Verify & Link $cardType Card', style: const TextStyle(fontWeight: FontWeight.w900)),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (accNoCtrl.text.trim().length < 4) return;
-              Navigator.pop(ctx);
-              await BharatOnePayApi.linkBankAccount(
-                bankName: bankNameCtrl.text.trim(),
-                ifsc: ifscCtrl.text.trim(),
-                accountNumber: accNoCtrl.text.trim(),
-                setAsPrimary: true,
-              );
-              if (mounted) setState(() {});
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
-            child: const Text('Link & Set Primary'),
-          ),
-        ],
       ),
     );
   }
@@ -3349,10 +3841,34 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
         children: [
           MobileScanner(
             controller: _scannerController,
+            errorBuilder: (context, error, child) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF10B981), size: 56),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Camera Permission or Sensor Ready',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Allow camera access in Settings or use the instant QR presets / UPI ID box below (${error.errorCode.name}).',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
             onDetect: (capture) {
               if (_hasPopped) return;
               for (final barcode in capture.barcodes) {
-                final raw = barcode.rawValue;
+                final raw = barcode.rawValue ?? barcode.displayValue;
                 if (raw != null && raw.trim().isNotEmpty) {
                   _hasPopped = true;
                   Navigator.of(context).pop(raw.trim());
@@ -3362,13 +3878,15 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
             },
           ),
           // Scanner Target Reticle Overlay
-          Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF10B981), width: 3),
-                borderRadius: BorderRadius.circular(24),
+          IgnorePointer(
+            child: Center(
+              child: Container(
+                width: 240,
+                height: 240,
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF10B981), width: 3),
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
             ),
           ),
@@ -3377,9 +3895,9 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               decoration: const BoxDecoration(
-                color: Color(0xEE0F172A),
+                color: Color(0xF20F172A),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
@@ -3390,6 +3908,33 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
                     'Point camera at any Google Pay, PhonePe, Paytm, BHIM, or Shop BharatQR code',
                     style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildQuickQrPreset(
+                          label: '🏪 Sharma Kirana QR (₹85)',
+                          uri: 'upi://pay?pa=sharmakirana@okaxis&pn=Sharma%20Kirana%20Store&am=85&tn=Groceries',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildQuickQrPreset(
+                          label: '☕ Chai Point QR (₹20)',
+                          uri: 'upi://pay?pa=chaipoint@ybl&pn=Raju%20Tea%20Stall&am=20&tn=Masala%20Chai',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildQuickQrPreset(
+                          label: '🚕 Metro Auto QR (₹120)',
+                          uri: 'upi://pay?pa=autowala@paytm&pn=Kolkata%20Metro%20Auto&am=120&tn=Auto%20Fare',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildQuickQrPreset(
+                          label: '⚠️ Test Scam QR Alert',
+                          uri: 'upi://pay?pa=lotterywinner2026@okicici&pn=Prize%20Claim%20Refund&am=4999&tn=Lottery%20KYC%20Fee',
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -3398,7 +3943,7 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
                           controller: _manualUriCtrl,
                           style: const TextStyle(color: Colors.white, fontSize: 12),
                           decoration: InputDecoration(
-                            hintText: 'Or enter UPI ID / upi://pay link manually...',
+                            hintText: 'Or enter UPI ID / mobile / upi://pay link...',
                             hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
                             filled: true,
                             fillColor: const Color(0xFF1E293B),
@@ -3420,7 +3965,7 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
                           backgroundColor: const Color(0xFFFF671F),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('Pay'),
+                        child: const Text('Proceed'),
                       ),
                     ],
                   ),
@@ -3430,6 +3975,20 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuickQrPreset({required String label, required String uri}) {
+    return ActionChip(
+      backgroundColor: const Color(0xFF1E293B),
+      side: const BorderSide(color: Color(0xFF334155)),
+      label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+      onPressed: () {
+        if (!_hasPopped) {
+          _hasPopped = true;
+          Navigator.of(context).pop(uri);
+        }
+      },
     );
   }
 }
