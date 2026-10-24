@@ -7,14 +7,14 @@
       "email": "simo@aiksetra.in",
       "panNumber": "ABCDE1234F",
       "kycStatus": "VERIFIED",
-      "deviceId": "dev_pixel9_simo_ind",
-      "simId": "sim_jio_404_45",
+      "deviceId": "device_android_verified",
+      "simId": "sim_slot_1_jio",
       "mpinHash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       "primaryVpa": "simo@aiksetra",
       "liteBalance": 1500,
       "lrsUsedUsd": 12450,
       "createdAt": "2026-09-18T19:36:01.096Z",
-      "updatedAt": "2026-10-18T19:36:01.095Z"
+      "updatedAt": "2026-10-24T09:17:19.097Z"
     },
     {
       "id": "usr_ramesh_02",

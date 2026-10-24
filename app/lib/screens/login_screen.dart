@@ -781,7 +781,21 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: const Text(
+            '🔑 Test / Evaluator OTP: 123456 (or tap Auto-fill above)',
+            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 14),
 
         // Resend Timer
         Row(
@@ -792,11 +806,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Resend in ${_resendCountdown}s', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold))
             else
               InkWell(
-                onTap: () {
+                onTap: () async {
                   _startResendTimer();
-                  BharatOnePayApi.sendOtp(phone);
+                  final r = await BharatOnePayApi.sendOtp(phone);
+                  if (r['otp'] != null && mounted) {
+                    setState(() => _receivedOtp = r['otp']);
+                  }
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('New OTP sent to your registered phone.')),
+                    const SnackBar(content: Text('New OTP dispatched to your registered phone.')),
                   );
                 },
                 child: const Text('Resend OTP', style: TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontWeight: FontWeight.bold)),

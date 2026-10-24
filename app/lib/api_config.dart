@@ -5,23 +5,25 @@ class ApiConfig {
   static String lanIp = '192.168.29.90';
 
   // Active host chosen at runtime
-  static String activeHost = '10.0.2.2';
+  static String activeHost = '192.168.29.90';
 
-  // Automatically detects if running in Emulator (10.0.2.2) or on a physical phone (LAN IP)
+  // Automatically detects reachable host (Phone on Wi-Fi, Hotspot, or Emulator)
   static Future<void> detectAndSetHost() async {
     if (!Platform.isAndroid) {
       activeHost = 'localhost';
       return;
     }
-    try {
-      // Test if Android Studio emulator host 10.0.2.2 is reachable
-      final socket = await Socket.connect('10.0.2.2', 4000, timeout: const Duration(milliseconds: 700));
-      socket.destroy();
-      activeHost = '10.0.2.2';
-    } catch (_) {
-      // Running on a real physical phone: use PC's LAN IP
-      activeHost = lanIp;
+    // Check candidate hosts in priority order
+    final candidates = ['192.168.29.90', '192.168.137.1', '10.0.2.2', '127.0.0.1'];
+    for (final host in candidates) {
+      try {
+        final socket = await Socket.connect(host, 4000, timeout: const Duration(milliseconds: 600));
+        socket.destroy();
+        activeHost = host;
+        return;
+      } catch (_) {}
     }
+    activeHost = '192.168.29.90';
   }
 
   static String get baseUrl {
