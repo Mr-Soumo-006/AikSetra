@@ -3803,11 +3803,19 @@ class _RealCameraQrScannerScreen extends StatefulWidget {
 }
 
 class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> {
-  final MobileScannerController _scannerController = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-  );
+  late final MobileScannerController _scannerController;
   bool _hasPopped = false;
   final TextEditingController _manualUriCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scannerController = MobileScannerController(
+      facing: CameraFacing.back,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      autoStart: true,
+    );
+  }
 
   @override
   void dispose() {
@@ -3842,23 +3850,62 @@ class _RealCameraQrScannerScreenState extends State<_RealCameraQrScannerScreen> 
           MobileScanner(
             controller: _scannerController,
             errorBuilder: (context, error, child) {
+              final msg = error.errorDetails?.message ?? error.errorCode.message;
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF10B981), size: 56),
+                      const Icon(Icons.videocam_rounded, color: Color(0xFF10B981), size: 52),
                       const SizedBox(height: 12),
                       const Text(
-                        'Camera Permission or Sensor Ready',
+                        'Camera Access',
                         style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Allow camera access in Settings or use the instant QR presets / UPI ID box below (${error.errorCode.name}).',
+                        msg,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              try {
+                                await _scannerController.stop();
+                                await _scannerController.start();
+                              } catch (_) {}
+                              if (mounted) setState(() {});
+                            },
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: const Text('Retry Camera'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF046A38),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              try {
+                                await _scannerController.switchCamera();
+                              } catch (_) {}
+                              if (mounted) setState(() {});
+                            },
+                            icon: const Icon(Icons.cameraswitch_rounded, size: 16),
+                            label: const Text('Switch Lens'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFF64748B)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
