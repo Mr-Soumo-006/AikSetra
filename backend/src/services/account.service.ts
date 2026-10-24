@@ -29,40 +29,155 @@ export class AccountService {
   public static linkAccount(params: {
     userId: string;
     bankName: string;
-    bankCode: string;
+    bankCode?: string;
     ifsc: string;
-    maskedAccountNumber: string;
+    maskedAccountNumber?: string;
+    accountNumber?: string;
     accountType?: 'SAVINGS' | 'CURRENT';
+    initialBalance?: number;
+    setAsPrimary?: boolean;
+    replaceOnboardingAccount?: boolean;
   }): BankAccount {
-    const existing = db.get('accounts').filter((a) => a.userId === params.userId);
-    const isFirstAccount = existing.length === 0;
+    const allAccounts = db.get('accounts');
+    const userAccounts = allAccounts.filter((a) => a.userId === params.userId);
+    const user = db.get('users').find((u) => u.id === params.userId);
+
+    const inferredCode =
+      params.bankCode ||
+      (params.ifsc && params.ifsc.length >= 4 ? params.ifsc.slice(0, 4).toUpperCase() : 'SBIN');
+    const rawNum = (params.accountNumber || params.maskedAccountNumber || user?.phone || '4519').replace(/[^0-9]/g, '');
+    const last4 = rawNum.length >= 4 ? rawNum.slice(-4) : '4519';
+    const masked = `•••• •••• ${last4}`;
+    const balanceVal =
+      typeof params.initialBalance === 'number' && !isNaN(params.initialBalance) && params.initialBalance >= 0
+        ? Number(params.initialBalance.toFixed(2))
+        : 25000.0;
+
+    // If called during onboarding Step 4, update the default account created during Step 3 OTP verification
+    if (params.replaceOnboardingAccount && userAccounts.length === 1) {
+      const target = userAccounts[0];
+      target.bankName = params.bankName;
+      target.bankCode = inferredCode;
+      target.ifsc = params.ifsc.toUpperCase();
+      target.maskedAccountNumber = masked;
+      target.accountType = params.accountType || 'SAVINGS';
+      target.balance = balanceVal;
+      target.isPrimary = true;
+      db.save();
+      return target;
+    }
+
+    const shouldBePrimary = params.setAsPrimary !== false || userAccounts.length === 0;
+    if (shouldBePrimary) {
+      for (const acc of userAccounts) {
+        acc.isPrimary = false;
+      }
+    }
 
     const account: BankAccount = {
       id: `acc_${uuidv4().replace(/-/g, '').slice(0, 10)}`,
       userId: params.userId,
       bankName: params.bankName,
-      bankCode: params.bankCode,
-      ifsc: params.ifsc,
-      maskedAccountNumber: params.maskedAccountNumber,
+      bankCode: inferredCode,
+      ifsc: params.ifsc.toUpperCase(),
+      maskedAccountNumber: masked,
       accountType: params.accountType || 'SAVINGS',
-      isPrimary: isFirstAccount,
-      balance: Math.floor(10000 + Math.random() * 90000) + 0.5,
+      isPrimary: shouldBePrimary,
+      balance: balanceVal,
       upiPinSet: true,
     };
 
     db.insert('accounts', account);
 
     // Link to user's primary VPA
-    const user = db.get('users').find((u) => u.id === params.userId);
     if (user && user.primaryVpa) {
       const vpa = db.get('vpas').find((v) => v.vpa === user.primaryVpa);
-      if (vpa && !vpa.accountId) {
+      if (vpa && (shouldBePrimary || !vpa.accountId)) {
         vpa.accountId = account.id;
         db.save();
       }
     }
 
+    console.log(
+      `🏦 [AIKSETRA CBS LINK] Linked ${account.bankName} (${account.maskedAccountNumber}, IFSC: ${account.ifsc}) for ${user?.fullName || params.userId} | Balance: ₹${account.balance.toFixed(2)}`
+    );
+
     return account;
+  }
+
+  public static setPrimaryAccount(userId: string, accountId: string): BankAccount {
+    const userAccounts = db.get('accounts').filter((a) => a.userId === userId);
+    const target = userAccounts.find((a) => a.id === accountId);
+    if (!target) throw new Error('Bank account not found.');
+
+    for (const acc of userAccounts) {
+      acc.isPrimary = acc.id === accountId;
+    }
+
+    const user = db.get('users').find((u) => u.id === userId);
+    if (user && user.primaryVpa) {
+      const vpa = db.get('vpas').find((v) => v.vpa === user.primaryVpa);
+      if (vpa) vpa.accountId = target.id;
+    }
+    db.save();
+    return target;
+  }
+
+  public static addMoneyToAccount(params: {
+    userId: string;
+    accountId?: string;
+    amount: number;
+    sourceNote?: string;
+  }) {
+    const { userId, accountId, amount, sourceNote = 'Self Transfer / IMPS Credit' } = params;
+    if (!amount || amount <= 0) throw new Error('Please enter a valid deposit amount.');
+
+    const userAccounts = db.get('accounts').filter((a) => a.userId === userId);
+    const account =
+      (accountId ? userAccounts.find((a) => a.id === accountId) : null) ||
+      userAccounts.find((a) => a.isPrimary) ||
+      userAccounts[0];
+    if (!account) throw new Error('No linked bank account found.');
+
+    const user = db.get('users').find((u) => u.id === userId);
+    account.balance = Number((account.balance + amount).toFixed(2));
+
+    const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const transaction = {
+      id: `txn_cr_${uuidv4().replace(/-/g, '').slice(0, 10)}`,
+      txnRef: `IMPS${Date.now().toString().slice(-8)}`,
+      upiRrn: rrn,
+      senderUserId: userId,
+      senderAccountId: account.id,
+      senderVpa: 'imps.clearing@npci',
+      receiverVpa: user?.primaryVpa || 'user@aiksetra',
+      receiverName: `${user?.fullName || 'Account Holder'} (${account.bankName})`,
+      amount: Number(amount.toFixed(2)),
+      currency: 'INR',
+      txnType: 'P2P' as const,
+      status: 'SUCCESS' as const,
+      remark: `${sourceNote} -> ${account.bankName} (${account.maskedAccountNumber})`,
+      createdAt: new Date().toISOString(),
+      metadata: {
+        isCredit: true,
+        isSelfDeposit: true,
+        bankName: account.bankName,
+      },
+    };
+
+    db.insert('transactions', transaction as any);
+    db.save();
+
+    console.log(
+      `💰 [AIKSETRA BANK CREDIT] +₹${amount.toFixed(2)} credited to ${account.bankName} (${account.maskedAccountNumber}) | New Balance: ₹${account.balance.toFixed(2)}`
+    );
+
+    return {
+      success: true,
+      account,
+      updatedBalance: account.balance,
+      transaction,
+    };
   }
 
   public static getAccounts(userId: string): BankAccount[] {

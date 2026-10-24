@@ -7,14 +7,14 @@
       "email": "simo@aiksetra.in",
       "panNumber": "ABCDE1234F",
       "kycStatus": "VERIFIED",
-      "deviceId": "dev_pixel9_simo_ind",
-      "simId": "sim_jio_404_45",
+      "deviceId": "dev1",
+      "simId": "sim1",
       "mpinHash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       "primaryVpa": "simo@aiksetra",
       "liteBalance": 1500,
       "lrsUsedUsd": 12450,
       "createdAt": "2026-09-18T19:36:01.096Z",
-      "updatedAt": "2026-10-18T19:36:01.095Z"
+      "updatedAt": "2026-10-24T12:55:38.310Z"
     },
     {
       "id": "usr_ramesh_02",
@@ -63,6 +63,22 @@
       "lrsUsedUsd": 0,
       "createdAt": "2026-10-18T19:36:32.045Z",
       "updatedAt": "2026-10-18T19:36:32.045Z"
+    },
+    {
+      "id": "usr_21acd1d7f314",
+      "phone": "9830113038",
+      "fullName": "Soumo Naskar",
+      "email": "soumonaska@aiksetra.in",
+      "panNumber": "ABCDE8894F",
+      "kycStatus": "VERIFIED",
+      "deviceId": "android_studio_device_3038",
+      "simId": "sim_slot_1_jio",
+      "mpinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "primaryVpa": "soumonaska3038@aiksetra",
+      "liteBalance": 500,
+      "lrsUsedUsd": 127.34,
+      "createdAt": "2026-10-24T12:09:37.239Z",
+      "updatedAt": "2026-10-24T18:35:19.392Z"
     }
   ],
   "accounts": [
@@ -112,6 +128,40 @@
       "accountType": "SAVINGS",
       "isPrimary": true,
       "balance": 50000,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_6c7b44c0ff",
+      "userId": "usr_21acd1d7f314",
+      "bankName": "State Bank of India",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "maskedAccountNumber": "•••• •••• 3038",
+      "accountType": "SAVINGS",
+      "isPrimary": true,
+      "balance": 37931.59,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_c628233219",
+      "userId": "usr_21acd1d7f314",
+      "bankName": "State Bank of India",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "accountType": "SAVINGS",
+      "isPrimary": false,
+      "balance": 16102.5,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_a64cdfcd36",
+      "userId": "usr_21acd1d7f314",
+      "bankName": "State Bank of India",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "accountType": "SAVINGS",
+      "isPrimary": false,
+      "balance": 99066.5,
       "upiPinSet": true
     }
   ],
@@ -181,6 +231,17 @@
       "trustScore": 85,
       "fraudReportCount": 0,
       "isMerchant": false
+    },
+    {
+      "vpa": "soumonaska3038@aiksetra",
+      "userId": "usr_21acd1d7f314",
+      "fullName": "Soumo Naskar",
+      "accountId": "acc_6c7b44c0ff",
+      "isPrimary": true,
+      "createdAt": "2026-10-24T12:09:37.241Z",
+      "trustScore": 85,
+      "fraudReportCount": 0,
+      "isMerchant": false
     }
   ],
   "transactions": [
@@ -219,6 +280,56 @@
       "scamShieldScore": 2,
       "createdAt": "2026-10-17T19:36:01.096Z",
       "completedAt": "2026-10-17T19:36:02.196Z"
+    },
+    {
+      "id": "remit_91ec571f21f8",
+      "txnRef": "TXN1792850130894",
+      "upiRrn": "422223208098",
+      "senderUserId": "usr_21acd1d7f314",
+      "senderAccountId": "acc_6c7b44c0ff",
+      "senderVpa": "soumonaska3038@aiksetra",
+      "receiverVpa": "johnsmith@usd",
+      "receiverName": "John Smith",
+      "amount": 9744.91,
+      "currency": "INR",
+      "txnType": "CROSS_BORDER",
+      "status": "SUCCESS",
+      "remark": "Abroad Remittance: 100 USD via Partner AD Category-I Bank Outward Remittance Network",
+      "createdAt": "2026-10-24T13:55:30.894Z",
+      "metadata": {
+        "isCrossBorder": true,
+        "targetCurrency": "USD",
+        "targetAmount": 100,
+        "exchangeRate": 95.6791,
+        "purposeCode": "S0301",
+        "beneficiaryIban": "US64SVBK000000123456789",
+        "corridorType": "TIER_2_AD_BANK"
+      }
+    },
+    {
+      "id": "remit_b6659dbaa720",
+      "txnRef": "TXN1792851537707",
+      "upiRrn": "331038663715",
+      "senderUserId": "usr_21acd1d7f314",
+      "senderAccountId": "acc_6c7b44c0ff",
+      "senderVpa": "soumonaska3038@aiksetra",
+      "receiverVpa": "johnsmith@aed",
+      "receiverName": "John Smith",
+      "amount": 2323.5,
+      "currency": "INR",
+      "txnType": "CROSS_BORDER",
+      "status": "SUCCESS",
+      "remark": "Abroad Remittance: 100 AED via NIPL - UAE AANI / Jaywan & Bilateral LC Rail",
+      "createdAt": "2026-10-24T14:18:57.707Z",
+      "metadata": {
+        "isCrossBorder": true,
+        "targetCurrency": "AED",
+        "targetAmount": 100,
+        "exchangeRate": 22.94,
+        "purposeCode": "S0301",
+        "beneficiaryIban": "US64SVBK000000123456789",
+        "corridorType": "RUPEE_FIRST_BILATERAL"
+      }
     }
   ],
   "collectRequests": [],
@@ -236,6 +347,36 @@
       "autoReleaseDays": 7,
       "trackingNumber": "DTDC-BLR-892147",
       "createdAt": "2026-10-17T19:36:01.096Z"
+    },
+    {
+      "id": "esc_3909e55ddae0",
+      "buyerUserId": "usr_21acd1d7f314",
+      "buyerVpa": "soumonaska3038@aiksetra",
+      "sellerVpa": "olx.seller@okaxis",
+      "sellerName": "Vikram Electronics",
+      "amount": 2500,
+      "itemDescription": "Used iPad Air 5th Gen",
+      "status": "RELEASED_TO_SELLER",
+      "autoReleaseDays": 7,
+      "expiresAt": "2026-10-31T14:18:40.126Z",
+      "createdAt": "2026-10-24T14:18:40.126Z",
+      "releasedAt": "2026-10-24T14:18:43.664Z",
+      "resolvedAt": "2026-10-24T14:18:43.664Z"
+    },
+    {
+      "id": "esc_fd55ef08bcd0",
+      "buyerUserId": "usr_21acd1d7f314",
+      "buyerVpa": "soumonaska3038@aiksetra",
+      "sellerVpa": "olx.seller@okaxis",
+      "sellerName": "Vikram Electronics",
+      "amount": 2500,
+      "itemDescription": "Used iPad Air 5th Gen",
+      "status": "RELEASED_TO_SELLER",
+      "autoReleaseDays": 7,
+      "expiresAt": "2026-10-31T14:18:45.537Z",
+      "createdAt": "2026-10-24T14:18:45.537Z",
+      "releasedAt": "2026-10-24T14:18:47.961Z",
+      "resolvedAt": "2026-10-24T14:18:47.961Z"
     }
   ],
   "merchants": [
@@ -322,6 +463,17 @@
       "autoRoundUp": true,
       "roundUpMultiple": 10,
       "createdAt": "2026-10-18T19:36:32.047Z"
+    },
+    {
+      "id": "vlt_59b95846",
+      "userId": "usr_21acd1d7f314",
+      "name": "AikSetra Savings Gullak",
+      "targetAmount": 25000,
+      "currentBalance": 2500,
+      "category": "SAVINGS",
+      "autoRoundUp": true,
+      "roundUpMultiple": 10,
+      "createdAt": "2026-10-24T12:09:37.242Z"
     }
   ],
   "splitBills": [

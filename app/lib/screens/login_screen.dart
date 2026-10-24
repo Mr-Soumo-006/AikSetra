@@ -1,5 +1,6 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../api_config.dart';
 import '../services/bharat_one_pay_api.dart';
 import 'simple_home_screen.dart';
 
@@ -30,30 +31,20 @@ class _LoginScreenState extends State<LoginScreen> {
   Timer? _resendTimer;
   String? _receivedOtp;
 
-  // Step 4: Bank Discovery
+  // Step 4: Real Bank Linking & Account Details
   int _selectedBankIndex = 0;
+  final TextEditingController _accountNoController = TextEditingController();
+  final TextEditingController _ifscController = TextEditingController(text: 'SBIN0001234');
+  final TextEditingController _openingBalController = TextEditingController(text: '25000');
+  String _selectedAccountType = 'SAVINGS';
   final List<Map<String, String>> _discoveredBanks = [
-    {
-      'bankName': 'State Bank of India',
-      'bankCode': 'SBIN',
-      'accountNo': '•••• •••• 4519',
-      'ifsc': 'SBIN0001234',
-      'type': 'Savings A/C',
-    },
-    {
-      'bankName': 'HDFC Bank',
-      'bankCode': 'HDFC',
-      'accountNo': '•••• •••• 9821',
-      'ifsc': 'HDFC0005678',
-      'type': 'Savings A/C',
-    },
-    {
-      'bankName': 'ICICI Bank',
-      'bankCode': 'ICIC',
-      'accountNo': '•••• •••• 1042',
-      'ifsc': 'ICIC0009012',
-      'type': 'Salary A/C',
-    },
+    {'bankName': 'State Bank of India', 'bankCode': 'SBIN', 'ifsc': 'SBIN0001234'},
+    {'bankName': 'HDFC Bank', 'bankCode': 'HDFC', 'ifsc': 'HDFC0000240'},
+    {'bankName': 'ICICI Bank', 'bankCode': 'ICIC', 'ifsc': 'ICIC0000006'},
+    {'bankName': 'Axis Bank', 'bankCode': 'UTIB', 'ifsc': 'UTIB0000005'},
+    {'bankName': 'Kotak Mahindra Bank', 'bankCode': 'KKBK', 'ifsc': 'KKBK0000958'},
+    {'bankName': 'Punjab National Bank', 'bankCode': 'PUNB', 'ifsc': 'PUNB0014200'},
+    {'bankName': 'Bank of Baroda', 'bankCode': 'BARB', 'ifsc': 'BARB0KOLKAT'},
   ];
 
   // Step 5: Setup PIN
@@ -65,6 +56,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _accountNoController.dispose();
+    _ifscController.dispose();
+    _openingBalController.dispose();
     for (var c in _otpControllers) {
       c.dispose();
     }
@@ -178,8 +172,18 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (res['success'] == true) {
+      final acc = BharatOnePayApi.currentAccount;
+      if (acc != null) {
+        final idx = _discoveredBanks.indexWhere((b) => b['bankName'] == acc.bankName);
+        if (idx != -1) _selectedBankIndex = idx;
+        _ifscController.text = acc.ifsc;
+        _accountNoController.text = acc.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '');
+        _openingBalController.text = acc.balance.toStringAsFixed(0);
+      } else {
+        _accountNoController.text = phone.substring(phone.length - 4);
+      }
       setState(() {
-        _currentStep = 4; // Proceed to bank account discovery
+        _currentStep = 4; // Proceed to bank account linking
       });
     } else {
       setState(() {
@@ -188,9 +192,41 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- Step 4 Action: Select Bank & Go to PIN Setup ---
-  void _handleBankConfirmed() {
+  // --- Step 4 Action: Save Real Bank Account & Go to PIN Setup ---
+  Future<void> _handleBankConfirmed() async {
+    final bank = _discoveredBanks[_selectedBankIndex];
+    final accNum = _accountNoController.text.trim();
+    final ifsc = _ifscController.text.trim().toUpperCase();
+    final initBal = double.tryParse(_openingBalController.text.trim()) ?? 25000.0;
+
+    if (accNum.length < 4) {
+      setState(() => _errorMessage = 'Please enter at least the last 4 digits of your Bank Account Number.');
+      return;
+    }
+    if (ifsc.length < 8) {
+      setState(() => _errorMessage = 'Please enter a valid Bank IFSC Code (e.g. SBIN0001234).');
+      return;
+    }
+
     setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    await BharatOnePayApi.linkBankAccount(
+      bankName: bank['bankName']!,
+      bankCode: bank['bankCode']!,
+      ifsc: ifsc,
+      accountNumber: accNum,
+      accountType: _selectedAccountType,
+      initialBalance: initBal,
+      setAsPrimary: true,
+      replaceOnboardingAccount: true,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
       _currentStep = 5; // Proceed to PIN setup
     });
   }
@@ -342,7 +378,62 @@ class _LoginScreenState extends State<LoginScreen> {
             '$_currentStep/5',
             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.settings_ethernet, color: Color(0xFF64748B), size: 18),
+            tooltip: 'Configure Backend Server IP',
+            onPressed: _showServerConfigDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerConfigDialog() {
+    final ipCtrl = TextEditingController(text: ApiConfig.activeHost);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Backend Server IP (Port 4000)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your PC IPv4 address (from ipconfig) or 10.0.2.2 for Android Emulator:',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ipCtrl,
+              style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: '192.168.29.90',
+                hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                filled: true,
+                fillColor: const Color(0xFF0F172A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF671F)),
+            onPressed: () {
+              ApiConfig.setCustomHost(ipCtrl.text);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Backend host set to ${ApiConfig.activeHost}:4000')),
+              );
+            },
+            child: const Text('Save Host', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -781,7 +872,21 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: const Text(
+            '💻 Check your Backend CMD terminal for the 6-digit NPCI OTP',
+            style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: 14),
 
         // Resend Timer
         Row(
@@ -792,11 +897,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Resend in ${_resendCountdown}s', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold))
             else
               InkWell(
-                onTap: () {
+                onTap: () async {
                   _startResendTimer();
-                  BharatOnePayApi.sendOtp(phone);
+                  final r = await BharatOnePayApi.sendOtp(phone);
+                  if (r['otp'] != null && mounted) {
+                    setState(() => _receivedOtp = r['otp']);
+                  }
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('New OTP sent to your registered phone.')),
+                    const SnackBar(content: Text('New OTP dispatched to your registered phone.')),
                   );
                 },
                 child: const Text('Resend OTP', style: TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontWeight: FontWeight.bold)),
@@ -823,101 +932,200 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ==========================================
-  // STEP 4: Bank Account Discovery & UPI ID
+  // STEP 4: Real Bank Account Linking & UPI ID
   // ==========================================
   Widget _buildStep4BankDiscovery() {
     final cleanName = _nameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-    final assignedVpa = '${cleanName.isNotEmpty ? cleanName : "user"}@aiksetra';
+    final phoneLast4 = _phoneController.text.trim().length >= 4
+        ? _phoneController.text.trim().substring(_phoneController.text.trim().length - 4)
+        : '';
+    final assignedVpa = BharatOnePayApi.currentUser?.primaryVpa ??
+        '${cleanName.isNotEmpty ? cleanName.substring(0, cleanName.length > 10 ? 10 : cleanName.length) : "user"}$phoneLast4@aiksetra';
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: const Color(0xFF046A38).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF046A38).withValues(alpha: 0.3)),
+        Center(
+          child: Column(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF046A38).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF046A38).withValues(alpha: 0.3)),
+                ),
+                alignment: Alignment.center,
+                child: const Text('🏛️', style: TextStyle(fontSize: 28)),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Link Your Bank Account',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Select your bank and enter your real account details to link with NPCI UPI:',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
+            ],
           ),
-          alignment: Alignment.center,
-          child: const Text('🏛️', style: TextStyle(fontSize: 30)),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'Bank Accounts Discovered',
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'We found the following accounts registered with your mobile number. Select your primary UPI account:',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
 
-        // Bank Cards List
-        Column(
+        const Text(
+          'Select Your Bank',
+          style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+
+        // Horizontal Bank Chips + List
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: List.generate(_discoveredBanks.length, (idx) {
             final bank = _discoveredBanks[idx];
             final isSelected = idx == _selectedBankIndex;
             return InkWell(
-              onTap: () => setState(() => _selectedBankIndex = idx),
-              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                setState(() {
+                  _selectedBankIndex = idx;
+                  _ifscController.text = bank['ifsc']!;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF046A38).withValues(alpha: 0.12)
+                      ? const Color(0xFF046A38).withValues(alpha: 0.25)
                       : const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF046A38) : const Color(0xFF334155),
+                    color: isSelected ? const Color(0xFF10B981) : const Color(0xFF334155),
                     width: isSelected ? 2 : 1,
                   ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     CircleAvatar(
                       backgroundColor: isSelected ? const Color(0xFF046A38) : const Color(0xFF334155),
-                      radius: 20,
+                      radius: 11,
                       child: Text(
                         bank['bankCode']!.substring(0, 2),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(bank['bankName']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 2),
-                          Text('${bank['type']} • ${bank['accountNo']}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
-                          Text('IFSC: ${bank['ifsc']}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 10, fontFamily: 'monospace')),
-                        ],
+                    const SizedBox(width: 8),
+                    Text(
+                      bank['bankName']!,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 12,
                       ),
                     ),
-                    if (isSelected)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF046A38),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text('Primary', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      )
-                    else
-                      const Icon(Icons.radio_button_off, color: Color(0xFF64748B), size: 20),
                   ],
                 ),
               ),
             );
           }),
         ),
+        const SizedBox(height: 16),
 
+        // Account Number Input
+        const Text(
+          'Bank Account Number (Full or Last 4 Digits)',
+          style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _accountNoController,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'monospace'),
+          decoration: InputDecoration(
+            hintText: 'e.g. 309182734519',
+            hintStyle: const TextStyle(color: Color(0xFF64748B)),
+            prefixIcon: const Icon(Icons.account_balance, color: Color(0xFFFF671F), size: 18),
+            filled: true,
+            fillColor: const Color(0xFF1E293B),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // IFSC & Account Type Row
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Branch IFSC Code',
+                    style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _ifscController,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+                    decoration: InputDecoration(
+                      hintText: 'SBIN0001234',
+                      hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                      filled: true,
+                      fillColor: const Color(0xFF1E293B),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Account Type',
+                    style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF334155)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedAccountType,
+                        dropdownColor: const Color(0xFF1E293B),
+                        isExpanded: true,
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        items: const [
+                          DropdownMenuItem(value: 'SAVINGS', child: Text('Savings')),
+                          DropdownMenuItem(value: 'CURRENT', child: Text('Current')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setState(() => _selectedAccountType = v);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         // Assigned UPI ID Card
         Container(
           margin: const EdgeInsets.symmetric(vertical: 14),
@@ -933,7 +1141,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Your Assigned UPI ID', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                  const Text('Your Assigned NPCI UPI ID', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
                   const SizedBox(height: 2),
                   Text(assignedVpa, style: const TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'monospace')),
                 ],
@@ -944,7 +1152,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
 
         ElevatedButton(
-          onPressed: _handleBankConfirmed,
+          onPressed: _isLoading ? null : _handleBankConfirmed,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.white,
             foregroundColor: const Color(0xFF0F172A),
@@ -952,7 +1160,9 @@ class _LoginScreenState extends State<LoginScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 4,
           ),
-          child: const Text('Link Account & Set Security PIN →', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          child: _isLoading
+              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+              : const Text('Link Account & Set Security PIN →', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         ),
       ],
     );

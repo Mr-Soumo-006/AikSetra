@@ -97,14 +97,75 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1', apiRouter);
 
-// Start server
-server.listen(config.port, config.host, () => {
+// Prevent WebSocketServer from crashing on EADDRINUSE while HTTP server recovers
+wss.on('error', () => {});
+
+const onServerListening = () => {
   console.log('===========================================================');
   console.log(`✨ AikSetra Core Banking & Switch Service is running!`);
   console.log(`   A shared financial space; inspired by ek and kshetra`);
   console.log(`📡 Base URL:          http://localhost:${config.port}`);
+  console.log(`📶 LAN URL:           http://192.168.29.90:${config.port}`);
   console.log(`🖥️ Developer Console:  http://localhost:${config.port}/console`);
   console.log(`⚡ API Endpoints:      http://localhost:${config.port}/api/v1/...`);
   console.log(`🔊 Soundbox WS:       ws://localhost:${config.port}/ws/soundbox`);
   console.log('===========================================================');
+
+  // Auto-open firewall-free tunnel bridge for physical mobile devices
+  const startTunnel = async () => {
+    try {
+      // @ts-ignore
+      const lt = require('localtunnel');
+      const tunnel = await lt({
+        port: config.port,
+        local_host: '127.0.0.1',
+        subdomain: 'aiksetra-npci-soumo',
+      });
+      console.log(`🌐 Mobile Tunnel Bridge Active: ${tunnel.url} -> 127.0.0.1:${config.port}`);
+      tunnel.on('error', () => {});
+      tunnel.on('close', () => {
+        setTimeout(startTunnel, 3000);
+      });
+    } catch (_) {}
+  };
+  startTunnel();
+};
+
+const freePort4000 = () => {
+  try {
+    const { execSync } = require('child_process');
+    const out = execSync(`netstat -ano | findstr :${config.port}`).toString();
+    const lines = out.split(/\r?\n/);
+    const killedPids = new Set<number>();
+    for (const line of lines) {
+      if (!line.includes('LISTENING')) continue;
+      const parts = line.trim().split(/\s+/);
+      const pid = parseInt(parts[parts.length - 1], 10);
+      if (pid && pid > 0 && pid !== process.pid && !killedPids.has(pid)) {
+        killedPids.add(pid);
+        try {
+          execSync(`powershell -NoProfile -Command "Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue"`, { stdio: 'ignore' });
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+};
+
+freePort4000();
+
+server.on('error', (err: any) => {
+  if (err && err.code === 'EADDRINUSE') {
+    freePort4000();
+    setTimeout(() => {
+      server.close();
+      server.listen(config.port, config.host, onServerListening);
+    }, 600);
+  } else {
+    console.error('Server error:', err);
+  }
 });
+
+// Start server
+setTimeout(() => {
+  server.listen(config.port, config.host, onServerListening);
+}, 300);

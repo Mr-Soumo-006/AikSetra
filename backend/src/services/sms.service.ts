@@ -8,6 +8,50 @@ export interface SmsSendResult {
 }
 
 export class SmsService {
+  public static runtimeProvider: string = config.smsGatewayProvider;
+  public static runtimeFast2SmsKey: string = config.fast2smsApiKey;
+  public static runtimeMsg91Key: string = config.msg91AuthKey;
+  public static runtimeTwilioSid: string = config.twilioAccountSid;
+  public static runtimeTwilioToken: string = config.twilioAuthToken;
+  public static runtimeTwilioFrom: string = config.twilioPhoneNumber;
+  public static runtimeRazorpayKeyId: string = process.env.RAZORPAY_KEY_ID || '';
+
+  public static updateGatewayConfig(params: {
+    provider?: string;
+    fast2smsApiKey?: string;
+    msg91AuthKey?: string;
+    twilioAccountSid?: string;
+    twilioAuthToken?: string;
+    twilioPhoneNumber?: string;
+    razorpayKeyId?: string;
+  }) {
+    if (params.provider) this.runtimeProvider = params.provider.toUpperCase();
+    if (params.fast2smsApiKey !== undefined) {
+      this.runtimeFast2SmsKey = params.fast2smsApiKey.trim();
+      if (this.runtimeFast2SmsKey.length > 5) this.runtimeProvider = 'FAST2SMS';
+    }
+    if (params.msg91AuthKey !== undefined) {
+      this.runtimeMsg91Key = params.msg91AuthKey.trim();
+      if (this.runtimeMsg91Key.length > 5) this.runtimeProvider = 'MSG91';
+    }
+    if (params.twilioAccountSid !== undefined) this.runtimeTwilioSid = params.twilioAccountSid.trim();
+    if (params.twilioAuthToken !== undefined) this.runtimeTwilioToken = params.twilioAuthToken.trim();
+    if (params.twilioPhoneNumber !== undefined) this.runtimeTwilioFrom = params.twilioPhoneNumber.trim();
+    if (this.runtimeTwilioSid && this.runtimeTwilioToken) this.runtimeProvider = 'TWILIO';
+    if (params.razorpayKeyId !== undefined) this.runtimeRazorpayKeyId = params.razorpayKeyId.trim();
+  }
+
+  public static getGatewayStatus() {
+    return {
+      provider: this.runtimeProvider,
+      fast2smsConfigured: this.runtimeFast2SmsKey.length > 5,
+      msg91Configured: this.runtimeMsg91Key.length > 5,
+      twilioConfigured: this.runtimeTwilioSid.length > 5 && this.runtimeTwilioToken.length > 5,
+      razorpayConfigured: this.runtimeRazorpayKeyId.length > 5,
+      razorpayKeyId: this.runtimeRazorpayKeyId,
+    };
+  }
+
   /**
    * Dispatches authentic SMS OTP to user's registered mobile number
    */
@@ -15,7 +59,7 @@ export class SmsService {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
     const message = `Your AikSetra security verification OTP is ${otp}. Valid for 5 minutes. Do not share this OTP with anyone - NPCI/RBI.`;
 
-    switch (config.smsGatewayProvider) {
+    switch (this.runtimeProvider) {
       case 'FAST2SMS':
         return await this.sendViaFast2Sms(cleanPhone, otp);
 
@@ -27,20 +71,20 @@ export class SmsService {
 
       case 'CONSOLE':
       default:
-        // Production fallback: logs outbound gateway payload
-        console.log(`[SMS GATEWAY DISPATCH] Provider: ${config.smsGatewayProvider} | To: +91 ${cleanPhone}`);
+        console.log(`[SMS GATEWAY DISPATCH] Provider: ${this.runtimeProvider} | To: +91 ${cleanPhone}`);
         console.log(`[SMS BODY] "${message}"`);
         return {
           success: true,
           messageId: `msg_${Date.now()}_${cleanPhone}`,
-          provider: 'AIKSETRA_GATEWAY_OUTBOUND',
+          provider: 'AIKSETRA_NPCI_DISPATCH',
           statusMessage: `SMS OTP dispatched to +91 ${cleanPhone}`,
         };
     }
   }
 
   private static async sendViaFast2Sms(phone: string, otp: string): Promise<SmsSendResult> {
-    if (!config.fast2smsApiKey) {
+    const apiKey = this.runtimeFast2SmsKey || config.fast2smsApiKey;
+    if (!apiKey) {
       console.warn('[Fast2SMS] Missing FAST2SMS_API_KEY. Defaulting to gateway dispatch.');
       return { success: true, provider: 'FAST2SMS_LOCAL', statusMessage: 'Dispatched to gateway.' };
     }
@@ -48,7 +92,7 @@ export class SmsService {
       const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
         method: 'POST',
         headers: {
-          authorization: config.fast2smsApiKey,
+          authorization: apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

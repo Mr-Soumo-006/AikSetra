@@ -20,10 +20,12 @@ export interface InitiatePaymentParams {
 
 export class PaymentService {
   public static async executePayment(params: InitiatePaymentParams): Promise<{
+    success: boolean;
     transaction: Transaction;
     scamShieldAnalysis?: any;
     soundboxAnnounced?: boolean;
     roundedUpAmount?: number;
+    updatedBalance?: number;
   }> {
     const {
       senderUserId,
@@ -40,7 +42,7 @@ export class PaymentService {
     if (idempotencyKey) {
       const existing = db.get('transactions').find((t) => t.idempotencyKey === idempotencyKey);
       if (existing) {
-        return { transaction: existing };
+        return { success: true, transaction: existing };
       }
     }
 
@@ -195,11 +197,15 @@ export class PaymentService {
 
     db.save();
 
+    console.log(`💸 [AIKSETRA NPCI SETTLEMENT] ₹${amount} paid from ${user.primaryVpa} -> ${receiverVpa} | RRN: ${transaction.upiRrn}`);
+
     return {
+      success: true,
       transaction,
       scamShieldAnalysis: scamAnalysis,
       soundboxAnnounced,
       roundedUpAmount,
+      updatedBalance: remitterAccount.balance,
     };
   }
 

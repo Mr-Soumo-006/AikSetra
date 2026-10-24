@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { db } from '../db/database.js';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import { AuthService } from '../services/auth.service.js';
@@ -12,6 +12,9 @@ import { soundboxService } from '../services/soundbox.service.js';
 import { VaultService } from '../services/vault.service.js';
 import { SplitService } from '../services/split.service.js';
 import { DisputeService } from '../services/dispute.service.js';
+import { BillPayService } from '../services/billPay.service.js';
+import { SipService } from '../services/sip.service.js';
+import { SmsService } from '../services/sms.service.js';
 import { pspSimulator } from '../services/psp.simulator.js';
 
 export const apiRouter = Router();
@@ -109,6 +112,30 @@ apiRouter.post('/accounts/link', authMiddleware, (req: AuthenticatedRequest, res
 apiRouter.get('/accounts', authMiddleware, (req: AuthenticatedRequest, res) => {
   const accounts = AccountService.getAccounts(req.userId!);
   return res.json({ success: true, accounts });
+});
+
+apiRouter.post('/accounts/:id/set-primary', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const account = AccountService.setPrimaryAccount(req.userId!, req.params.id as string);
+    return res.json({ success: true, account });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/accounts/add-money', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { accountId, amount, sourceNote } = req.body;
+    const result = AccountService.addMoneyToAccount({
+      userId: req.userId!,
+      accountId,
+      amount: parseFloat(amount),
+      sourceNote,
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
 });
 
 apiRouter.get('/accounts/:id/balance', authMiddleware, (req: AuthenticatedRequest, res) => {
@@ -503,4 +530,122 @@ apiRouter.post('/psp-simulator/mode', (req, res) => {
   }
   pspSimulator.setMode(mode);
   return res.json({ success: true, mode });
+});
+
+// ==========================================
+// 11. BBPS UTILITY BILL PAYMENTS & RECHARGES
+// ==========================================
+apiRouter.get('/bills/billers', (req, res) => {
+  const category = req.query.category as string | undefined;
+  return res.json({ success: true, billers: BillPayService.getBillers(category) });
+});
+
+apiRouter.post('/bills/fetch', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { billerId, consumerNumber } = req.body;
+    const bill = BillPayService.fetchBillDetails({
+      userId: req.userId!,
+      billerId,
+      consumerNumber,
+    });
+    return res.json({ success: true, bill });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/bills/pay', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { billerId, consumerNumber, amount, mpin, billNumber, planOrUsage } = req.body;
+    const result = BillPayService.payBill({
+      userId: req.userId!,
+      billerId,
+      consumerNumber,
+      amount: parseFloat(amount),
+      mpin: mpin || '1234',
+      billNumber,
+      planOrUsage,
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.get('/bills/history', authMiddleware, (req: AuthenticatedRequest, res) => {
+  return res.json({ success: true, bills: BillPayService.getUserBillHistory(req.userId!) });
+});
+
+// ==========================================
+// 12. BANK AUTO-SIP & WEALTH PLANS
+// ==========================================
+apiRouter.get('/sip/plans', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const data = SipService.getPlansAndPortfolio(req.userId!);
+  return res.json({ success: true, ...data });
+});
+
+apiRouter.post('/sip/create', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { planId, monthlyAmount, debitDay, mpin } = req.body;
+    const result = SipService.createSipMandate({
+      userId: req.userId!,
+      planId,
+      monthlyAmount: parseFloat(monthlyAmount),
+      debitDay: parseInt(debitDay || '5', 10),
+      mpin: mpin || '1234',
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/sip/:id/installment', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { amount, mpin } = req.body;
+    const result = SipService.payAdditionalInstallment({
+      userId: req.userId!,
+      sipId: req.params.id as string,
+      amount: amount ? parseFloat(amount) : undefined,
+      mpin: mpin || '1234',
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/sip/:id/redeem', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { mpin } = req.body;
+    const result = SipService.redeemSipToBank({
+      userId: req.userId!,
+      sipId: req.params.id as string,
+      mpin: mpin || '1234',
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.get('/merchants/local', (req, res) => {
+  const merchants = db.get('merchants');
+  return res.json({ success: true, merchants });
+});
+
+// ==========================================
+// 13. LIVE GATEWAY & SMS API KEY CONFIGURATION
+// ==========================================
+apiRouter.get('/config/gateway', (req, res) => {
+  return res.json({ success: true, gateway: SmsService.getGatewayStatus() });
+});
+
+apiRouter.post('/config/gateway', (req, res) => {
+  SmsService.updateGatewayConfig(req.body || {});
+  return res.json({
+    success: true,
+    message: 'Live Gateway & SMS credentials updated.',
+    gateway: SmsService.getGatewayStatus(),
+  });
 });
