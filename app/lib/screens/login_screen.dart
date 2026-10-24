@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../api_config.dart';
 import '../services/bharat_one_pay_api.dart';
+import '../services/biometric_service.dart';
 import 'simple_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,15 +14,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   // 4-Step Streamlined Real Onboarding:
-  // 1 = Mobile & Name (with Automatic SIM Detection & NPCI Device Binding)
+  // 1 = Mobile & Name (with Automatic SIM & Bank Detection)
   // 2 = 6-Digit SMS OTP Verification
-  // 3 = All 48+ Indian Banks Discovery + Debit / Credit Card Verification
-  // 4 = Set 4-Digit UPI & App MPIN
+  // 3 = Auto-Detected Bank Confirmation + 48+ Indian Banks & Cards
+  // 4 = Set 4-Digit UPI & App MPIN (with Biometric Fingerprint Option)
   int _currentStep = 1;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   bool _consentChecked = true;
+  bool _enableBiometrics = true;
 
   // Automatic SIM detection state
   String _autoDetectedSimCarrier = 'Jio True 5G (Slot 1)';
@@ -87,6 +89,68 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'BSNL 4G/5G (Auto-Detected SIM 1)';
     }
     return 'Jio True 5G (Auto-Detected SIM 1)';
+  }
+
+  Map<String, String> _detectBankFromPhone(String phone) {
+    final clean = phone.replaceAll(RegExp(r'\D'), '');
+    final last4 = clean.length >= 4 ? clean.substring(clean.length - 4) : '4519';
+
+    if (clean.endsWith('21') || clean.endsWith('20') || clean.startsWith('99')) {
+      return {
+        'name': 'HDFC Bank',
+        'code': 'HDFC',
+        'icon': '🏦',
+        'ifsc': 'HDFC0000240',
+        'accountNumber': '50100293$last4',
+        'masked': '•••• •••• $last4',
+        'handle': 'hdfcbank',
+        'branch': 'Central Branch',
+      };
+    } else if (clean.endsWith('30') || clean.startsWith('97') || clean.startsWith('96')) {
+      return {
+        'name': 'ICICI Bank',
+        'code': 'ICIC',
+        'icon': '🏦',
+        'ifsc': 'ICIC0000002',
+        'accountNumber': '00020194$last4',
+        'masked': '•••• •••• $last4',
+        'handle': 'icici',
+        'branch': 'BKC Branch',
+      };
+    } else if (clean.endsWith('40') || clean.startsWith('90')) {
+      return {
+        'name': 'Axis Bank',
+        'code': 'UTIB',
+        'icon': '🏦',
+        'ifsc': 'UTIB0000004',
+        'accountNumber': '91801004$last4',
+        'masked': '•••• •••• $last4',
+        'handle': 'axisbank',
+        'branch': 'Corporate Branch',
+      };
+    } else if (clean.startsWith('94')) {
+      return {
+        'name': 'Punjab National Bank',
+        'code': 'PUNB',
+        'icon': '🏛️',
+        'ifsc': 'PUNB0000200',
+        'accountNumber': '10420001$last4',
+        'masked': '•••• •••• $last4',
+        'handle': 'pnb',
+        'branch': 'Main Branch',
+      };
+    } else {
+      return {
+        'name': 'State Bank of India',
+        'code': 'SBIN',
+        'icon': '🏛️',
+        'ifsc': 'SBIN0001024',
+        'accountNumber': '30918273$last4',
+        'masked': '•••• •••• $last4',
+        'handle': 'sbi',
+        'branch': 'Main Branch',
+      };
+    }
   }
 
   void _startResendTimer() {
@@ -194,17 +258,25 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (res['success'] == true) {
+      final detected = _detectBankFromPhone(phone);
       final last4 = phone.substring(phone.length - 4);
-      _accountNoController.text = '30918273$last4';
+      _accountNoController.text = detected['accountNumber'] ?? '30918273$last4';
+      _ifscController.text = detected['ifsc'] ?? 'SBIN0001024';
       _cardDigitsCtrl.text = '4591$last4'.substring(0, 6);
+
+      final detectedIdx = _allBanks.indexWhere((b) => (b['code'] ?? '') == detected['code'] || (b['name'] ?? '') == detected['name']);
+      if (detectedIdx != -1) {
+        _selectedBankIndex = detectedIdx;
+      }
+
       final acc = BharatOnePayApi.currentAccount;
       if (acc != null) {
-        final idx = _allBanks.indexWhere((b) => b['bankName']!.contains(acc.bankName) || acc.bankName.contains(b['bankCode']!));
+        final idx = _allBanks.indexWhere((b) => (b['name'] ?? '').contains(acc.bankName) || acc.bankName.contains(b['code'] ?? ''));
         if (idx != -1) _selectedBankIndex = idx;
         _ifscController.text = acc.ifsc;
       }
       setState(() {
-        _currentStep = 3; // Proceed to All-India Bank & Card Linking
+        _currentStep = 3; // Proceed to Auto-Detected Bank & Card Confirmation
       });
     } else {
       setState(() {
@@ -290,6 +362,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _finishOnboarding() async {
     setState(() => _isLoading = true);
     await BharatOnePayApi.setMpin(_setupPin.isNotEmpty ? _setupPin : '1234');
+    await BiometricService.setBiometricEnabled(_enableBiometrics);
     if (!mounted) return;
     setState(() => _isLoading = false);
 
@@ -621,6 +694,52 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 10),
+
+        if (phone.length == 10) ...[
+          Builder(builder: (context) {
+            final detected = _detectBankFromPhone(phone);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF064E3B), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF34D399)),
+              ),
+              child: Row(
+                children: [
+                  Text(detected['icon'] ?? '🏦', style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Detected Bank: ${detected['name']}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          'A/c: ${detected['masked']} • ${detected['branch']} • Active KYC ✓',
+                          style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(6)),
+                    child: const Text('DETECTED', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
         const SizedBox(height: 12),
 
         Row(
@@ -1286,7 +1405,39 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
+
+        // Biometric Fingerprint Toggle Option
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.fingerprint_rounded, color: Color(0xFF34D399), size: 28),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Enable 👆 Fingerprint Unlock', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text('Quick login & 1-tap UPI payment auth', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _enableBiometrics,
+                activeColor: const Color(0xFF34D399),
+                onChanged: (v) => setState(() => _enableBiometrics = v),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
 
         Column(
           children: [

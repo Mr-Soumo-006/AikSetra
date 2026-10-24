@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/bharat_one_pay_api.dart';
+import '../services/biometric_service.dart';
 import 'login_screen.dart';
 import 'simple_home_screen.dart';
 
@@ -13,6 +14,33 @@ class AppLockScreen extends StatefulWidget {
 class _AppLockScreenState extends State<AppLockScreen> {
   String _enteredPin = '';
   String? _pinError;
+  bool _isAuthenticatingBiometrics = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prompt biometric fingerprint automatically on screen open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authenticateWithBiometrics();
+    });
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    if (_isAuthenticatingBiometrics) return;
+    final enabled = await BiometricService.isBiometricEnabled();
+    if (!enabled) return;
+
+    setState(() => _isAuthenticatingBiometrics = true);
+    final authenticated = await BiometricService.authenticate(
+      reason: 'Scan your fingerprint or face to unlock AikSetra',
+    );
+    if (!mounted) return;
+    setState(() => _isAuthenticatingBiometrics = false);
+
+    if (authenticated) {
+      _unlockApp();
+    }
+  }
 
   void _onKeyPress(String val) {
     if (_enteredPin.length < 4) {
@@ -131,7 +159,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
 
                   // Biometric Fingerprint Button
                   InkWell(
-                    onTap: _unlockApp,
+                    onTap: _authenticateWithBiometrics,
                     borderRadius: BorderRadius.circular(30),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -167,7 +195,7 @@ class _AppLockScreenState extends State<AppLockScreen> {
                     children: [
                       _buildKeyButton('Clear', onTap: _onClear, isText: true),
                       _buildKeyButton('0', onTap: () => _onKeyPress('0')),
-                      _buildKeyButton('👆', onTap: _unlockApp, isIcon: true),
+                      _buildKeyButton('👆', onTap: _authenticateWithBiometrics, isIcon: true),
                     ],
                   ),
                   const SizedBox(height: 12),

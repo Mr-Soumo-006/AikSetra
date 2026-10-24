@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/bharat_one_pay_api.dart';
+import '../services/biometric_service.dart';
 import '../models/scam_shield_model.dart';
 import '../models/cross_border_model.dart';
 import 'login_screen.dart';
@@ -19,6 +20,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _selectedLang = 'en-IN';
   bool _showBalance = true;
   int _bottomNavIndex = 0;
+  bool _isBiometricLockActive = true;
 
   // BBPS Bill Tab State
   String _selectedBillCategory = 'ELECTRICITY';
@@ -70,8 +72,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     await BharatOnePayApi.getBillers();
     await BharatOnePayApi.getSipPlansAndPortfolio();
     await BharatOnePayApi.getMyEscrows();
+    final bioEnabled = await BiometricService.isBiometricEnabled();
     if (!mounted) return;
     setState(() {
+      _isBiometricLockActive = bioEnabled;
       final elecBillers = BharatOnePayApi.bbpsBillers
           .where((b) => b['category'] == _selectedBillCategory)
           .toList();
@@ -2437,6 +2441,24 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           const Text('Account, Security & Live Gateways', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
           const SizedBox(height: 8),
           _buildToolTile(
+            icon: Icons.fingerprint_rounded,
+            title: 'Fingerprint & Biometric Lock',
+            subtitle: _isBiometricLockActive ? 'Enabled for App Unlock & 1-Tap UPI Payments' : 'Disabled (Tap to Enable)',
+            trailing: Switch(
+              value: _isBiometricLockActive,
+              activeColor: const Color(0xFF046A38),
+              onChanged: (v) async {
+                await BiometricService.setBiometricEnabled(v);
+                setState(() => _isBiometricLockActive = v);
+              },
+            ),
+            onTap: () async {
+              final next = !_isBiometricLockActive;
+              await BiometricService.setBiometricEnabled(next);
+              setState(() => _isBiometricLockActive = next);
+            },
+          ),
+          _buildToolTile(
             icon: Icons.vpn_key_rounded,
             title: 'Live SMS & Payment Gateway API Keys',
             subtitle: 'Configure Fast2SMS, MSG91, Twilio, or Razorpay Live Keys',
@@ -2484,6 +2506,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
     bool isDestructive = false,
+    Widget? trailing,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -2503,7 +2526,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isDestructive ? Colors.red : const Color(0xFF0F172A)),
         ),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-        trailing: const Icon(Icons.chevron_right_rounded),
+        trailing: trailing ?? const Icon(Icons.chevron_right_rounded),
       ),
     );
   }
@@ -3777,6 +3800,25 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ),
             const SizedBox(height: 6),
             const Text('Enter your 4-digit UPI MPIN', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+            const SizedBox(height: 12),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final authenticated = await BiometricService.authenticate(
+                    reason: '$title - Scan fingerprint to authorize payment',
+                  );
+                  if (authenticated) {
+                    Navigator.pop(ctx, BharatOnePayApi.configuredAppPin.isNotEmpty ? BharatOnePayApi.configuredAppPin : '1234');
+                  }
+                },
+                icon: const Icon(Icons.fingerprint_rounded, color: Color(0xFF34D399), size: 20),
+                label: const Text('👆 Pay with Fingerprint', style: TextStyle(color: Color(0xFF34D399), fontSize: 12, fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF34D399)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+              ),
+            ),
           ],
         ),
         actions: [
