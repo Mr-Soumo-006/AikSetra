@@ -24,12 +24,19 @@ export class AuthService {
 
     // Cryptographically secure 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
 
     activeOtps.set(cleanPhone, { phone: cleanPhone, otp, expiresAt, attempts: 0 });
 
     // Send via SMS Gateway
     await SmsService.sendOtpSms(cleanPhone, otp);
+
+    console.log(`\n======================================================`);
+    console.log(`🔑 [AIKSETRA NPCI OTP DISPATCH]`);
+    console.log(`📱 Mobile Number : +91 ${cleanPhone}`);
+    console.log(`⚡ Authentic OTP  : >>> ${otp} <<<`);
+    console.log(`⏰ Valid for     : 15 minutes`);
+    console.log(`======================================================\n`);
 
     return {
       success: true,
@@ -51,8 +58,15 @@ export class AuthService {
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
 
     const session = activeOtps.get(cleanPhone);
-    if (!session || session.expiresAt < Date.now()) {
-      throw new Error('OTP has expired or was not requested. Please request a new OTP.');
+    if (!session) {
+      console.warn(`[OTP Verify] No active session found for phone: +91 ${cleanPhone}. Active sessions count: ${activeOtps.size}`);
+      throw new Error('OTP was not requested or session expired. Please tap Resend OTP.');
+    }
+
+    if (session.expiresAt < Date.now()) {
+      console.warn(`[OTP Verify] OTP expired for phone: +91 ${cleanPhone}. Expired at: ${new Date(session.expiresAt).toISOString()}`);
+      activeOtps.delete(cleanPhone);
+      throw new Error('OTP has expired. Please request a new OTP.');
     }
 
     session.attempts += 1;
