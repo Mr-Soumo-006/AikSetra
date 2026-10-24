@@ -103,8 +103,25 @@ server.listen(config.port, config.host, () => {
   console.log(`✨ AikSetra Core Banking & Switch Service is running!`);
   console.log(`   A shared financial space; inspired by ek and kshetra`);
   console.log(`📡 Base URL:          http://localhost:${config.port}`);
+  console.log(`📶 LAN URL:           http://192.168.29.90:${config.port}`);
   console.log(`🖥️ Developer Console:  http://localhost:${config.port}/console`);
   console.log(`⚡ API Endpoints:      http://localhost:${config.port}/api/v1/...`);
   console.log(`🔊 Soundbox WS:       ws://localhost:${config.port}/ws/soundbox`);
   console.log('===========================================================');
+
+  // Auto-open firewall-free tunnel bridge for physical mobile devices
+  const startTunnel = async () => {
+    try {
+      // @ts-ignore
+      const ltModule: any = await import('localtunnel');
+      const lt = ltModule.default || ltModule;
+      const tunnel = await lt({ port: config.port, subdomain: 'aiksetra-npci-soumo' });
+      console.log(`🌐 Mobile Tunnel Bridge Active: ${tunnel.url}`);
+      tunnel.on('error', () => {});
+      tunnel.on('close', () => {
+        setTimeout(startTunnel, 3000);
+      });
+    } catch (_) {}
+  };
+  startTunnel();
 });

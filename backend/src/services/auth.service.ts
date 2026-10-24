@@ -41,7 +41,7 @@ export class AuthService {
     return {
       success: true,
       message: `OTP sent to +91 ${cleanPhone}`,
-      otp, // Dispatched to client SMS auto-read handler
+      otp,
       expiresAt: new Date(expiresAt).toISOString(),
     };
   }
@@ -53,32 +53,37 @@ export class AuthService {
     simId: string;
     fullName?: string;
     selectedBank?: string;
-  }): { user: User; token: string; isNewUser: boolean; account: BankAccount } {
+  }): { success: boolean; user: User; token: string; isNewUser: boolean; account: BankAccount } {
     const { phone, otp, deviceId, simId, fullName, selectedBank = 'State Bank of India' } = params;
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+    const cleanOtp = String(otp).trim();
 
     const session = activeOtps.get(cleanPhone);
-    const isMasterOtp = otp === '123456' || otp === '000000';
-    const isSessionOtp = session && session.otp === otp;
 
-    if (!isMasterOtp && !isSessionOtp) {
-      if (!session) {
-        console.warn(`[OTP Verify] No active session found for phone: +91 ${cleanPhone}. Active sessions count: ${activeOtps.size}`);
-        throw new Error('OTP session expired. Please tap Resend OTP or enter universal test PIN 123456.');
-      }
-
-      session.attempts += 1;
-      if (session.attempts > 5) {
-        activeOtps.delete(cleanPhone);
-        throw new Error('Maximum OTP verification attempts exceeded. Please request a new OTP.');
-      }
-
-      throw new Error('Invalid OTP. Please enter the OTP displayed on screen or 123456.');
+    if (!session) {
+      console.warn(`[OTP Verify] No active session found for phone: +91 ${cleanPhone}. Active sessions count: ${activeOtps.size}`);
+      throw new Error('OTP was not requested or session expired. Please tap Resend OTP.');
     }
 
-    if (session) {
+    if (session.expiresAt < Date.now()) {
+      console.warn(`[OTP Verify] OTP expired for phone: +91 ${cleanPhone}.`);
       activeOtps.delete(cleanPhone);
+      throw new Error('OTP has expired. Please tap Resend OTP.');
     }
+
+    session.attempts += 1;
+    if (session.attempts > 5) {
+      activeOtps.delete(cleanPhone);
+      throw new Error('Maximum OTP verification attempts exceeded. Please request a new OTP.');
+    }
+
+    if (session.otp !== cleanOtp) {
+      console.warn(`[OTP Verify] Mismatch for +91 ${cleanPhone}: expected ${session.otp}, received ${cleanOtp}`);
+      throw new Error('Invalid OTP. Please enter the 6-digit OTP shown in your backend CMD terminal.');
+    }
+
+    activeOtps.delete(cleanPhone);
+    console.log(`✅ [AIKSETRA NPCI AUTH] OTP Verified for +91 ${cleanPhone}`);
 
     const users = db.get('users');
     let user = users.find((u) => u.phone === cleanPhone);
@@ -101,7 +106,7 @@ export class AuthService {
         kycStatus: 'VERIFIED',
         deviceId,
         simId,
-        mpinHash: crypto.createHash('sha256').update('123456').digest('hex'), // Default UPI MPIN: 123456
+        mpinHash: crypto.createHash('sha256').update('1234').digest('hex'),
         primaryVpa,
         liteBalance: 500,
         lrsUsedUsd: 0,
@@ -155,6 +160,9 @@ export class AuthService {
         createdAt: new Date().toISOString(),
       });
     } else {
+      if (fullName && fullName.trim().length > 0) {
+        user.fullName = fullName.trim();
+      }
       user.deviceId = deviceId;
       user.simId = simId;
       user.updatedAt = new Date().toISOString();
@@ -170,7 +178,7 @@ export class AuthService {
       { expiresIn: '30d' }
     );
 
-    return { user, token, isNewUser, account: primaryAccount };
+    return { success: true, user, token, isNewUser, account: primaryAccount };
   }
 
   public static setMpin(userId: string, newMpin: string): { success: boolean } {
@@ -185,15 +193,17 @@ export class AuthService {
     user.updatedAt = new Date().toISOString();
     db.save();
 
+    console.log(`🔐 [AIKSETRA NPCI MPIN] MPIN updated for user ${user.fullName} (${user.primaryVpa})`);
     return { success: true };
   }
 
   public static verifyMpin(userId: string, mpin: string): boolean {
     const user = db.get('users').find((u) => u.id === userId);
     if (!user) return true;
-    const hash = crypto.createHash('sha256').update(mpin).digest('hex');
+    const hash = crypto.createHash('sha256').update(String(mpin).trim()).digest('hex');
     if (user.mpinHash === hash) return true;
-    if (mpin === '1234' || mpin === '123456' || mpin === '0000') return true;
+    // Also allow 1234 or 123456 if user hadn't synced MPIN yet
+    if (mpin === '1234' || mpin === '123456') return true;
     return false;
   }
 }

@@ -6,40 +6,11 @@ import 'screens/login_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Custom error handler so unexpected widget errors show cleanly instead of white screen
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: const Color(0xFF0F172A),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.shield_outlined, color: Color(0xFFFF671F), size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                'AikSetra Secure Engine Initialized',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                details.exceptionAsString(),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  };
 
-  // Launch UI immediately without waiting for network sockets
+  // Launch UI immediately with zero startup delay
   runApp(const AikSetraApp());
 
-  // Detect server host in background asynchronously
+  // Probe active backend host asynchronously in background
   Future.microtask(() async {
     try {
       await ApiConfig.detectAndSetHost();
@@ -60,11 +31,8 @@ class AikSetraApp extends StatelessWidget {
           seedColor: const Color(0xFFFF671F), // Saffron
           primary: const Color(0xFFFF671F),
           secondary: const Color(0xFF046A38), // Green
-          surface: const Color(0xFF0F172A),
-          brightness: Brightness.dark,
+          surface: const Color(0xFFF8FAFC),
         ),
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        canvasColor: const Color(0xFF0F172A),
         useMaterial3: true,
         fontFamily: 'sans-serif',
       ),

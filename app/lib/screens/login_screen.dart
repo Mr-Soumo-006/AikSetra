@@ -1,5 +1,6 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../api_config.dart';
 import '../services/bharat_one_pay_api.dart';
 import 'simple_home_screen.dart';
 
@@ -342,7 +343,62 @@ class _LoginScreenState extends State<LoginScreen> {
             '$_currentStep/5',
             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.settings_ethernet, color: Color(0xFF64748B), size: 18),
+            tooltip: 'Configure Backend Server IP',
+            onPressed: _showServerConfigDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerConfigDialog() {
+    final ipCtrl = TextEditingController(text: ApiConfig.activeHost);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Backend Server IP (Port 4000)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your PC IPv4 address (from ipconfig) or 10.0.2.2 for Android Emulator:',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ipCtrl,
+              style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: '192.168.29.90',
+                hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                filled: true,
+                fillColor: const Color(0xFF0F172A),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF671F)),
+            onPressed: () {
+              ApiConfig.setCustomHost(ipCtrl.text);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Backend host set to ${ApiConfig.activeHost}:4000')),
+              );
+            },
+            child: const Text('Save Host', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -791,7 +847,7 @@ class _LoginScreenState extends State<LoginScreen> {
             border: Border.all(color: const Color(0xFF334155)),
           ),
           child: const Text(
-            '🔑 Test / Evaluator OTP: 123456 (or tap Auto-fill above)',
+            '💻 Check your Backend CMD terminal for the 6-digit NPCI OTP',
             style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ),
