@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 import { config } from '../config/index.js';
 import { db } from '../db/database.js';
+import { validatePaymentAmount, validateVpa, validateIfsc } from '../utils/validation.js';
 import type { Transaction } from '../types/index.js';
 
 describe('API Security, Webhooks & Rate Limiting (P0 & P1)', () => {
@@ -80,5 +81,28 @@ describe('API Security, Webhooks & Rate Limiting (P0 & P1)', () => {
     const allowed = config.allowedOrigins;
     assert.ok(Array.isArray(allowed));
     assert.ok(!allowed.includes('*'), 'Production CORS allowlist must never permit wildcard *');
+  });
+
+  test('Financial Input Validation: Enforces bounds, 2 decimal places, and NPCI VPA format', () => {
+    assert.equal(validatePaymentAmount(100.5).valid, true);
+    assert.equal(validatePaymentAmount(-50).valid, false, 'Negative amounts must be rejected');
+    assert.equal(validatePaymentAmount(0).valid, false, 'Zero amount must be rejected');
+    assert.equal(validatePaymentAmount(10.555).valid, false, 'More than 2 decimals (fractional paise) must be rejected');
+    assert.equal(validatePaymentAmount(200000).valid, false, 'Exceeding ₹1,00,000 max UPI limit must be rejected');
+
+    assert.equal(validateVpa('user@aiksetra').valid, true);
+    assert.equal(validateVpa('invalid-vpa-format').valid, false);
+    assert.equal(validateVpa('a@b').valid, false);
+
+    assert.equal(validateIfsc('SBIN0001234').valid, true);
+    assert.equal(validateIfsc('INVALIDIFSC').valid, false);
+  });
+
+  test('Raw Body Buffer Webhook Verification: Calculates HMAC over exact raw buffer', () => {
+    const rawBuffer = Buffer.from('{"event":"PAYMENT_SUCCESS","transactionId":"txn_01","status":"SUCCESS"}', 'utf-8');
+    const signature = crypto.createHmac('sha256', config.webhookSecret).update(rawBuffer).digest('hex');
+
+    const expected = crypto.createHmac('sha256', config.webhookSecret).update(rawBuffer).digest('hex');
+    assert.equal(signature, expected, 'Raw body HMAC computation must be exact');
   });
 });

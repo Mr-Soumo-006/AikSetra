@@ -145,23 +145,20 @@ export class AuthService {
         .slice(0, 10);
       const primaryVpa = `${cleanHandle}${cleanPhone.slice(-4)}${config.defaultVpaHandle}`;
 
-      const salt = crypto.randomBytes(16).toString('hex');
-      const mpinHash = hashMpin('1234', salt);
-
+      // P0: Do NOT set default MPIN, fabricated PAN, or automatic KYC verification on registration
       user = {
         id: `usr_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
         phone: cleanPhone,
         fullName: fullName || 'AikSetra Member',
         email: `${cleanHandle}@aiksetra.in`,
-        panNumber: 'ABCDE' + Math.floor(1000 + Math.random() * 9000) + 'F',
-        kycStatus: 'VERIFIED',
+        kycStatus: 'PENDING',
         deviceId,
         simId,
-        mpinHash,
-        mpinSalt: salt,
+        mpinHash: undefined,
+        mpinSalt: undefined,
         failedMpinAttempts: 0,
         primaryVpa,
-        liteBalance: 500,
+        liteBalance: 0,
         lrsUsedUsd: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -169,7 +166,7 @@ export class AuthService {
 
       db.insert('users', user);
 
-      // Create linked primary bank account
+      // Create linked bank account with 0 balance and upiPinSet=false (no fabricated balances)
       const bankCode = selectedBank.includes('HDFC')
         ? 'HDFC'
         : selectedBank.includes('ICICI')
@@ -195,8 +192,10 @@ export class AuthService {
         maskedAccountNumber: `•••• •••• ${last4}`,
         accountType: accountType || 'SAVINGS',
         isPrimary: true,
-        balance: typeof initialBalance === 'number' && initialBalance >= 0 ? initialBalance : 25000.0,
-        upiPinSet: true,
+        balance: 0.0,
+        openingBalance: 0.0,
+        isVerified: false,
+        upiPinSet: false,
       };
 
       db.insert('accounts', account);
@@ -238,7 +237,7 @@ export class AuthService {
     const primaryAccount = accounts.find((a) => a.isPrimary) || accounts[0];
 
     const token = jwt.sign(
-      { userId: user.id, phone: user.phone, vpa: user.primaryVpa, isAdmin: user.isAdmin === true },
+      { userId: user.id, id: user.id, phone: user.phone, vpa: user.primaryVpa, isAdmin: user.isAdmin === true },
       config.jwtSecret,
       { expiresIn: '7d' } // Secure 7-day token
     );
@@ -277,6 +276,13 @@ export class AuthService {
     user.failedMpinAttempts = 0;
     user.mpinLockedUntil = undefined;
     user.updatedAt = new Date().toISOString();
+
+    // Mark user's linked accounts upiPinSet = true
+    const accounts = db.get('accounts').filter((a) => a.userId === userId);
+    accounts.forEach((acc) => {
+      acc.upiPinSet = true;
+    });
+
     db.save();
 
     AuditService.log({
@@ -295,6 +301,11 @@ export class AuthService {
   public static verifyMpin(userId: string, mpin: string): boolean {
     const user = db.get('users').find((u) => u.id === userId);
     if (!user) return false;
+
+    // Check if MPIN is set
+    if (!user.mpinHash) {
+      throw new Error('UPI MPIN has not been configured. Please set your UPI MPIN first.');
+    }
 
     // Check account lockout
     if (user.mpinLockedUntil && user.mpinLockedUntil > Date.now()) {

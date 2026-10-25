@@ -28,6 +28,7 @@ import { SmsService } from '../services/sms.service.js';
 import { pspSimulator } from '../services/psp.simulator.js';
 import { LedgerService } from '../services/ledger.service.js';
 import { AuditService } from '../services/audit.service.js';
+import { validatePaymentAmount, validateVpa, validateIfsc, sanitizeRemark } from '../utils/validation.js';
 
 export const apiRouter = Router();
 
@@ -126,6 +127,11 @@ apiRouter.post('/accounts/link', authMiddleware, (req: AuthenticatedRequest, res
       return res.status(400).json({ success: false, message: 'bankName and ifsc are required.' });
     }
 
+    const valIfsc = validateIfsc(ifsc);
+    if (!valIfsc.valid) {
+      return res.status(400).json({ success: false, message: valIfsc.error });
+    }
+
     const account = AccountService.linkAccount({
       userId: req.userId!,
       bankName: String(bankName).trim(),
@@ -135,8 +141,8 @@ apiRouter.post('/accounts/link', authMiddleware, (req: AuthenticatedRequest, res
       accountType: accountType === 'CURRENT' ? 'CURRENT' : 'SAVINGS',
       setAsPrimary: !!setAsPrimary,
       replaceOnboardingAccount: !!replaceOnboardingAccount,
-      // P0 Issue 4: In production, client-supplied initial balances are forbidden
-      initialBalance: config.isProduction ? 0.00 : (typeof req.body.initialBalance === 'number' ? req.body.initialBalance : 25000.00),
+      // P0: Initial balance is strictly 0.00 (fabricated balances eliminated)
+      initialBalance: 0.00,
     });
 
     AuditService.log({
@@ -221,13 +227,14 @@ apiRouter.post('/payments/pay', authMiddleware, paymentRateLimiter, async (req: 
   try {
     const { receiverVpa, amount, mpin, remark, senderAccountId, idempotencyKey, bypassScamShieldWarning } = req.body;
 
-    if (!receiverVpa || !amount) {
-      return res.status(400).json({ success: false, message: 'receiverVpa and amount are required.' });
+    const valAmount = validatePaymentAmount(amount, 100000);
+    if (!valAmount.valid) {
+      return res.status(400).json({ success: false, message: valAmount.error });
     }
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      return res.status(400).json({ success: false, message: 'Amount must be a valid positive number.' });
+    const valVpa = validateVpa(receiverVpa);
+    if (!valVpa.valid) {
+      return res.status(400).json({ success: false, message: valVpa.error });
     }
 
     if (!mpin || String(mpin).trim().length < 4) {
@@ -242,13 +249,16 @@ apiRouter.post('/payments/pay', authMiddleware, paymentRateLimiter, async (req: 
       }
     }
 
+    const numAmount = parseFloat(amount);
+    const cleanRemark = sanitizeRemark(remark);
+
     const result = await PaymentService.executePayment({
       senderUserId: req.userId!,
       senderAccountId,
-      receiverVpa,
+      receiverVpa: receiverVpa.trim().toLowerCase(),
       amount: numAmount,
       mpin: String(mpin).trim(),
-      remark,
+      remark: cleanRemark,
       idempotencyKey: idempotencyKey || (req.headers['idempotency-key'] as string),
       bypassScamShieldWarning: !!bypassScamShieldWarning,
     });
@@ -263,16 +273,24 @@ apiRouter.post('/payments/pay', authMiddleware, paymentRateLimiter, async (req: 
 apiRouter.post('/payments/lite-pay', authMiddleware, paymentRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { receiverVpa, amount, remark } = req.body;
-    const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0) {
-      return res.status(400).json({ success: false, message: 'Invalid payment amount.' });
+    const valAmount = validatePaymentAmount(amount, 500);
+    if (!valAmount.valid) {
+      return res.status(400).json({ success: false, message: valAmount.error });
     }
+
+    const valVpa = validateVpa(receiverVpa);
+    if (!valVpa.valid) {
+      return res.status(400).json({ success: false, message: valVpa.error });
+    }
+
+    const numAmount = parseFloat(amount);
+    const cleanRemark = sanitizeRemark(remark);
 
     const transaction = await PaymentService.executeLitePayment({
       senderUserId: req.userId!,
-      receiverVpa,
+      receiverVpa: receiverVpa.trim().toLowerCase(),
       amount: numAmount,
-      remark,
+      remark: cleanRemark,
     });
     return res.json({ success: true, transaction });
   } catch (err: any) {
@@ -288,16 +306,24 @@ apiRouter.get('/payments/history', authMiddleware, (req: AuthenticatedRequest, r
 apiRouter.post('/payments/collect', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { payerVpa, amount, remark } = req.body;
-    const numAmount = parseFloat(amount);
-    if (!payerVpa || !numAmount || numAmount <= 0) {
-      return res.status(400).json({ success: false, message: 'Valid payerVpa and amount required.' });
+    const valVpa = validateVpa(payerVpa);
+    if (!valVpa.valid) {
+      return res.status(400).json({ success: false, message: valVpa.error });
     }
+
+    const valAmount = validatePaymentAmount(amount, 100000);
+    if (!valAmount.valid) {
+      return res.status(400).json({ success: false, message: valAmount.error });
+    }
+
+    const numAmount = parseFloat(amount);
+    const cleanRemark = sanitizeRemark(remark);
 
     const collect = PaymentService.createCollectRequest({
       payeeUserId: req.userId!,
-      payerVpa,
+      payerVpa: payerVpa.trim().toLowerCase(),
       amount: numAmount,
-      remark,
+      remark: cleanRemark,
     });
     return res.json({ success: true, collectRequest: collect });
   } catch (err: any) {
@@ -323,11 +349,11 @@ apiRouter.post('/payments/collect/:id/approve', authMiddleware, paymentRateLimit
   }
 });
 
-// P1 Issue 12: Payment Provider Webhook Signatures & Callback Verification
+// P1 Issue 12: Payment Provider Webhook Signatures & Callback Verification (Raw Body & Strict State Machine)
 apiRouter.post('/payments/webhook', async (req, res) => {
   try {
     const signature = (req.headers['x-webhook-signature'] || req.headers['x-razorpay-signature'] || '') as string;
-    const rawPayload = JSON.stringify(req.body);
+    const rawPayload: Buffer | string = (req as any).rawBody || Buffer.from(JSON.stringify(req.body));
 
     const expectedSignature = crypto
       .createHmac('sha256', config.webhookSecret)
@@ -354,27 +380,42 @@ apiRouter.post('/payments/webhook', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing transactionId or status in webhook payload.' });
     }
 
+    // P0: Validate allowed event types
+    const ALLOWED_EVENTS = ['PAYMENT_SUCCESS', 'PAYMENT_FAILED', 'PAYMENT_REVERSED', 'REFUND_PROCESSED', 'CROSS_BORDER_SETTLED'];
+    if (event && !ALLOWED_EVENTS.includes(event)) {
+      return res.status(400).json({ success: false, message: `Unsupported webhook event type: ${event}` });
+    }
+
     const transaction = db.get('transactions').find((t) => t.id === transactionId || t.txnRef === transactionId);
     if (!transaction) {
       return res.status(404).json({ success: false, message: 'Transaction not found for webhook callback.' });
     }
 
-    // Handle duplicate or out-of-order callbacks idempotently
-    if (transaction.status === 'SUCCESS' && status === 'SUCCESS') {
-      return res.json({ success: true, message: 'Duplicate webhook event ignored (already SUCCESS).' });
+    // P0: Strict State Machine Transitions
+    const currentStatus = transaction.status;
+
+    // Idempotent duplicate check
+    if (currentStatus === status) {
+      return res.json({ success: true, message: `Duplicate webhook event ignored (already ${status}).` });
     }
 
-    if (transaction.status === 'PENDING') {
-      if (status === 'SUCCESS') {
-        transaction.status = 'SUCCESS';
-        transaction.upiRrn = upiRrn || transaction.upiRrn;
-        transaction.completedAt = new Date().toISOString();
-      } else if (status === 'FAILED') {
-        transaction.status = 'FAILED';
-        transaction.failureReason = reason || 'Payment declined by banking switch rail';
-        transaction.completedAt = new Date().toISOString();
-      }
+    const isPending = currentStatus === 'PENDING' || currentStatus === 'PENDING_PARTNER_SETTLEMENT';
+    if (isPending && (status === 'SUCCESS' || status === 'FAILED')) {
+      transaction.status = status;
+      if (upiRrn) transaction.upiRrn = upiRrn;
+      if (status === 'FAILED' && reason) transaction.failureReason = reason;
+      transaction.completedAt = new Date().toISOString();
       db.save();
+    } else if (currentStatus === 'SUCCESS' && status === 'REVERSED') {
+      await LedgerService.executeReversal({
+        originalTransaction: transaction,
+        reason: reason || 'Reversal requested via provider webhook',
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: `Illegal state transition from ${currentStatus} to ${status}.`,
+      });
     }
 
     AuditService.log({
@@ -387,7 +428,7 @@ apiRouter.post('/payments/webhook', async (req, res) => {
 
     return res.json({ success: true, message: 'Webhook callback processed successfully.' });
   } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'Webhook processing failed.' });
   }
 });
 

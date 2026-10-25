@@ -15,6 +15,7 @@ import type {
   DisputeTicket,
   LedgerEntry,
   AuditLog,
+  IdempotencyRecord,
 } from '../types/index.js';
 
 export interface DatabaseSchema {
@@ -31,6 +32,7 @@ export interface DatabaseSchema {
   disputes: DisputeTicket[];
   ledger: LedgerEntry[];
   auditLogs: AuditLog[];
+  idempotencyKeys: IdempotencyRecord[];
   fraudRegistry: Array<{
     vpa: string;
     phone?: string;
@@ -54,6 +56,7 @@ const defaultDatabase: DatabaseSchema = {
   disputes: [],
   ledger: [],
   auditLogs: [],
+  idempotencyKeys: [],
   fraudRegistry: [],
 };
 
@@ -62,6 +65,7 @@ class JsonDatabase {
   private backupPath: string;
   private data: DatabaseSchema;
   private inFlightKeys: Set<string> = new Set();
+  private transactionDepth: number = 0;
 
   constructor() {
     const dir = path.resolve(process.cwd(), config.dataDir);
@@ -80,6 +84,7 @@ class JsonDatabase {
           ...parsed,
           ledger: parsed.ledger || [],
           auditLogs: parsed.auditLogs || [],
+          idempotencyKeys: parsed.idempotencyKeys || [],
         };
       } catch (e) {
         console.warn('Could not parse existing database, trying backup file...', e);
@@ -106,6 +111,7 @@ class JsonDatabase {
   // P1 Issue 28: Crash-Safe Atomic Persistence via Temp-Swap & Rolling Backup
   private persist(): void {
     if (
+      this.transactionDepth > 0 ||
       process.env.NODE_ENV === 'test' ||
       Boolean(process.env.NODE_TEST_CONTEXT) ||
       process.argv.some((a) => a.toLowerCase().includes('test'))
@@ -131,12 +137,29 @@ class JsonDatabase {
     }
   }
 
-  // P1 Issue 15: Atomic In-Flight Idempotency Reservation
-  public reserveIdempotencyKey(key: string): boolean {
+  // P1 Issue 15 & P1 Checklist: Database-Enforced Persistent Idempotency Keys
+  public reserveIdempotencyKey(key: string, ttlMs: number = 120000): boolean {
+    const now = Date.now();
+    this.data.idempotencyKeys = (this.data.idempotencyKeys || []).filter(
+      (k) => new Date(k.expiresAt).getTime() > now
+    );
+
     if (this.inFlightKeys.has(key)) return false;
+    const existsInDb = this.data.idempotencyKeys.some((k) => k.key === key);
+    if (existsInDb) return false;
     const existsInTransactions = this.data.transactions.some((t) => t.idempotencyKey === key);
     if (existsInTransactions) return false;
+
     this.inFlightKeys.add(key);
+    this.data.idempotencyKeys.push({
+      key,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(now + ttlMs).toISOString(),
+    });
+
+    if (this.transactionDepth === 0) {
+      this.persist();
+    }
     return true;
   }
 
@@ -144,16 +167,24 @@ class JsonDatabase {
     this.inFlightKeys.delete(key);
   }
 
-  // P1 Issue 17 & 27: Transactional Execution with Automatic Rollback
+  // P1 Issue 17 & 27: Transactional Execution with Automatic Rollback (suppresses intermediate persist)
   public async transaction<T>(operation: () => Promise<T>): Promise<T> {
     const snapshot = JSON.stringify(this.data);
+    this.transactionDepth++;
     try {
       const result = await operation();
-      this.persist();
+      this.transactionDepth--;
+      if (this.transactionDepth === 0) {
+        this.persist();
+      }
       return result;
     } catch (err) {
+      this.transactionDepth--;
       // Roll back in-memory state on failure
       this.data = JSON.parse(snapshot);
+      if (this.transactionDepth === 0) {
+        this.persist();
+      }
       throw err;
     }
   }
@@ -167,7 +198,9 @@ class JsonDatabase {
     item: DatabaseSchema[K] extends Array<infer U> ? U : never
   ): DatabaseSchema[K] extends Array<infer U> ? U : never {
     (this.data[collection] as any[]).push(item);
-    this.persist();
+    if (this.transactionDepth === 0) {
+      this.persist();
+    }
     return item;
   }
 
@@ -180,12 +213,16 @@ class JsonDatabase {
     const idx = list.findIndex(predicate);
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...updater };
-    this.persist();
+    if (this.transactionDepth === 0) {
+      this.persist();
+    }
     return list[idx];
   }
 
   public save(): void {
-    this.persist();
+    if (this.transactionDepth === 0) {
+      this.persist();
+    }
   }
 
   public reset(newData?: DatabaseSchema): void {

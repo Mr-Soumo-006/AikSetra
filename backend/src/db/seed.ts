@@ -383,6 +383,7 @@ export function runSeed(force = false): void {
         flaggedAt: pastDate,
       },
     ],
+    idempotencyKeys: [],
   };
 
   db.reset(seedData);

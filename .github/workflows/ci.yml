@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    name: Backend Build & Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run automated test suites
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: c11e186e2410fc6b2700e12d45c55a2b3855a02484f4f7d2cfc8e6dfd15adba8
+          ADMIN_API_KEY: e3f12469956485890885e3f538563a6501726a455a298782bb193e2b26002f23
+          WEBHOOK_SECRET: a84782bb193e2b26002f23e3f12469956485890885e3f538563a6501726a455a
+          ALLOWED_ORIGINS: https://aiksetra.in,https://app.aiksetra.in
+        run: npm test
+
+      - name: TypeScript Compile Build
+        working-directory: ./backend
+        run: npm run build

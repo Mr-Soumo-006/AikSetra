@@ -153,6 +153,8 @@ export class LedgerService {
 
   /**
    * Reverse a transaction atomically (reversal workflow)
+   * Locks both sender and receiver accounts, updates balances, writes paired ledger entries,
+   * and commits inside a db.transaction() boundary.
    */
   public static async executeReversal(params: {
     originalTransaction: Transaction;
@@ -161,39 +163,85 @@ export class LedgerService {
     const { originalTransaction, reason } = params;
 
     if (originalTransaction.status === 'REVERSED') {
-      return false; // Already reversed
+      return false; // Idempotent: already reversed
     }
 
     const senderAccount = db.get('accounts').find((a) => a.id === originalTransaction.senderAccountId);
     if (!senderAccount) return false;
 
-    return await this.lockManager.acquire(senderAccount.id, async () => {
-      const refundAmount = originalTransaction.amount;
-      senderAccount.balance = Math.round((senderAccount.balance + refundAmount) * 100) / 100;
+    // Resolve receiver account if internal
+    let receiverAccount: BankAccount | undefined;
+    if (originalTransaction.receiverUserId) {
+      const recAccounts = db.get('accounts').filter((a) => a.userId === originalTransaction.receiverUserId);
+      receiverAccount = recAccounts.find((a) => a.isPrimary) || recAccounts[0];
+    }
 
-      const reversalEntry: LedgerEntry = {
-        id: `led_rev_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
-        transactionId: originalTransaction.id,
-        accountId: senderAccount.id,
-        accountType: 'USER_ACCOUNT',
-        entryType: 'CREDIT',
-        amount: refundAmount,
-        currency: originalTransaction.currency,
-        balanceAfter: senderAccount.balance,
-        description: `REVERSAL REFUND: ${reason}`,
-        createdAt: new Date().toISOString(),
-      };
+    const lockIds = [senderAccount.id, receiverAccount?.id].filter(Boolean) as string[];
 
-      db.get('ledger').push(reversalEntry);
-      originalTransaction.status = 'REVERSED';
-      originalTransaction.failureReason = reason;
-      db.save();
-      return true;
+    return await this.lockManager.acquireMultiple(lockIds, async () => {
+      return await db.transaction(async () => {
+        const refundAmount = originalTransaction.amount;
+
+        // 1. Credit original sender
+        senderAccount.balance = Math.round((senderAccount.balance + refundAmount) * 100) / 100;
+
+        const creditEntry: LedgerEntry = {
+          id: `led_rev_cr_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
+          transactionId: originalTransaction.id,
+          accountId: senderAccount.id,
+          accountType: 'USER_ACCOUNT',
+          entryType: 'CREDIT',
+          amount: refundAmount,
+          currency: originalTransaction.currency,
+          balanceAfter: senderAccount.balance,
+          description: `REVERSAL REFUND CREDIT: ${reason}`,
+          createdAt: new Date().toISOString(),
+        };
+
+        // 2. Debit original receiver or settlement clearing
+        let debitEntry: LedgerEntry;
+        if (receiverAccount) {
+          receiverAccount.balance = Math.round((receiverAccount.balance - refundAmount) * 100) / 100;
+          debitEntry = {
+            id: `led_rev_dr_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
+            transactionId: originalTransaction.id,
+            accountId: receiverAccount.id,
+            accountType: 'USER_ACCOUNT',
+            entryType: 'DEBIT',
+            amount: refundAmount,
+            currency: originalTransaction.currency,
+            balanceAfter: receiverAccount.balance,
+            description: `REVERSAL RECOVERY DEBIT: ${reason}`,
+            createdAt: new Date().toISOString(),
+          };
+        } else {
+          debitEntry = {
+            id: `led_rev_dr_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
+            transactionId: originalTransaction.id,
+            accountId: 'acc_clearing_switch_00',
+            accountType: 'SETTLEMENT_CLEARING',
+            entryType: 'DEBIT',
+            amount: refundAmount,
+            currency: originalTransaction.currency,
+            balanceAfter: 0,
+            description: `CLEARING REVERSAL DEBIT: ${reason}`,
+            createdAt: new Date().toISOString(),
+          };
+        }
+
+        db.insert('ledger', creditEntry);
+        db.insert('ledger', debitEntry);
+
+        originalTransaction.status = 'REVERSED';
+        originalTransaction.failureReason = reason;
+        return true;
+      });
     });
   }
 
   /**
-   * Ledger Audit & Reconciliation helper
+   * Ledger Audit & Dynamic Reconciliation helper
+   * Validates account balance against baseline opening balance plus sum of all ledger entries.
    */
   public static reconcileAccount(accountId: string): { reconciled: boolean; balanceDiscrepancy: number } {
     const account = db.get('accounts').find((a) => a.id === accountId);
@@ -206,8 +254,9 @@ export class LedgerService {
       if (e.entryType === 'DEBIT') computedDelta -= e.amount;
     }
 
-    // Baseline calculation check
-    const diff = Math.abs(account.balance - (10000 + computedDelta)); // Initial seed baseline check
+    const openingBalance = typeof account.openingBalance === 'number' ? account.openingBalance : 0;
+    const expectedBalance = Math.round((openingBalance + computedDelta) * 100) / 100;
+    const diff = Math.abs(account.balance - expectedBalance);
     return {
       reconciled: diff < 0.01,
       balanceDiscrepancy: diff,

@@ -8,7 +8,7 @@ import { VaultService } from './vault.service.js';
 import { AuthService } from './auth.service.js';
 import { LedgerService } from './ledger.service.js';
 import { AuditService } from './audit.service.js';
-import type { Transaction, CollectRequest, BankAccount } from '../types/index.js';
+import type { Transaction, CollectRequest, BankAccount, LedgerEntry } from '../types/index.js';
 
 export interface InitiatePaymentParams {
   senderUserId: string;
@@ -121,6 +121,10 @@ export class PaymentService {
     }
 
     // 6. Invoke Banking Switch Rail
+    if (config.isProduction && !config.npciMerchantKey) {
+      throw new Error('Authorized Banking PSP Gateway credentials are required in production. Simulated payment processing is prohibited.');
+    }
+
     const txnRef = `BOP${Date.now()}`;
     const pspResult = await pspSimulator.executeReqPay({
       payerVpa: user.primaryVpa,
@@ -301,53 +305,129 @@ export class PaymentService {
       throw new Error('UPI Lite transaction limit is up to ₹500 per payment.');
     }
 
+    if (config.isProduction && !config.npciMerchantKey) {
+      throw new Error('Authorized Banking PSP Gateway required for UPI Lite on-device settlement in production.');
+    }
+
     const user = db.get('users').find((u) => u.id === senderUserId);
     if (!user) throw new Error('User not found.');
 
-    if (user.liteBalance < amount) {
-      throw new Error(`Insufficient UPI Lite balance (Available: ₹${user.liteBalance.toFixed(2)}).`);
-    }
-
-    user.liteBalance = Number((user.liteBalance - amount).toFixed(2));
-
+    const txnId = `txn_lite_${uuidv4().replace(/-/g, '').slice(0, 10)}`;
     const txnRef = `LITE${Date.now()}`;
-    const upiRrn = `4291${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const upiRrn = config.isSimulationMode
+      ? `4291${Math.floor(10000000 + Math.random() * 90000000)}`
+      : '';
 
-    const transaction: Transaction = {
-      id: `txn_lite_${uuidv4().slice(0, 8)}`,
-      txnRef,
-      upiRrn,
-      senderUserId,
-      senderVpa: user.primaryVpa,
-      receiverVpa,
-      receiverName: 'UPI Lite Beneficiary',
-      amount,
-      currency: 'INR',
-      txnType: 'LITE',
-      status: 'SUCCESS',
-      remark,
-      createdAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-    };
+    // Concurrency control & atomic double-entry ledger within db.transaction
+    return await db.transaction(async () => {
+      if (user.liteBalance < amount) {
+        throw new Error(`Insufficient UPI Lite balance (Available: ₹${user.liteBalance.toFixed(2)}).`);
+      }
 
-    db.insert('transactions', transaction);
+      user.liteBalance = Number((user.liteBalance - amount).toFixed(2));
 
-    const merchant = db.get('merchants').find((m) => m.merchantVpa.toLowerCase() === receiverVpa.toLowerCase());
-    if (merchant) {
-      merchant.totalVolumeInr += amount;
-      soundboxService.broadcastPayment({
-        merchantId: merchant.id,
-        merchantName: merchant.businessName,
+      // Resolve beneficiary
+      let beneficiaryUserId: string | undefined;
+      let beneficiaryName = 'UPI Lite Beneficiary';
+      let beneficiaryAccount: BankAccount | undefined;
+
+      const benVpa = db.get('vpas').find((v) => v.vpa.toLowerCase() === receiverVpa.toLowerCase());
+      if (benVpa && benVpa.accountId) {
+        beneficiaryAccount = db.get('accounts').find((a) => a.id === benVpa.accountId);
+        if (beneficiaryAccount) {
+          beneficiaryUserId = beneficiaryAccount.userId;
+          beneficiaryName = benVpa.fullName;
+        }
+      }
+
+      // Paired DEBIT on sender's UPI Lite wallet
+      const debitEntry: LedgerEntry = {
+        id: `led_lite_dr_${uuidv4().slice(0, 10)}`,
+        transactionId: txnId,
+        accountId: `lite_${user.id}`,
+        accountType: 'USER_ACCOUNT',
+        entryType: 'DEBIT',
         amount,
         currency: 'INR',
-        payerName: user.fullName,
-        payerVpa: user.primaryVpa,
-        language: merchant.soundboxLanguage,
-      });
-    }
+        balanceAfter: user.liteBalance,
+        description: `UPI LITE DEBIT: ${remark}`,
+        createdAt: new Date().toISOString(),
+      };
 
-    db.save();
-    return transaction;
+      // Paired CREDIT on receiver or clearing
+      let creditEntry: LedgerEntry;
+      if (beneficiaryAccount) {
+        beneficiaryAccount.balance = Math.round((beneficiaryAccount.balance + amount) * 100) / 100;
+        creditEntry = {
+          id: `led_lite_cr_${uuidv4().slice(0, 10)}`,
+          transactionId: txnId,
+          accountId: beneficiaryAccount.id,
+          accountType: 'USER_ACCOUNT',
+          entryType: 'CREDIT',
+          amount,
+          currency: 'INR',
+          balanceAfter: beneficiaryAccount.balance,
+          description: `UPI LITE CREDIT: ${remark}`,
+          createdAt: new Date().toISOString(),
+        };
+      } else {
+        creditEntry = {
+          id: `led_lite_cr_${uuidv4().slice(0, 10)}`,
+          transactionId: txnId,
+          accountId: 'acc_clearing_switch_00',
+          accountType: 'SETTLEMENT_CLEARING',
+          entryType: 'CREDIT',
+          amount,
+          currency: 'INR',
+          balanceAfter: 0,
+          description: `UPI LITE CLEARING CREDIT: ${remark}`,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      db.insert('ledger', debitEntry);
+      db.insert('ledger', creditEntry);
+
+      const transaction: Transaction = {
+        id: txnId,
+        txnRef,
+        upiRrn,
+        senderUserId,
+        senderVpa: user.primaryVpa,
+        receiverUserId: beneficiaryUserId,
+        receiverVpa,
+        receiverName: beneficiaryName,
+        amount,
+        currency: 'INR',
+        txnType: 'LITE',
+        status: config.isProduction ? 'PENDING' : 'SUCCESS',
+        remark,
+        createdAt: new Date().toISOString(),
+        completedAt: config.isProduction ? undefined : new Date().toISOString(),
+        metadata: {
+          isSimulated: config.isSimulationMode,
+          rail: 'UPI_LITE_WALLET',
+        },
+      };
+
+      db.insert('transactions', transaction);
+
+      const merchant = db.get('merchants').find((m) => m.merchantVpa.toLowerCase() === receiverVpa.toLowerCase());
+      if (merchant) {
+        merchant.totalVolumeInr += amount;
+        soundboxService.broadcastPayment({
+          merchantId: merchant.id,
+          merchantName: merchant.businessName,
+          amount,
+          currency: 'INR',
+          payerName: user.fullName,
+          payerVpa: user.primaryVpa,
+          language: merchant.soundboxLanguage,
+        });
+      }
+
+      return transaction;
+    });
   }
 
   public static getTransactionHistory(userId: string): Transaction[] {
@@ -398,7 +478,12 @@ export class PaymentService {
     if (collect.status !== 'PENDING') throw new Error(`Collect request already ${collect.status}.`);
 
     const payerUser = db.get('users').find((u) => u.id === payerUserId);
-    if (!payerUser || payerUser.primaryVpa.toLowerCase() !== collect.payerVpa.toLowerCase()) {
+    if (!payerUser) throw new Error('Payer user not found.');
+
+    const userVpas = db.get('vpas').filter((v) => v.userId === payerUserId).map((v) => v.vpa.toLowerCase());
+    userVpas.push(payerUser.primaryVpa.toLowerCase());
+
+    if (!userVpas.includes(collect.payerVpa.toLowerCase())) {
       throw new Error('Unauthorized: You are not the targeted payer for this collect request.');
     }
 

@@ -1,6 +1,6 @@
 export type KycStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type AccountType = 'SAVINGS' | 'CURRENT';
-export type PaymentStatus = 'INITIATED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'REVERSED';
+export type PaymentStatus = 'INITIATED' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'REVERSED' | 'PENDING_PARTNER_SETTLEMENT' | 'SIMULATED_SUCCESS';
 export type PaymentType = 'P2P' | 'P2M' | 'COLLECT' | 'LITE' | 'CROSS_BORDER' | 'PROTECTED_PAY' | 'SPLIT';
 export type CollectStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 export type RiskLevel = 'SAFE' | 'LOW' | 'MODERATE' | 'HIGH';
@@ -12,11 +12,11 @@ export interface User {
   phone: string;
   fullName: string;
   email: string;
-  panNumber: string;
+  panNumber?: string;
   kycStatus: KycStatus;
   deviceId: string;
   simId: string;
-  mpinHash: string; // PBKDF2 salted hash or sha256 migrated
+  mpinHash?: string; // PBKDF2 salted hash or sha256 migrated
   mpinSalt?: string;
   failedMpinAttempts?: number;
   mpinLockedUntil?: number;
@@ -38,6 +38,8 @@ export interface BankAccount {
   accountType: AccountType;
   isPrimary: boolean;
   balance: number;
+  openingBalance?: number;
+  isVerified?: boolean;
   upiPinSet: boolean;
 }
 
@@ -262,4 +264,11 @@ export interface AuditLog {
   payloadHash?: string;
   metadata?: Record<string, any>;
   timestamp: string;
+}
+
+export interface IdempotencyRecord {
+  key: string;
+  createdAt: string;
+  expiresAt: string;
+  response?: any;
 }

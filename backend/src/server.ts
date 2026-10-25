@@ -41,8 +41,9 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
-    const user = db.get('users').find((u) => u.id === decoded.id);
+    const decoded = jwt.verify(token, config.jwtSecret) as { id?: string; userId?: string };
+    const targetUserId = decoded.userId || decoded.id;
+    const user = targetUserId ? db.get('users').find((u) => u.id === targetUserId) : null;
     if (!user) {
       ws.close(4401, 'Unauthorized: User not found');
       return;
@@ -84,7 +85,14 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: '500kb' }));
+app.use(
+  express.json({
+    limit: '500kb',
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '500kb' }));
 
 // Serve Developer & Switch Testing Console (Restricted in production)

@@ -147,4 +147,70 @@ describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
     const currentSender = db.get('accounts').find((a) => a.id === senderAcc.id);
     assert.equal(currentSender?.balance, initialBal, 'In-memory state must roll back to pre-transaction snapshot on failure');
   });
+
+  test('Atomic Reversals: Reverses payment with sender credit, receiver debit, and paired ledger entries', async () => {
+    // 1. Initial transfer of ₹1,000
+    await LedgerService.executeDoubleEntryTransfer({
+      transactionId: 'txn_to_reverse_01',
+      senderAccount: senderAcc,
+      receiverAccount: receiverAcc,
+      amount: 1000.0,
+      currency: 'INR',
+      description: 'Transfer before reversal',
+    });
+
+    const txnToReverse: any = {
+      id: 'txn_to_reverse_01',
+      txnRef: 'REF_REV_01',
+      upiRrn: '429100000001',
+      senderUserId: senderAcc.userId,
+      senderAccountId: senderAcc.id,
+      receiverUserId: receiverAcc.userId,
+      amount: 1000.0,
+      currency: 'INR',
+      status: 'SUCCESS',
+    };
+
+    // 2. Execute atomic reversal
+    const reversed = await LedgerService.executeReversal({
+      originalTransaction: txnToReverse,
+      reason: 'Wrong VPA credited error',
+    });
+
+    assert.equal(reversed, true, 'Reversal must execute successfully');
+    assert.equal(txnToReverse.status, 'REVERSED');
+
+    // 3. Check balances restored: sender back to 10000, receiver back to 5000
+    const curSender = db.get('accounts').find((a) => a.id === senderAcc.id);
+    const curReceiver = db.get('accounts').find((a) => a.id === receiverAcc.id);
+    assert.equal(curSender?.balance, 10000.0, 'Sender balance must be restored');
+    assert.equal(curReceiver?.balance, 5000.0, 'Receiver balance must be reduced by reversal amount');
+
+    // 4. Repeated reversal must be idempotent
+    const secondReversal = await LedgerService.executeReversal({
+      originalTransaction: txnToReverse,
+      reason: 'Duplicate call',
+    });
+    assert.equal(secondReversal, false, 'Idempotent repeated reversal must return false without modifying balances');
+  });
+
+  test('Dynamic Reconciliation: Accurately checks balance against baseline opening balance plus ledger', () => {
+    senderAcc.openingBalance = 10000.0;
+    const initialRec = LedgerService.reconcileAccount(senderAcc.id);
+    assert.equal(initialRec.reconciled, true, 'Account with zero net delta and matching opening balance must reconcile');
+
+    // Manually skew balance
+    senderAcc.balance = 8500.0;
+    const skewedRec = LedgerService.reconcileAccount(senderAcc.id);
+    assert.equal(skewedRec.reconciled, false, 'Discrepancy must be detected when balance does not match ledger');
+    assert.equal(skewedRec.balanceDiscrepancy, 1500.0);
+  });
+
+  test('Persistent Idempotency Keys: Enforces uniqueness and prevents concurrent duplicate execution', () => {
+    const testKey = 'idem_key_unique_test_99';
+    assert.equal(db.reserveIdempotencyKey(testKey), true, 'First key reservation must succeed');
+    assert.equal(db.reserveIdempotencyKey(testKey), false, 'Duplicate key reservation must be rejected');
+
+    db.releaseIdempotencyKey(testKey);
+  });
 });

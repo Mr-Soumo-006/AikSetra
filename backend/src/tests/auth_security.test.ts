@@ -91,4 +91,45 @@ describe('Auth & Security Verifications (P0 & P2)', () => {
     assert.equal(sanitizeUrl('javascript:alert(1)'), '#', 'Malicious javascript: URLs must be replaced with #');
     assert.equal(sanitizeUrl('data:text/html,<script>alert(1)</script>'), '#', 'Data URIs must be replaced with #');
   });
+
+  test('New user registration does not set default MPIN or fabricated balance', () => {
+    const unconfiguredUser = {
+      id: 'test_usr_new_02',
+      phone: '9888800002',
+      fullName: 'New User Test',
+      email: 'newuser@aiksetra.in',
+      kycStatus: 'PENDING' as const,
+      deviceId: 'dev_02',
+      simId: 'sim_02',
+      primaryVpa: 'newuser@aiksetra',
+      liteBalance: 0,
+      lrsUsedUsd: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    db.insert('users', unconfiguredUser);
+
+    assert.throws(
+      () => AuthService.verifyMpin('test_usr_new_02', '1234'),
+      /UPI MPIN has not been configured/i,
+      'Unconfigured MPIN must be rejected when attempting to verify'
+    );
+  });
+
+  test('Explicit MPIN setup succeeds for non-trivial PIN and rejects trivial PINs', () => {
+    assert.throws(
+      () => AuthService.setMpin('test_usr_01', '1234'),
+      /Weak MPIN chosen/i,
+      'Trivial PIN 1234 must be rejected'
+    );
+    assert.throws(
+      () => AuthService.setMpin('test_usr_01', '0000'),
+      /Weak MPIN chosen/i,
+      'Trivial PIN 0000 must be rejected'
+    );
+
+    const setResult = AuthService.setMpin('test_usr_01', '892143');
+    assert.equal(setResult.success, true);
+    assert.equal(AuthService.verifyMpin('test_usr_01', '892143'), true);
+  });
 });

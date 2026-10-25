@@ -360,8 +360,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    if (_setupPin.length != 4) {
+      setState(() => _errorMessage = 'Please enter a 4-digit UPI PIN to secure your account.');
+      return;
+    }
     setState(() => _isLoading = true);
-    await BharatOnePayApi.setMpin(_setupPin.isNotEmpty ? _setupPin : '1234');
+    await BharatOnePayApi.setMpin(_setupPin);
     await BiometricService.setBiometricEnabled(_enableBiometrics);
     if (!mounted) return;
     setState(() => _isLoading = false);

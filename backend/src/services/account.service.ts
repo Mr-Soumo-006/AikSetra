@@ -67,11 +67,10 @@ export class AccountService {
     const rawNum = (params.accountNumber || params.maskedAccountNumber || user?.phone || '4519').replace(/[^0-9]/g, '');
     const last4 = rawNum.length >= 4 ? rawNum.slice(-4) : '4519';
     const masked = `•••• •••• ${last4}`;
-    const balanceVal = config.isProduction
-      ? 0.0
-      : (typeof params.initialBalance === 'number' && !isNaN(params.initialBalance) && params.initialBalance >= 0
-          ? Number(params.initialBalance.toFixed(2))
-          : 25000.0);
+    const balanceVal =
+      typeof params.initialBalance === 'number' && !isNaN(params.initialBalance) && params.initialBalance >= 0
+        ? Number(params.initialBalance.toFixed(2))
+        : 0.0;
 
     // If called during onboarding Step 4, update the default account created during Step 3 OTP verification
     if (params.replaceOnboardingAccount && userAccounts.length === 1) {
@@ -82,7 +81,9 @@ export class AccountService {
       target.maskedAccountNumber = masked;
       target.accountType = params.accountType || 'SAVINGS';
       target.balance = balanceVal;
+      target.openingBalance = balanceVal;
       target.isPrimary = true;
+      target.upiPinSet = !!user?.mpinHash;
       db.save();
       return target;
     }
@@ -104,7 +105,8 @@ export class AccountService {
       accountType: params.accountType || 'SAVINGS',
       isPrimary: shouldBePrimary,
       balance: balanceVal,
-      upiPinSet: true,
+      openingBalance: balanceVal,
+      upiPinSet: !!user?.mpinHash,
     };
 
     db.insert('accounts', account);

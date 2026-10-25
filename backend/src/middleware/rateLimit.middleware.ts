@@ -1,61 +1,78 @@
 import { Request, Response, NextFunction } from 'express';
 
-interface RateLimitRecord {
-  timestamps: number[];
+export interface RateLimitStore {
+  increment(key: string, windowMs: number): Promise<{ count: number; oldestTimestamp: number }>;
 }
+
+class InMemoryRateLimitStore implements RateLimitStore {
+  private store = new Map<string, { timestamps: number[] }>();
+
+  constructor() {
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, record] of this.store.entries()) {
+        record.timestamps = record.timestamps.filter((ts) => now - ts < 15 * 60 * 1000);
+        if (record.timestamps.length === 0) {
+          this.store.delete(key);
+        }
+      }
+    }, 5 * 60 * 1000).unref();
+  }
+
+  public async increment(key: string, windowMs: number): Promise<{ count: number; oldestTimestamp: number }> {
+    const now = Date.now();
+    let record = this.store.get(key);
+    if (!record) {
+      record = { timestamps: [] };
+      this.store.set(key, record);
+    }
+    record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
+    record.timestamps.push(now);
+    return {
+      count: record.timestamps.length,
+      oldestTimestamp: record.timestamps[0],
+    };
+  }
+}
+
+export const defaultSharedStore: RateLimitStore = new InMemoryRateLimitStore();
 
 export function createRateLimiter(options: {
   windowMs: number;
   maxRequests: number;
   keyGenerator?: (req: Request) => string;
   message?: string;
+  store?: RateLimitStore;
 }) {
-  const store = new Map<string, RateLimitRecord>();
+  const store = options.store || defaultSharedStore;
   const { windowMs, maxRequests, message = 'Too many requests. Please try again later.' } = options;
 
-  // Periodic cleanup every 5 minutes
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of store.entries()) {
-      record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
-      if (record.timestamps.length === 0) {
-        store.delete(key);
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const key = options.keyGenerator
+        ? options.keyGenerator(req)
+        : req.ip || req.socket.remoteAddress || 'unknown';
+
+      const now = Date.now();
+      const { count, oldestTimestamp } = await store.increment(key, windowMs);
+
+      if (count > maxRequests) {
+        const retryAfterSec = Math.max(1, Math.ceil((windowMs - (now - oldestTimestamp)) / 1000));
+        res.setHeader('Retry-After', retryAfterSec);
+        return res.status(429).json({
+          success: false,
+          code: 'RATE_LIMIT_EXCEEDED',
+          message,
+          retryAfterSeconds: retryAfterSec,
+        });
       }
+
+      res.setHeader('X-RateLimit-Limit', maxRequests);
+      res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - count));
+      next();
+    } catch (err) {
+      next();
     }
-  }, 5 * 60 * 1000).unref();
-
-  return (req: Request, res: Response, next: NextFunction) => {
-    const key = options.keyGenerator
-      ? options.keyGenerator(req)
-      : req.ip || req.socket.remoteAddress || 'unknown';
-
-    const now = Date.now();
-    let record = store.get(key);
-
-    if (!record) {
-      record = { timestamps: [] };
-      store.set(key, record);
-    }
-
-    // Filter out timestamps outside current window
-    record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
-
-    if (record.timestamps.length >= maxRequests) {
-      const oldest = record.timestamps[0];
-      const retryAfterSec = Math.ceil((windowMs - (now - oldest)) / 1000);
-      res.setHeader('Retry-After', retryAfterSec);
-      return res.status(429).json({
-        success: false,
-        code: 'RATE_LIMIT_EXCEEDED',
-        message,
-        retryAfterSeconds: retryAfterSec,
-      });
-    }
-
-    record.timestamps.push(now);
-    res.setHeader('X-RateLimit-Limit', maxRequests);
-    res.setHeader('X-RateLimit-Remaining', maxRequests - record.timestamps.length);
-    next();
   };
 }
 

@@ -310,11 +310,13 @@ export class CrossBorderService {
     user.lrsUsedUsd = Number(((user.lrsUsedUsd || 0) + usdEquivalent).toFixed(2));
     user.updatedAt = now;
 
-    const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const partnerTrackingRef = `FX_TRACK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    const remittanceStatus = config.isSimulationMode ? ('SIMULATED_SUCCESS' as const) : ('PENDING_PARTNER_SETTLEMENT' as const);
+
     const transactionRecord = {
       id: transferId,
       txnRef: `TXN${Date.now()}`,
-      upiRrn: rrn,
+      upiRrn: config.isSimulationMode ? `4291${Math.floor(10000000 + Math.random() * 90000000)}` : '',
       senderUserId: userId,
       senderAccountId: account.id,
       senderVpa: user.primaryVpa,
@@ -323,7 +325,7 @@ export class CrossBorderService {
       amount: quote.totalCostInr,
       currency: 'INR',
       txnType: 'CROSS_BORDER' as const,
-      status: 'SUCCESS' as const,
+      status: remittanceStatus,
       remark: `Abroad Remittance: ${quote.targetAmount} ${quote.targetCurrency} via ${quote.partnerRail}`,
       createdAt: now,
       metadata: {
@@ -334,6 +336,7 @@ export class CrossBorderService {
         purposeCode,
         beneficiaryIban: beneficiaryAccountOrIban,
         corridorType: quote.corridorType,
+        partnerTrackingRef,
         isSimulated: config.isSimulationMode,
       },
     };
@@ -352,22 +355,49 @@ export class CrossBorderService {
         targetAmount: quote.targetAmount,
         totalCostInr: quote.totalCostInr,
         beneficiaryName,
+        partnerTrackingRef,
+        status: remittanceStatus,
       },
     });
 
     return {
       success: true,
       transferId,
+      partnerTrackingRef,
       amountPaidInr: quote.totalCostInr,
       amountReceivedForeign: quote.targetAmount,
       foreignCurrency: quote.targetCurrency,
       beneficiaryName,
       beneficiaryAccountOrIban,
       rail: quote.partnerRail,
-      status: 'SETTLED',
+      status: remittanceStatus,
       updatedAccountBalance: senderBalanceAfter,
       isSimulated: config.isSimulationMode,
       timestamp: now,
     };
+  }
+
+  /**
+   * P0: Real Partner Settlement Confirmation
+   * Transitions remittance from PENDING_PARTNER_SETTLEMENT to SUCCESS/FAILED
+   * upon confirmed callback from AD-Bank / NIPL partner rail.
+   */
+  public static confirmPartnerSettlement(params: {
+    transferId: string;
+    partnerRrn: string;
+    status: 'SUCCESS' | 'FAILED';
+    failureReason?: string;
+  }): boolean {
+    const txn = db.get('transactions').find((t) => t.id === params.transferId);
+    if (!txn) return false;
+    if (txn.status === 'SUCCESS' && params.status === 'SUCCESS') return true;
+    if (txn.status !== 'PENDING' && txn.status !== 'PENDING_PARTNER_SETTLEMENT') return false;
+
+    txn.status = params.status;
+    txn.upiRrn = params.partnerRrn;
+    if (params.failureReason) txn.failureReason = params.failureReason;
+    txn.completedAt = new Date().toISOString();
+    db.save();
+    return true;
   }
 }
