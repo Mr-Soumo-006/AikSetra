@@ -11,6 +11,21 @@ jobs:
     name: Backend Build & Automated Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: aiksetra_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,10 +41,17 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
+      - name: Run database migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:root@localhost:5432/aiksetra_db
+        run: npm run migrate
+
       - name: Run automated test suites
         working-directory: ./backend
         env:
           NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:root@localhost:5432/aiksetra_db
           JWT_SECRET: c11e186e2410fc6b2700e12d45c55a2b3855a02484f4f7d2cfc8e6dfd15adba8
           ADMIN_API_KEY: e3f12469956485890885e3f538563a6501726a455a298782bb193e2b26002f23
           WEBHOOK_SECRET: a84782bb193e2b26002f23e3f12469956485890885e3f538563a6501726a455a

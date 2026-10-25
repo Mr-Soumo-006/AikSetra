@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
+import { postgresDb } from '../db/postgres.js';
 import type { LedgerEntry, BankAccount, Transaction } from '../types/index.js';
 
 /**
@@ -69,6 +70,18 @@ export class LedgerService {
 
     if (amount <= 0 || !Number.isFinite(amount)) {
       throw new Error('Invalid transfer amount. Amount must be a positive finite number.');
+    }
+
+    // P1: When PostgreSQL is active, execute via database ACID transaction with pessimistic row-locking (SELECT ... FOR UPDATE)
+    if (postgresDb.isReady()) {
+      return await postgresDb.executeAtomicTransferWithRowLock({
+        transactionId,
+        senderAccountId: senderAccount.id,
+        receiverAccountId: receiverAccount?.id,
+        amount,
+        currency,
+        description,
+      });
     }
 
     const lockIds = [senderAccount.id, receiverAccount?.id].filter(Boolean) as string[];
@@ -174,6 +187,19 @@ export class LedgerService {
     if (originalTransaction.receiverUserId) {
       const recAccounts = db.get('accounts').filter((a) => a.userId === originalTransaction.receiverUserId);
       receiverAccount = recAccounts.find((a) => a.isPrimary) || recAccounts[0];
+    }
+
+    // P1: When PostgreSQL is active, execute reversal via database ACID row locking
+    if (postgresDb.isReady()) {
+      await postgresDb.executeAtomicReversalWithRowLock({
+        transactionId: originalTransaction.id,
+        senderAccountId: senderAccount.id,
+        receiverAccountId: receiverAccount?.id,
+        amount: originalTransaction.amount,
+        currency: originalTransaction.currency,
+        reason,
+      });
+      return true;
     }
 
     const lockIds = [senderAccount.id, receiverAccount?.id].filter(Boolean) as string[];

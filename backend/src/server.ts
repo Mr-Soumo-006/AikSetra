@@ -2,38 +2,40 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from 'path';
+import jwt from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
 import { config, validateConfig } from './config/index.js';
+import { db } from './db/database.js';
 import { runSeed } from './db/seed.js';
 import { apiRouter } from './routes/api.router.js';
 import { soundboxService } from './services/soundbox.service.js';
 import { MerchantService } from './services/merchant.service.js';
+import { escapeHtml, sanitizeUrl } from './utils/sanitize.js';
 
 // Validate configuration at startup (Issue 2 & 10)
 validateConfig();
 
+// Wire PostgreSQL into the runtime (ACID transactions & pessimistic row locking)
+if (config.databaseUrl) {
+  try {
+    const { postgresDb } = await import('./db/postgres.js');
+    const connected = await postgresDb.init();
+    if (connected) {
+      db.usePostgres(postgresDb);
+      console.log('🐘 [POSTGRESQL]: Runtime database active on PostgreSQL (aiksetra_db) with ACID transactions and row locking.');
+    } else {
+      console.warn('⚠️ [POSTGRESQL]: DATABASE_URL configured but initialization failed. Falling back to transactional JsonDatabase.');
+    }
+  } catch (err) {
+    console.warn('⚠️ [POSTGRESQL]: Could not initialize PostgreSQL. Falling back to JsonDatabase.', err);
+  }
+}
+
 // Initialize baseline data
 runSeed(false);
 
-// Test local PostgreSQL connectivity if configured
-if (config.databaseUrl) {
-  import('./db/postgres.js').then(({ postgresDb }) => {
-    postgresDb.testConnection().then((connected) => {
-      if (connected) {
-        console.log('🐘 [POSTGRESQL]: Connected successfully to PostgreSQL database (aiksetra_db).');
-      } else {
-        console.warn('⚠️ [POSTGRESQL]: DATABASE_URL configured but connection failed. Falling back to transactional JsonDatabase.');
-      }
-    });
-  });
-}
-
 const app = express();
 const server = http.createServer(app);
-
-import jwt from 'jsonwebtoken';
-import { db } from './db/database.js';
-import { escapeHtml, sanitizeUrl } from './utils/sanitize.js';
 
 // Initialize WebSocket server for Soundbox audio stream with authentication (P2)
 const wss = new WebSocketServer({ server, path: '/ws/soundbox' });

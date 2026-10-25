@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { config } from '../config/index.js';
+import type { IDatabase } from './database.interface.js';
 import type {
   User,
   BankAccount,
@@ -275,4 +276,86 @@ class JsonDatabase {
   }
 }
 
-export const db = new JsonDatabase();
+export class UnifiedDatabase implements IDatabase {
+  private activeEngine: 'json' | 'postgres' = 'json';
+  private jsonDb: JsonDatabase;
+  private pgDb?: IDatabase;
+
+  constructor() {
+    this.jsonDb = new JsonDatabase();
+  }
+
+  public usePostgres(pgDb: IDatabase): void {
+    this.pgDb = pgDb;
+    this.activeEngine = 'postgres';
+  }
+
+  public getActiveEngine(): 'json' | 'postgres' {
+    return this.activeEngine;
+  }
+
+  public get<K extends keyof DatabaseSchema>(collection: K): DatabaseSchema[K] {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.get(collection);
+    }
+    return this.jsonDb.get(collection);
+  }
+
+  public insert<K extends keyof DatabaseSchema>(
+    collection: K,
+    item: DatabaseSchema[K] extends Array<infer U> ? U : never
+  ): DatabaseSchema[K] extends Array<infer U> ? U : never {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.insert(collection, item);
+    }
+    return this.jsonDb.insert(collection, item);
+  }
+
+  public update<K extends keyof DatabaseSchema, T extends { id?: string; vpa?: string }>(
+    collection: K,
+    predicate: (item: any) => boolean,
+    updater: Partial<any>
+  ): any | null {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.update(collection, predicate, updater);
+    }
+    return this.jsonDb.update(collection, predicate, updater);
+  }
+
+  public async transaction<T>(operation: (client?: any) => Promise<T>): Promise<T> {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.transaction(operation);
+    }
+    return this.jsonDb.transaction(operation as any);
+  }
+
+  public reserveIdempotencyKey(key: string, ttlMs: number = 120000): boolean | Promise<boolean> {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.reserveIdempotencyKey(key, ttlMs);
+    }
+    return this.jsonDb.reserveIdempotencyKey(key, ttlMs);
+  }
+
+  public releaseIdempotencyKey(key: string): void | Promise<void> {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.releaseIdempotencyKey(key);
+    }
+    return this.jsonDb.releaseIdempotencyKey(key);
+  }
+
+  public save(): void | Promise<void> {
+    if (this.activeEngine === 'postgres' && this.pgDb) {
+      return this.pgDb.save();
+    }
+    return this.jsonDb.save();
+  }
+
+  public reset(newData?: DatabaseSchema): void {
+    this.jsonDb.reset(newData);
+    if (this.pgDb && (this.pgDb as any).reset) {
+      (this.pgDb as any).reset(newData);
+    }
+  }
+}
+
+export const db = new UnifiedDatabase();

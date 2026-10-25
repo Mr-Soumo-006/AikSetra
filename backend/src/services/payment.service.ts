@@ -56,7 +56,7 @@ export class PaymentService {
       if (existing) {
         return { success: true, transaction: existing };
       }
-      if (!db.reserveIdempotencyKey(idempotencyKey)) {
+      if (!(await db.reserveIdempotencyKey(idempotencyKey))) {
         throw new Error('Payment with this idempotency key is already in progress. Please wait.');
       }
     }
