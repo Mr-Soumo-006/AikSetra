@@ -38,6 +38,8 @@ export async function runMigrations() {
   if (fs.existsSync(sqlPath)) {
     const sql = fs.readFileSync(sqlPath, 'utf-8');
     await dbClient.query(sql);
+    await dbClient.query('ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entries_transaction_id_fkey;');
+    await dbClient.query('ALTER TABLE collect_requests DROP CONSTRAINT IF EXISTS collect_requests_txn_id_fkey;');
     console.log('✅ PostgreSQL Schema migrations (001_init.sql) applied successfully.');
   }
   await dbClient.end();

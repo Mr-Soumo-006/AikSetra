@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- 5. Immutable Double-Entry Ledger
 CREATE TABLE IF NOT EXISTS ledger_entries (
   id VARCHAR(64) PRIMARY KEY,
-  transaction_id VARCHAR(64) REFERENCES transactions(id) ON DELETE RESTRICT,
+  transaction_id VARCHAR(64),
   account_id VARCHAR(64) NOT NULL,
   account_type VARCHAR(32) NOT NULL CHECK (account_type IN ('USER_ACCOUNT', 'SETTLEMENT_CLEARING', 'FEE_INCOME', 'ESCROW_HOLD')),
   entry_type VARCHAR(8) NOT NULL CHECK (entry_type IN ('DEBIT', 'CREDIT')),
@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS collect_requests (
   remark VARCHAR(256),
   expiry_minutes INT DEFAULT 60,
   status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED')),
-  txn_id VARCHAR(64) REFERENCES transactions(id),
+  txn_id VARCHAR(64),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ NOT NULL
 );

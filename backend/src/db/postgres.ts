@@ -84,6 +84,11 @@ export class PostgresDatabase implements IDatabase {
           console.warn('⚠️ [POSTGRESQL]: Auto-migration verification warning:', migErr);
         }
 
+        try {
+          await client.query('ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entries_transaction_id_fkey');
+          await client.query('ALTER TABLE collect_requests DROP CONSTRAINT IF EXISTS collect_requests_txn_id_fkey');
+        } catch (_) {}
+
         // 1. Users
         const usersRes = await client.query('SELECT * FROM users ORDER BY created_at ASC');
         this.data.users = usersRes.rows.map((r): User => ({
