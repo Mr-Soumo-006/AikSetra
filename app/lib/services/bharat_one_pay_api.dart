@@ -444,7 +444,6 @@ class BharatOnePayApi {
   static Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'bypass-tunnel-reminder': 'true',
-        'x-user-id': _activeUserId,
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
@@ -514,9 +513,7 @@ class BharatOnePayApi {
     throw lastError ?? const SocketException('All candidate backend hosts unreachable');
   }
 
-  static String? _lastDispatchedOtp;
-
-  // 1. Send OTP to Indian Mobile Number (Dispatches real 6-digit OTP to Backend CMD + Device SMS Handler)
+  // 1. Send OTP to Indian Mobile Number (Dispatches real 6-digit OTP via SMS Gateway)
   static Future<Map<String, dynamic>> sendOtp(String phone) async {
     try {
       final response = await _postWithFailover(
@@ -525,18 +522,11 @@ class BharatOnePayApi {
         customHeaders: {'Content-Type': 'application/json'},
       );
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (data['otp'] != null) {
-        _lastDispatchedOtp = data['otp'].toString();
-      }
       return data;
     } catch (e) {
-      // Seamless on-device NPCI OTP dispatch fallback if PC tunnel is offline
-      final generatedOtp = (100000 + (DateTime.now().millisecondsSinceEpoch % 899999)).toString();
-      _lastDispatchedOtp = generatedOtp;
       return {
-        'success': true,
-        'otp': generatedOtp,
-        'message': 'OTP dispatched via NPCI Device-Binding to +91 $phone',
+        'success': false,
+        'message': 'Failed to connect to authentication server. Please check your network connection.',
       };
     }
   }
@@ -565,7 +555,6 @@ class BharatOnePayApi {
       );
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-      // Accept if success == true OR if backend returned user & token directly
       final isSuccess = data['success'] == true || (response.statusCode == 200 && data['user'] != null);
       if (isSuccess) {
         if (data['token'] != null) {
@@ -595,38 +584,10 @@ class BharatOnePayApi {
         'message': data['message'] ?? 'Invalid OTP. Please check the 6-digit OTP.',
       };
     } catch (e) {
-      if (_lastDispatchedOtp != null && otp.trim() != _lastDispatchedOtp && otp.trim() != '123456') {
-        return {
-          'success': false,
-          'message': 'Incorrect OTP. Expected $_lastDispatchedOtp.',
-        };
-      }
-      final cleanHandle = (fullName ?? 'user').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final last4 = phone.length >= 4 ? phone.substring(phone.length - 4) : '4519';
-      final vpa = '${cleanHandle.isNotEmpty ? cleanHandle.substring(0, cleanHandle.length > 10 ? 10 : cleanHandle.length) : "user"}$last4@aiksetra';
-      _authToken = 'local_jwt_${DateTime.now().millisecondsSinceEpoch}';
-      currentUser = UserModel(
-        id: 'usr_$last4',
-        phone: phone,
-        fullName: fullName ?? 'AikSetra User',
-        email: '$cleanHandle@aiksetra.in',
-        primaryVpa: vpa,
-        liteBalance: 500.0,
-        lrsUsedUsd: 0.0,
-      );
-      _activeUserId = currentUser!.id;
-      currentAccount = BankAccountModel(
-        id: 'acc_$last4',
-        bankName: selectedBank ?? 'State Bank of India (SBI)',
-        bankCode: 'SBIN',
-        ifsc: 'SBIN0001234',
-        maskedAccountNumber: '•••• •••• $last4',
-        balance: 25000.0,
-        isPrimary: true,
-      );
-      linkedAccounts = [currentAccount!];
-      await saveSessionToDisk();
-      return {'success': true, 'user': currentUser, 'account': currentAccount};
+      return {
+        'success': false,
+        'message': 'Failed to connect to authentication server. Please check your network and try again.',
+      };
     }
   }
 
@@ -638,7 +599,7 @@ class BharatOnePayApi {
       final response = await _postWithFailover('/auth/set-mpin', {'mpin': mpin});
       return jsonDecode(response.body);
     } catch (e) {
-      return {'success': true, 'message': 'MPIN configured.'};
+      return {'success': false, 'message': 'Failed to synchronize MPIN with server.'};
     }
   }
 
@@ -703,33 +664,16 @@ class BharatOnePayApi {
         await saveSessionToDisk();
         return {'success': true, 'account': acc};
       }
-    } catch (_) {}
-
-    // Local fallback if backend endpoint is unreachable or not restarted yet
-    final cleanDigits = accountNumber.replaceAll(RegExp(r'[^0-9]'), '');
-    final last4 = cleanDigits.length >= 4
-        ? cleanDigits.substring(cleanDigits.length - 4)
-        : (currentUser?.phone.substring(currentUser!.phone.length - 4) ?? '4519');
-    final code = bankCode ?? (ifsc.length >= 4 ? ifsc.substring(0, 4).toUpperCase() : 'SBIN');
-    final fallbackAcc = BankAccountModel(
-      id: 'acc_${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
-      bankName: bankName,
-      bankCode: code,
-      ifsc: ifsc.toUpperCase(),
-      maskedAccountNumber: '•••• •••• $last4',
-      balance: initialBalance ?? (currentAccount?.balance ?? 25000.0),
-      isPrimary: setAsPrimary,
-    );
-    if (replaceOnboardingAccount && linkedAccounts.isNotEmpty) {
-      linkedAccounts[0] = fallbackAcc;
-    } else {
-      linkedAccounts.insert(0, fallbackAcc);
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to link bank account.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Banking switch unreachable. Unable to link bank account.',
+      };
     }
-    if (setAsPrimary || currentAccount == null) {
-      currentAccount = fallbackAcc;
-    }
-    await saveSessionToDisk();
-    return {'success': true, 'account': fallbackAcc};
   }
 
   // 4a-2. Link Debit Card or Credit Card (RuPay UPI / Visa / Mastercard)
@@ -811,36 +755,16 @@ class BharatOnePayApi {
         await getMe();
         return data;
       }
-    } catch (_) {}
-
-    // Local fallback if backend is not restarted
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: currentAccount!.balance + amount,
-        isPrimary: currentAccount!.isPrimary,
-      );
-      final idx = linkedAccounts.indexWhere((a) => a.id == currentAccount!.id);
-      if (idx != -1) linkedAccounts[idx] = currentAccount!;
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to add money.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to reach banking switch for deposit.',
+      };
     }
-    final txn = {
-      'id': 'txn_cr_${DateTime.now().millisecondsSinceEpoch}',
-      'upiRrn': '4291${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-      'receiverName': '${currentUser?.fullName ?? "Account Holder"} (${currentAccount?.bankName ?? "Bank"})',
-      'receiverVpa': currentUser?.primaryVpa ?? 'user@aiksetra',
-      'amount': amount,
-      'status': 'SUCCESS',
-      'remark': '$sourceNote -> ${currentAccount?.bankName ?? "Bank"}',
-      'createdAt': DateTime.now().toIso8601String(),
-      'metadata': {'isCredit': true, 'isSelfDeposit': true},
-    };
-    recentTransactions.insert(0, txn);
-    await saveSessionToDisk();
-    return {'success': true, 'account': currentAccount, 'transaction': txn};
   }
 
   // 4d. Fetch Transaction History (Real user transactions only)
@@ -861,7 +785,7 @@ class BharatOnePayApi {
       final response = await _getWithFailover('/vpa/resolve?vpa=$vpa');
       return jsonDecode(response.body);
     } catch (e) {
-      return {'success': true, 'valid': true, 'payeeName': 'Verified NPCI Account Holder'};
+      return {'success': false, 'valid': false, 'message': 'VPA resolution switch unreachable.'};
     }
   }
 
@@ -1019,38 +943,10 @@ class BharatOnePayApi {
         'success': false,
         'message': res['message'] ?? 'Payment declined by bank switch.',
       };
-    } catch (_) {
-      // Seamless local settlement if connection drops mid-payment
-      final txnRef = 'BOP${DateTime.now().millisecondsSinceEpoch}';
-      final upiRrn = '4291${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-      if (currentAccount != null) {
-        currentAccount = BankAccountModel(
-          id: currentAccount!.id,
-          bankName: currentAccount!.bankName,
-          bankCode: currentAccount!.bankCode,
-          ifsc: currentAccount!.ifsc,
-          maskedAccountNumber: currentAccount!.maskedAccountNumber,
-          balance: (currentAccount!.balance - amount) > 0 ? (currentAccount!.balance - amount) : 0,
-          isPrimary: currentAccount!.isPrimary,
-        );
-      }
-      final txn = {
-        'id': 'txn_$txnRef',
-        'txnRef': txnRef,
-        'upiRrn': upiRrn,
-        'receiverName': receiverVpa,
-        'receiverVpa': receiverVpa,
-        'amount': amount,
-        'status': 'SUCCESS',
-        'remark': remark,
-        'createdAt': DateTime.now().toIso8601String(),
-      };
-      recentTransactions.insert(0, txn);
-      await saveSessionToDisk();
+    } catch (e) {
       return {
-        'success': true,
-        'message': 'UPI Payment Successful',
-        'transaction': txn,
+        'success': false,
+        'message': 'Payment failed. Banking switch could not be reached. No money was debited.',
       };
     }
   }
@@ -1082,27 +978,14 @@ class BharatOnePayApi {
         }
         return {'success': true, ...res};
       }
-      return res;
-    } catch (_) {
-      if (currentUser != null) {
-        currentUser = UserModel(
-          id: currentUser!.id,
-          phone: currentUser!.phone,
-          fullName: currentUser!.fullName,
-          email: currentUser!.email,
-          primaryVpa: currentUser!.primaryVpa,
-          liteBalance: (currentUser!.liteBalance - amount) > 0 ? (currentUser!.liteBalance - amount) : 0,
-          lrsUsedUsd: currentUser!.lrsUsedUsd,
-        );
-      }
       return {
-        'success': true,
-        'transaction': {
-          'txnRef': 'LITE${DateTime.now().millisecondsSinceEpoch}',
-          'upiRrn': '4291${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-          'amount': amount,
-          'status': 'SUCCESS',
-        }
+        'success': false,
+        'message': res['message'] ?? 'UPI Lite payment declined.',
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'UPI Lite payment failed. Banking switch unreachable.',
       };
     }
   }
@@ -1207,39 +1090,16 @@ class BharatOnePayApi {
         });
         return data;
       }
-    } catch (_) {}
-
-    final paidInr = totalCostInr ?? 8735.10;
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: (currentAccount!.balance - paidInr) > 0 ? (currentAccount!.balance - paidInr) : 0,
-        isPrimary: currentAccount!.isPrimary,
-      );
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Cross-border remittance declined.',
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Cross-border transfer failed. Authorized FX bridge unreachable.',
+      };
     }
-    final transferId = 'CBX${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
-    recentTransactions.insert(0, {
-      'id': transferId,
-      'receiverName': '$beneficiaryName (${targetCurrency ?? "USD"})',
-      'receiverVpa': beneficiaryAccountOrIban,
-      'amount': paidInr,
-      'upiRrn': transferId,
-      'status': 'SUCCESS',
-      'remark': 'Cross-Border Remittance',
-      'createdAt': DateTime.now().toIso8601String(),
-    });
-    return {
-      'success': true,
-      'transferId': transferId,
-      'amountPaidInr': paidInr.toStringAsFixed(2),
-      'amountReceivedForeign': targetAmount ?? 100,
-      'foreignCurrency': targetCurrency ?? 'USD',
-      'rail': 'NPCI NIPL Global Corridor',
-    };
   }
 
   // 10. Protected Pay (Escrow)
@@ -1256,7 +1116,7 @@ class BharatOnePayApi {
     return activeEscrows;
   }
 
-  static Future<ProtectedPayEscrowModel> initiateProtectedPay({
+  static Future<ProtectedPayEscrowModel?> initiateProtectedPay({
     required String sellerVpa,
     required String sellerName,
     required double amount,
@@ -1287,30 +1147,7 @@ class BharatOnePayApi {
         return esc;
       }
     } catch (_) {}
-
-    final fallbackEsc = ProtectedPayEscrowModel(
-      id: 'esc_${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
-      buyerUserId: _activeUserId,
-      sellerVpa: sellerVpa,
-      sellerName: sellerName,
-      amount: amount,
-      itemDescription: itemDescription,
-      status: 'HELD_IN_ESCROW',
-      expiresAt: DateTime.now().add(const Duration(days: 3)),
-    );
-    activeEscrows.insert(0, fallbackEsc);
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: (currentAccount!.balance - amount) > 0 ? (currentAccount!.balance - amount) : 0,
-        isPrimary: currentAccount!.isPrimary,
-      );
-    }
-    return fallbackEsc;
+    return null;
   }
 
   static Future<bool> confirmDelivery(String escrowId) async {
@@ -1390,19 +1227,7 @@ class BharatOnePayApi {
         return true;
       }
     } catch (_) {}
-    gullakBalance += amount;
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: (currentAccount!.balance - amount) > 0 ? (currentAccount!.balance - amount) : 0,
-        isPrimary: currentAccount!.isPrimary,
-      );
-    }
-    return true;
+    return false;
   }
 
   static Future<bool> withdrawVault(double amount) async {
@@ -1426,19 +1251,7 @@ class BharatOnePayApi {
         return true;
       }
     } catch (_) {}
-    gullakBalance -= amount;
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: currentAccount!.balance + amount,
-        isPrimary: currentAccount!.isPrimary,
-      );
-    }
-    return true;
+    return false;
   }
 
   // 12. BBPS Utility Bills & Recharges (Electricity, Water, Gas, Broadband, Mobile, FASTag, DTH)
@@ -1621,44 +1434,15 @@ class BharatOnePayApi {
           await saveSessionToDisk();
           return data;
         }
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Bill payment declined.',
+        };
       }
     } catch (_) {}
-
-    // Local BBPS settlement fallback
-    final biller = bbpsBillers.firstWhere(
-      (b) => b['id'] == billerId,
-      orElse: () => {'id': billerId, 'name': 'BBPS Utility Biller'},
-    );
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: (currentAccount!.balance - amount) > 0 ? (currentAccount!.balance - amount) : 0,
-        isPrimary: currentAccount!.isPrimary,
-      );
-    }
-    final bbpsRef = 'BBPS${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-    final txn = {
-      'id': 'txn_bill_${DateTime.now().millisecondsSinceEpoch}',
-      'upiRrn': bbpsRef,
-      'receiverName': biller['name'],
-      'receiverVpa': '$billerId@bbps',
-      'amount': amount,
-      'status': 'SUCCESS',
-      'remark': 'BBPS Bill Paid (${consumerNumber}) • ${planOrUsage ?? "Utility"}',
-      'createdAt': DateTime.now().toIso8601String(),
-      'metadata': {'isBbpsBill': true, 'bbpsRef': bbpsRef},
-    };
-    recentTransactions.insert(0, txn);
-    await saveSessionToDisk();
     return {
-      'success': true,
-      'bbpsRef': bbpsRef,
-      'updatedBalance': currentAccount?.balance ?? 0.0,
-      'transaction': txn,
+      'success': false,
+      'message': 'BBPS bill payment failed. Utility gateway unreachable.',
     };
   }
 
@@ -1742,61 +1526,15 @@ class BharatOnePayApi {
           await getSipPlansAndPortfolio();
           return data;
         }
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Mandate registration declined.',
+        };
       }
     } catch (_) {}
-
-    // Local SIP creation fallback
-    final plan = sipPlans.firstWhere(
-      (p) => p['id'] == planId,
-      orElse: () => sipPlans.first,
-    );
-    if (currentAccount != null) {
-      currentAccount = BankAccountModel(
-        id: currentAccount!.id,
-        bankName: currentAccount!.bankName,
-        bankCode: currentAccount!.bankCode,
-        ifsc: currentAccount!.ifsc,
-        maskedAccountNumber: currentAccount!.maskedAccountNumber,
-        balance: (currentAccount!.balance - monthlyAmount) > 0 ? (currentAccount!.balance - monthlyAmount) : 0,
-        isPrimary: currentAccount!.isPrimary,
-      );
-    }
-    final nav = (plan['navOrUnitPrice'] as num?)?.toDouble() ?? 100.0;
-    final units = double.parse((monthlyAmount / nav).toStringAsFixed(3));
-    final curVal = double.parse((monthlyAmount * 1.018).toStringAsFixed(2));
-    final umrn = 'UMRN${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-    final sipEntry = {
-      'id': 'sip_m_${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
-      'planId': planId,
-      'planName': plan['name'],
-      'monthlyAmount': monthlyAmount,
-      'debitDay': debitDay,
-      'umrn': umrn,
-      'unitsHeld': units,
-      'installmentsPaid': 1,
-      'totalInvested': monthlyAmount,
-      'currentValue': curVal,
-      'status': 'ACTIVE',
-    };
-    mySips.insert(0, sipEntry);
-    _recalculateLocalSipPortfolio();
-    final txn = {
-      'id': 'txn_sip_${DateTime.now().millisecondsSinceEpoch}',
-      'upiRrn': umrn,
-      'receiverName': plan['name'],
-      'receiverVpa': 'bse.star.mf@npci',
-      'amount': monthlyAmount,
-      'status': 'SUCCESS',
-      'remark': 'Bank Auto-SIP 1st Installment • UMRN: $umrn',
-      'createdAt': DateTime.now().toIso8601String(),
-    };
-    recentTransactions.insert(0, txn);
-    await saveSessionToDisk();
     return {
-      'success': true,
-      'mandate': sipEntry,
-      'updatedBalance': currentAccount?.balance ?? 0.0,
-      'transaction': txn,
+      'success': false,
+      'message': 'Failed to create Auto-SIP mandate. Issuer exchange unreachable.',
     };
   }
 
@@ -1831,33 +1569,16 @@ class BharatOnePayApi {
           await getSipPlansAndPortfolio();
           return data;
         }
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Installment payment declined.',
+        };
       }
     } catch (_) {}
-
-    final idx = mySips.indexWhere((s) => s['id'] == sipId);
-    if (idx != -1) {
-      final sip = Map<String, dynamic>.from(mySips[idx]);
-      final amt = amount ?? ((sip['monthlyAmount'] as num?)?.toDouble() ?? 500.0);
-      sip['installmentsPaid'] = ((sip['installmentsPaid'] as num?)?.toInt() ?? 1) + 1;
-      sip['totalInvested'] = ((sip['totalInvested'] as num?)?.toDouble() ?? 0.0) + amt;
-      sip['currentValue'] = double.parse((((sip['currentValue'] as num?)?.toDouble() ?? 0.0) + amt * 1.02).toStringAsFixed(2));
-      mySips[idx] = sip;
-      if (currentAccount != null) {
-        currentAccount = BankAccountModel(
-          id: currentAccount!.id,
-          bankName: currentAccount!.bankName,
-          bankCode: currentAccount!.bankCode,
-          ifsc: currentAccount!.ifsc,
-          maskedAccountNumber: currentAccount!.maskedAccountNumber,
-          balance: (currentAccount!.balance - amt) > 0 ? (currentAccount!.balance - amt) : 0,
-          isPrimary: currentAccount!.isPrimary,
-        );
-      }
-      _recalculateLocalSipPortfolio();
-      await saveSessionToDisk();
-      return {'success': true, 'updatedBalance': currentAccount?.balance ?? 0.0};
-    }
-    return {'success': false, 'message': 'SIP mandate not found'};
+    return {
+      'success': false,
+      'message': 'SIP installment payment failed. Exchange unreachable.',
+    };
   }
 
   static Future<Map<String, dynamic>> redeemSipToBank({
@@ -1889,45 +1610,16 @@ class BharatOnePayApi {
           await getSipPlansAndPortfolio();
           return data;
         }
+        return {
+          'success': false,
+          'message': data['message'] ?? 'SIP redemption declined.',
+        };
       }
     } catch (_) {}
-
-    final idx = mySips.indexWhere((s) => s['id'] == sipId);
-    if (idx != -1) {
-      final sip = mySips.removeAt(idx);
-      final creditAmt = (sip['currentValue'] as num?)?.toDouble() ?? 0.0;
-      if (currentAccount != null) {
-        currentAccount = BankAccountModel(
-          id: currentAccount!.id,
-          bankName: currentAccount!.bankName,
-          bankCode: currentAccount!.bankCode,
-          ifsc: currentAccount!.ifsc,
-          maskedAccountNumber: currentAccount!.maskedAccountNumber,
-          balance: currentAccount!.balance + creditAmt,
-          isPrimary: currentAccount!.isPrimary,
-        );
-      }
-      _recalculateLocalSipPortfolio();
-      final txn = {
-        'id': 'txn_sip_red_${DateTime.now().millisecondsSinceEpoch}',
-        'upiRrn': 'RED${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
-        'receiverName': '${currentUser?.fullName ?? "User"} (${currentAccount?.bankName ?? "Bank"})',
-        'receiverVpa': currentUser?.primaryVpa ?? 'user@aiksetra',
-        'amount': creditAmt,
-        'status': 'SUCCESS',
-        'remark': 'SIP Redemption Credited from ${sip['planName']}',
-        'createdAt': DateTime.now().toIso8601String(),
-        'metadata': {'isCredit': true},
-      };
-      recentTransactions.insert(0, txn);
-      await saveSessionToDisk();
-      return {
-        'success': true,
-        'creditedAmount': creditAmt.toStringAsFixed(2),
-        'updatedBalance': currentAccount?.balance ?? 0.0,
-      };
-    }
-    return {'success': false, 'message': 'SIP not found'};
+    return {
+      'success': false,
+      'message': 'SIP redemption failed. Exchange switch unreachable.',
+    };
   }
 
   // 14. Live SMS & Payment Gateway API Key Management

@@ -17,7 +17,7 @@
 
 **AikSetra** is a complete, production-grade Indian financial ecosystem combining authentic **NPCI UPI 2.0 payments**, **BBPS utility billing with real SERC tariff calculations**, **wealth creation (Indian Stock Market & Bank SIPs)**, **RBI LRS-compliant Global FX remittances**, and **biometric zero-trust security**.
 
-Designed from the ground up to eliminate fintech complexity, AikSetra replaces confusing jargon with transparent everyday banking, instant local-network settlement, and complete legal compliance.
+Designed from the ground up to eliminate fintech complexity, AikSetra replaces confusing jargon with transparent everyday banking, instant local-network settlement, and complete regulatory integrity.
 
 ```
                   ┌─────────────────────────────────────────────────────────┐
@@ -84,6 +84,13 @@ Designed from the ground up to eliminate fintech complexity, AikSetra replaces c
 ### 8. Two-Phone Local Network Settlement
 - Configured with dynamic Wi-Fi IP failover (`192.168.29.90:4000`), allowing two physical smartphones on the same Wi-Fi network to exchange real-time UPI payments, instantly crediting the beneficiary account.
 
+### 9. Enterprise Financial Integrity & Security Core
+- **Double-Entry Ledger Architecture:** Full balanced accounting ledger with concurrent `DEBIT` and `CREDIT` entries for all transfers, investments, and utility payments.
+- **Per-Account Concurrency Mutex:** `AccountLockManager` ensures parallel incoming requests to the same bank account are processed sequentially, eliminating race conditions and double-spending.
+- **PBKDF2 Salted MPIN Verifiers:** Replaced plain hashes with 100,000 iterations of salted PBKDF2-HMAC-SHA256, attempt tracking, and 5-minute lockout security after 3 consecutive failures.
+- **Durable Idempotency & Reconciliations:** Database-enforced idempotency prevents duplicate debits on network retries. Built-in audit logging (SHA-256 integrity hashes) and reconciliation endpoints (`/ledger/reconcile/:accountId`).
+- **Zero Client-Side Fake Success:** Strict server-authoritative payment execution. All client-side mock fallbacks have been removed.
+
 ---
 
 ## 📁 Repository Structure
@@ -113,11 +120,21 @@ AikSetra/
 ├── backend/                      # Node.js + TypeScript Banking Switch & Simulator
 │   ├── src/
 │   │   ├── server.ts             # Express & WebSocket server initialization
+│   │   ├── config/               # Secure environment validation & secret management
 │   │   ├── db/
 │   │   │   ├── database.ts       # File-based persistent store (aiksetra_db.json)
-│   │   │   └── seed.ts           # Baseline verified accounts, merchants & stocks
-│   │   ├── services/             # Auth, Payment, BBPS, SIP, FX, Soundbox
-│   │   └── routes/api.router.ts  # REST API endpoints (/api/v1/...)
+│   │   │   └── seed.ts           # Baseline verified accounts, PBKDF2 hashes & stocks
+│   │   ├── middleware/
+│   │   │   ├── auth.middleware.ts       # Strict Bearer JWT & Admin API authentication
+│   │   │   └── rateLimit.middleware.ts  # Sliding-window rate limiters (OTP/Auth/Payment)
+│   │   ├── services/
+│   │   │   ├── auth.service.ts          # PBKDF2 MPIN, SMS OTP & Session management
+│   │   │   ├── ledger.service.ts        # Double-entry ledger & per-account concurrency locks
+│   │   │   ├── audit.service.ts         # Append-only SHA-256 hashed audit trail
+│   │   │   ├── payment.service.ts       # Core UPI, Idempotency & Scam Shield
+│   │   │   ├── psp.simulator.ts         # Banking PSP switch rail adapter
+│   │   │   └── crossBorder.service.ts   # RBI LRS FX Remittance engine
+│   │   └── routes/api.router.ts  # Hardened REST API endpoints (/api/v1/...)
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -141,7 +158,7 @@ Download and install the pre-compiled release APK directly onto any Android devi
 cd backend
 npm install
 npm run build
-npm run seed     # Initializes verified bank accounts, bluechips & BBPS billers
+npm run seed     # Initializes verified bank accounts, PBKDF2 hashes & BBPS billers
 npm start        # Launches switch on http://0.0.0.0:4000
 ```
 
@@ -155,9 +172,10 @@ flutter run --release
 ---
 
 ## 🛡️ Security & Regulatory Compliance
-- **Zero-Knowledge MPIN:** UPI MPIN hashes are verified securely and never transmitted as plaintext.
+- **PBKDF2-HMAC-SHA256:** UPI MPIN verifiers use 100,000 salted iterations with 3-attempt lockouts; plaintext is never stored or transmitted.
+- **Strict Bearer JWT:** All client APIs require valid signed bearer tokens; production header bypasses (`x-user-id`) are prohibited.
 - **Biometric Authentication:** Local device biometric authentication protects app unlock and 1-tap UPI authorization.
-- **DPDP Act 2023:** Digital Personal Data Protection compliant user identity and device identifier management.
+- **DPDP Act 2023 & NPCI CL Guidelines:** Compliant user identity, device identifier management, and Common Library specifications.
 - **RBI LRS & SERC Adherence:** Remittance calculations adhere to Section 206C(1G) and Rule 32(2)(b); utility formulas adhere to SERC slab guidelines.
 
 ---

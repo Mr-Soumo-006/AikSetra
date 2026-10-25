@@ -13,6 +13,8 @@ import type {
   MoneyVault,
   SplitBill,
   DisputeTicket,
+  LedgerEntry,
+  AuditLog,
 } from '../types/index.js';
 
 export interface DatabaseSchema {
@@ -27,6 +29,8 @@ export interface DatabaseSchema {
   vaults: MoneyVault[];
   splitBills: SplitBill[];
   disputes: DisputeTicket[];
+  ledger: LedgerEntry[];
+  auditLogs: AuditLog[];
   fraudRegistry: Array<{
     vpa: string;
     phone?: string;
@@ -48,6 +52,8 @@ const defaultDatabase: DatabaseSchema = {
   vaults: [],
   splitBills: [],
   disputes: [],
+  ledger: [],
+  auditLogs: [],
   fraudRegistry: [],
 };
 
@@ -65,7 +71,13 @@ class JsonDatabase {
     if (fs.existsSync(this.filePath)) {
       try {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
-        this.data = { ...defaultDatabase, ...JSON.parse(raw) };
+        const parsed = JSON.parse(raw);
+        this.data = {
+          ...defaultDatabase,
+          ...parsed,
+          ledger: parsed.ledger || [],
+          auditLogs: parsed.auditLogs || [],
+        };
       } catch (e) {
         console.warn('Could not parse existing database, initializing fresh one.', e);
         this.data = defaultDatabase;

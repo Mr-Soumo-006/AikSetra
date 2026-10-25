@@ -16,7 +16,11 @@ export interface User {
   kycStatus: KycStatus;
   deviceId: string;
   simId: string;
-  mpinHash: string; // bcrypt or sha256 simulated hash
+  mpinHash: string; // PBKDF2 salted hash or sha256 migrated
+  mpinSalt?: string;
+  failedMpinAttempts?: number;
+  mpinLockedUntil?: number;
+  isAdmin?: boolean;
   primaryVpa: string;
   liteBalance: number;
   lrsUsedUsd: number;
@@ -229,5 +233,33 @@ export interface SoundboxEvent {
   payerVpa: string;
   language: 'en' | 'hi' | 'bn' | 'ta' | 'te';
   spokenText: string;
+  timestamp: string;
+}
+
+export type LedgerEntryType = 'DEBIT' | 'CREDIT';
+
+export interface LedgerEntry {
+  id: string;
+  transactionId: string;
+  accountId: string;
+  accountType: 'USER_ACCOUNT' | 'SETTLEMENT_CLEARING' | 'FEE_INCOME' | 'ESCROW_HOLD';
+  entryType: LedgerEntryType;
+  amount: number;
+  currency: string;
+  balanceAfter: number;
+  description: string;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actorId?: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  payloadHash?: string;
+  metadata?: Record<string, any>;
   timestamp: string;
 }

@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { db } from '../db/database.js';
-import { authMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import { authMiddleware, adminAuthMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import {
+  otpRateLimiter,
+  authRateLimiter,
+  paymentRateLimiter,
+  mpinRateLimiter,
+} from '../middleware/rateLimit.middleware.js';
 import { AuthService } from '../services/auth.service.js';
 import { AccountService } from '../services/account.service.js';
 import { PaymentService } from '../services/payment.service.js';
@@ -16,30 +22,35 @@ import { BillPayService } from '../services/billPay.service.js';
 import { SipService } from '../services/sip.service.js';
 import { SmsService } from '../services/sms.service.js';
 import { pspSimulator } from '../services/psp.simulator.js';
+import { LedgerService } from '../services/ledger.service.js';
+import { AuditService } from '../services/audit.service.js';
 
 export const apiRouter = Router();
 
 // ==========================================
 // 1. AUTH, OTP & DEVICE BINDING
 // ==========================================
-apiRouter.post('/auth/send-otp', async (req, res) => {
+
+// Issue 3, 7 & 35: Rate-limited OTP dispatch with no OTP disclosure
+apiRouter.post('/auth/send-otp', otpRateLimiter, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, message: 'Please provide a 10-digit mobile number.' });
+      return res.status(400).json({ success: false, message: 'Please provide a 10-digit Indian mobile number.' });
     }
-    const result = await AuthService.sendOtp(phone);
+    const result = await AuthService.sendOtp(phone, req.ip);
     return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
 
-apiRouter.post('/auth/verify-otp', (req, res) => {
+// Issue 4, 7 & 33: Rate-limited interactive OTP verification & login
+apiRouter.post('/auth/verify-otp', authRateLimiter, (req, res) => {
   try {
     const { phone, otp, deviceId, simId, fullName, selectedBank } = req.body;
     if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: 'Phone number and OTP are required.' });
+      return res.status(400).json({ success: false, message: 'Phone number and 6-digit OTP are required.' });
     }
     const result = AuthService.verifyOtpAndLogin({
       phone,
@@ -48,6 +59,7 @@ apiRouter.post('/auth/verify-otp', (req, res) => {
       simId: simId || 'sim_slot_1_jio',
       fullName,
       selectedBank,
+      clientIp: req.ip,
     });
     return res.json(result);
   } catch (err: any) {
@@ -55,30 +67,24 @@ apiRouter.post('/auth/verify-otp', (req, res) => {
   }
 });
 
+// Issue 4: Disallow fixed OTP registration bypass
 apiRouter.post('/auth/register-device', (req, res) => {
-  try {
-    const { phone, deviceId, simId, fullName } = req.body;
-    if (!phone || !deviceId || !simId) {
-      return res.status(400).json({ success: false, message: 'phone, deviceId and simId are required.' });
-    }
-    const result = AuthService.verifyOtpAndLogin({
-      phone,
-      otp: '123456',
-      deviceId,
-      simId,
-      fullName,
-    });
-    return res.json(result);
-  } catch (err: any) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
+  return res.status(400).json({
+    success: false,
+    code: 'INTERACTIVE_OTP_REQUIRED',
+    message: 'Fixed-OTP registration is disabled for security compliance. Please authenticate via /auth/send-otp and /auth/verify-otp.',
+  });
 });
 
-apiRouter.post('/auth/set-mpin', authMiddleware, (req: AuthenticatedRequest, res) => {
+// Issue 5 & 7: Rate-limited MPIN configuration with validation
+apiRouter.post('/auth/set-mpin', authMiddleware, mpinRateLimiter, (req: AuthenticatedRequest, res) => {
   try {
     const { mpin } = req.body;
+    if (!mpin) {
+      return res.status(400).json({ success: false, message: 'Please provide a 4 or 6 digit numerical MPIN.' });
+    }
     AuthService.setMpin(req.userId!, mpin);
-    return res.json({ success: true, message: 'UPI MPIN configured successfully.' });
+    return res.json({ success: true, message: 'UPI MPIN configured successfully using PBKDF2.' });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -87,13 +93,22 @@ apiRouter.post('/auth/set-mpin', authMiddleware, (req: AuthenticatedRequest, res
 apiRouter.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
   const user = db.get('users').find((u) => u.id === req.userId);
   if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+  // Sanitize user object (never expose mpinHash or salt)
+  const sanitizedUser = {
+    ...user,
+    mpinHash: undefined,
+    mpinSalt: undefined,
+  };
+
   const accounts = db.get('accounts').filter((a) => a.userId === req.userId);
-  return res.json({ success: true, user, accounts });
+  return res.json({ success: true, user: sanitizedUser, accounts });
 });
 
 // ==========================================
-// 2. ACCOUNTS & VPA MANAGEMENT
+// 2. ACCOUNTS & VPA MANAGEMENT (Issue 6: Ownership Authorization)
 // ==========================================
+
 apiRouter.get('/accounts/discover', authMiddleware, (req: AuthenticatedRequest, res) => {
   const user = db.get('users').find((u) => u.id === req.userId);
   const accounts = AccountService.discoverBankAccounts(user?.phone || '9876543210');
@@ -103,6 +118,13 @@ apiRouter.get('/accounts/discover', authMiddleware, (req: AuthenticatedRequest, 
 apiRouter.post('/accounts/link', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const account = AccountService.linkAccount({ userId: req.userId!, ...req.body });
+    AuditService.log({
+      actorId: req.userId,
+      action: 'ACCOUNT_LINKED',
+      resource: 'ACCOUNT',
+      resourceId: account.id,
+      metadata: { bankName: account.bankName },
+    });
     return res.json({ success: true, account });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -116,8 +138,14 @@ apiRouter.get('/accounts', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.post('/accounts/:id/set-primary', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const account = AccountService.setPrimaryAccount(req.userId!, req.params.id as string);
-    return res.json({ success: true, account });
+    const account = db.get('accounts').find((a) => a.id === req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Account not found.' });
+    if (account.userId !== req.userId && !req.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: You do not own this account.' });
+    }
+
+    const updated = AccountService.setPrimaryAccount(req.userId!, req.params.id as string);
+    return res.json({ success: true, account: updated });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -126,10 +154,20 @@ apiRouter.post('/accounts/:id/set-primary', authMiddleware, (req: AuthenticatedR
 apiRouter.post('/accounts/add-money', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { accountId, amount, sourceNote } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Amount must be greater than zero.' });
+    }
+
+    const account = db.get('accounts').find((a) => a.id === accountId);
+    if (account && account.userId !== req.userId && !req.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Unauthorized account credit attempt.' });
+    }
+
     const result = AccountService.addMoneyToAccount({
       userId: req.userId!,
       accountId,
-      amount: parseFloat(amount),
+      amount: numAmount,
       sourceNote,
     });
     return res.json(result);
@@ -139,40 +177,59 @@ apiRouter.post('/accounts/add-money', authMiddleware, (req: AuthenticatedRequest
 });
 
 apiRouter.get('/accounts/:id/balance', authMiddleware, (req: AuthenticatedRequest, res) => {
-  try {
-    const balance = AccountService.getBalance(req.params.id as string, req.userId!);
-    return res.json({ success: true, accountId: req.params.id as string, balance });
-  } catch (err: any) {
-    return res.status(404).json({ success: false, message: err.message });
+  const account = db.get('accounts').find((a) => a.id === req.params.id);
+  if (!account) return res.status(404).json({ success: false, message: 'Account not found.' });
+  if (account.userId !== req.userId && !req.isAdmin) {
+    return res.status(403).json({ success: false, message: 'Forbidden: Cannot view another user’s balance.' });
   }
+  return res.json({ success: true, balance: account.balance, isPrimary: account.isPrimary });
 });
 
 apiRouter.get('/vpa/resolve', (req, res) => {
   const vpa = req.query.vpa as string;
-  if (!vpa) return res.status(400).json({ success: false, message: 'vpa query parameter is required.' });
+  if (!vpa) return res.status(400).json({ success: false, message: 'vpa query param required.' });
   const result = AccountService.resolveVpa(vpa);
   return res.json(result);
 });
 
 // ==========================================
-// 3. CORE PAYMENTS & TRANSACTIONS
+// 3. CORE PAYMENTS & TRANSACTIONS (Issues 6, 7, 14, 15, 16, 17)
 // ==========================================
-apiRouter.post('/payments/pay', authMiddleware, async (req: AuthenticatedRequest, res) => {
+
+apiRouter.post('/payments/pay', authMiddleware, paymentRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { receiverVpa, amount, mpin, remark, senderAccountId, idempotencyKey, bypassScamShieldWarning } = req.body;
+
     if (!receiverVpa || !amount) {
       return res.status(400).json({ success: false, message: 'receiverVpa and amount are required.' });
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Amount must be a valid positive number.' });
+    }
+
+    if (!mpin || String(mpin).trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'Valid 4 or 6 digit UPI MPIN is required.' });
+    }
+
+    // Verify account ownership
+    if (senderAccountId) {
+      const senderAcc = db.get('accounts').find((a) => a.id === senderAccountId);
+      if (!senderAcc || senderAcc.userId !== req.userId) {
+        return res.status(403).json({ success: false, message: 'Selected sender account does not belong to you.' });
+      }
     }
 
     const result = await PaymentService.executePayment({
       senderUserId: req.userId!,
       senderAccountId,
       receiverVpa,
-      amount: parseFloat(amount),
-      mpin,
+      amount: numAmount,
+      mpin: String(mpin).trim(),
       remark,
-      idempotencyKey,
-      bypassScamShieldWarning,
+      idempotencyKey: idempotencyKey || (req.headers['idempotency-key'] as string),
+      bypassScamShieldWarning: !!bypassScamShieldWarning,
     });
 
     return res.json(result);
@@ -181,13 +238,18 @@ apiRouter.post('/payments/pay', authMiddleware, async (req: AuthenticatedRequest
   }
 });
 
-apiRouter.post('/payments/lite-pay', authMiddleware, async (req: AuthenticatedRequest, res) => {
+apiRouter.post('/payments/lite-pay', authMiddleware, paymentRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { receiverVpa, amount, remark } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid payment amount.' });
+    }
+
     const transaction = await PaymentService.executeLitePayment({
       senderUserId: req.userId!,
       receiverVpa,
-      amount: parseFloat(amount),
+      amount: numAmount,
       remark,
     });
     return res.json({ success: true, transaction });
@@ -197,17 +259,22 @@ apiRouter.post('/payments/lite-pay', authMiddleware, async (req: AuthenticatedRe
 });
 
 apiRouter.get('/payments/history', authMiddleware, (req: AuthenticatedRequest, res) => {
-  const transactions = PaymentService.getTransactionHistory(req.userId!);
-  return res.json({ success: true, transactions });
+  const history = PaymentService.getTransactionHistory(req.userId!);
+  return res.json({ success: true, transactions: history });
 });
 
 apiRouter.post('/payments/collect', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { payerVpa, amount, remark } = req.body;
+    const numAmount = parseFloat(amount);
+    if (!payerVpa || !numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Valid payerVpa and amount required.' });
+    }
+
     const collect = PaymentService.createCollectRequest({
-      payerVpa,
       payeeUserId: req.userId!,
-      amount: parseFloat(amount),
+      payerVpa,
+      amount: numAmount,
       remark,
     });
     return res.json({ success: true, collectRequest: collect });
@@ -216,10 +283,18 @@ apiRouter.post('/payments/collect', authMiddleware, (req: AuthenticatedRequest, 
   }
 });
 
-apiRouter.post('/payments/collect/:id/approve', authMiddleware, async (req: AuthenticatedRequest, res) => {
+apiRouter.post('/payments/collect/:id/approve', authMiddleware, paymentRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { mpin } = req.body;
-    const transaction = await PaymentService.approveCollectRequest(req.params.id as string, req.userId!, mpin);
+    if (!mpin) {
+      return res.status(400).json({ success: false, message: 'UPI MPIN required to approve collect request.' });
+    }
+
+    const transaction = await PaymentService.approveCollectRequest(
+      req.params.id as string,
+      req.userId!,
+      String(mpin).trim()
+    );
     return res.json({ success: true, transaction });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
@@ -227,46 +302,50 @@ apiRouter.post('/payments/collect/:id/approve', authMiddleware, async (req: Auth
 });
 
 // ==========================================
-// 4. SCAM SHIELD (ORIGINAL DIFFERENTIATOR)
+// 4. SCAM SHIELD
 // ==========================================
+
 apiRouter.post('/scam-shield/analyze', authMiddleware, (req: AuthenticatedRequest, res) => {
-  const { receiverVpa, amount, remark, expectedPayeeName } = req.body;
+  const { receiverVpa, amount, remark } = req.body;
   const analysis = ScamShieldService.analyzePaymentRisk({
-    senderUserId: req.userId,
-    senderVpa: req.userVpa || '',
+    senderUserId: req.userId!,
+    senderVpa: req.userVpa!,
     receiverVpa,
     amount: parseFloat(amount || '0'),
     remark,
-    expectedPayeeName,
   });
   return res.json({ success: true, analysis });
 });
 
 apiRouter.post('/scam-shield/report', authMiddleware, (req: AuthenticatedRequest, res) => {
   const { vpa, phone, reason } = req.body;
+  if (!vpa || !reason) {
+    return res.status(400).json({ success: false, message: 'vpa and reason are required.' });
+  }
   const result = ScamShieldService.reportFraud({
+    reportedByUserId: req.userId!,
     vpa,
     phone,
     reason,
-    reportedByUserId: req.userId!,
   });
   return res.json(result);
 });
 
 // ==========================================
-// 5. PROTECTED PAY (ESCROW FOR STRANGERS)
+// 5. PROTECTED PAY (BUYER ESCROW)
 // ==========================================
-apiRouter.post('/protected-pay/initiate', authMiddleware, (req: AuthenticatedRequest, res) => {
+
+apiRouter.post('/protected-pay/initiate', authMiddleware, paymentRateLimiter, (req: AuthenticatedRequest, res) => {
   try {
     const { sellerVpa, sellerName, amount, itemDescription, autoReleaseDays } = req.body;
     const escrow = ProtectedPayService.createEscrow({
       buyerUserId: req.userId!,
       buyerVpa: req.userVpa!,
       sellerVpa,
-      sellerName,
+      sellerName: sellerName || 'Verified Seller',
       amount: parseFloat(amount),
       itemDescription,
-      autoReleaseDays,
+      autoReleaseDays: autoReleaseDays ? parseInt(autoReleaseDays, 10) : 7,
     });
     return res.json({ success: true, escrow });
   } catch (err: any) {
@@ -277,7 +356,7 @@ apiRouter.post('/protected-pay/initiate', authMiddleware, (req: AuthenticatedReq
 apiRouter.post('/protected-pay/:id/confirm-delivery', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const escrow = ProtectedPayService.confirmDelivery(req.params.id as string, req.userId!);
-    return res.json({ success: true, escrow, message: 'Delivery confirmed. Escrow funds released to seller.' });
+    return res.json({ success: true, escrow });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -285,14 +364,14 @@ apiRouter.post('/protected-pay/:id/confirm-delivery', authMiddleware, (req: Auth
 
 apiRouter.post('/protected-pay/:id/dispute', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const { disputeReason, disputeEvidenceUrl } = req.body;
+    const { reason, evidenceUrl } = req.body;
     const escrow = ProtectedPayService.raiseDispute({
       escrowId: req.params.id as string,
       buyerUserId: req.userId!,
-      disputeReason,
-      disputeEvidenceUrl,
+      disputeReason: reason,
+      disputeEvidenceUrl: evidenceUrl,
     });
-    return res.json({ success: true, escrow, message: 'Dispute registered. Escrow payout paused.' });
+    return res.json({ success: true, escrow });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -304,19 +383,18 @@ apiRouter.get('/protected-pay/my-escrows', authMiddleware, (req: AuthenticatedRe
 });
 
 // ==========================================
-// 6. CROSS-BORDER & RUPEE BRIDGE
+// 6. CROSS-BORDER RUPEE-REMIT
 // ==========================================
-apiRouter.get('/cross-border/currencies', async (req, res) => {
-  await CrossBorderService.refreshLiveRates();
-  const currencies = CrossBorderService.getSupportedCurrencies();
-  return res.json({ success: true, currencies });
+
+apiRouter.get('/cross-border/currencies', (req, res) => {
+  const corridors = CrossBorderService.getSupportedCurrencies();
+  return res.json({ success: true, corridors });
 });
 
 apiRouter.post('/cross-border/quote', authMiddleware, async (req: AuthenticatedRequest, res) => {
-  await CrossBorderService.refreshLiveRates();
   try {
     const { targetCurrency, targetAmount, sourceAmountInr } = req.body;
-    const quote = CrossBorderService.generateQuote({
+    const quote = await CrossBorderService.generateQuote({
       userId: req.userId!,
       targetCurrency,
       targetAmount: targetAmount ? parseFloat(targetAmount) : undefined,
@@ -328,19 +406,19 @@ apiRouter.post('/cross-border/quote', authMiddleware, async (req: AuthenticatedR
   }
 });
 
-apiRouter.post('/cross-border/execute', authMiddleware, async (req: AuthenticatedRequest, res) => {
+apiRouter.post('/cross-border/execute', authMiddleware, paymentRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
-    const { quoteId, beneficiaryName, beneficiaryAccountOrIban, purposeCode, mpin } = req.body;
-    if (!quoteId || !beneficiaryName || !beneficiaryAccountOrIban) {
-      return res.status(400).json({ success: false, message: 'quoteId, beneficiaryName, and beneficiaryAccountOrIban are required.' });
+    const { quoteId, beneficiaryName, beneficiaryIbanOrAccount, purposeCode, mpin } = req.body;
+    if (!mpin) {
+      return res.status(400).json({ success: false, message: 'UPI MPIN required to authorize remittance.' });
     }
     const result = await CrossBorderService.executeTransfer({
       userId: req.userId!,
       quoteId,
       beneficiaryName,
-      beneficiaryAccountOrIban,
+      beneficiaryAccountOrIban: beneficiaryIbanOrAccount,
       purposeCode,
-      mpin: mpin || '1234',
+      mpin: String(mpin).trim(),
     });
     return res.json(result);
   } catch (err: any) {
@@ -349,18 +427,31 @@ apiRouter.post('/cross-border/execute', authMiddleware, async (req: Authenticate
 });
 
 apiRouter.get('/cross-border/lrs-status', authMiddleware, (req: AuthenticatedRequest, res) => {
-  const status = CrossBorderService.getLrsStatus(req.userId!);
-  return res.json({ success: true, lrsStatus: status });
+  const user = db.get('users').find((u) => u.id === req.userId);
+  const used = user?.lrsUsedUsd || 0;
+  const limit = 250000;
+  return res.json({
+    success: true,
+    lrsUsedUsd: used,
+    lrsLimitUsd: limit,
+    remainingUsd: Math.max(0, limit - used),
+  });
 });
 
 // ==========================================
-// 7. MERCHANT SERVICES & SOUNDBOX
+// 7. MERCHANTS & SOUNDBOX
 // ==========================================
+
 apiRouter.post('/merchants/qr', async (req, res) => {
   try {
-    const { vpa, payeeName, amount, transactionNote } = req.body;
-    const qrResult = await MerchantService.generateUpiQr({ vpa, payeeName, amount, transactionNote });
-    return res.json({ success: true, ...qrResult });
+    const { merchantVpa, merchantName, amount, description } = req.body;
+    const qrData = await MerchantService.generateUpiQr({
+      vpa: merchantVpa,
+      payeeName: merchantName,
+      amount: amount ? parseFloat(amount) : undefined,
+      transactionNote: description,
+    });
+    return res.json({ success: true, ...qrData });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -381,32 +472,19 @@ apiRouter.post('/merchants/paylinks', async (req, res) => {
 });
 
 apiRouter.get('/merchants/paylinks/:id', (req, res) => {
-  const payLink = MerchantService.getPayLink(req.params.id);
+  const payLink = MerchantService.getPayLink(req.params.id as string);
   if (!payLink) return res.status(404).json({ success: false, message: 'Pay link not found.' });
   return res.json({ success: true, payLink });
 });
 
 apiRouter.get('/merchants/dashboard/:id', (req, res) => {
-  try {
-    const data = MerchantService.getMerchantDashboard(req.params.id);
-    return res.json({ success: true, ...data });
-  } catch (err: any) {
-    return res.status(404).json({ success: false, message: err.message });
-  }
+  const dashboard = MerchantService.getMerchantDashboard(req.params.id as string);
+  if (!dashboard) return res.status(404).json({ success: false, message: 'Merchant not found.' });
+  return res.json({ success: true, dashboard });
 });
 
-// SSE Stream for Real-time Merchant Soundbox alerts
 apiRouter.get('/merchants/soundbox/stream', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
   soundboxService.registerSseClient(res);
-
-  req.on('close', () => {
-    soundboxService.removeSseClient(res);
-  });
 });
 
 apiRouter.get('/merchants/soundbox/recent', (req, res) => {
@@ -414,8 +492,9 @@ apiRouter.get('/merchants/soundbox/recent', (req, res) => {
 });
 
 // ==========================================
-// 8. MONEY VAULTS & SMART SPLIT
+// 8. MONEY VAULTS (DIGITAL GULLAK)
 // ==========================================
+
 apiRouter.get('/vaults', authMiddleware, (req: AuthenticatedRequest, res) => {
   const vaults = VaultService.getVaults(req.userId!);
   return res.json({ success: true, vaults });
@@ -427,10 +506,10 @@ apiRouter.post('/vaults', authMiddleware, (req: AuthenticatedRequest, res) => {
     const vault = VaultService.createVault({
       userId: req.userId!,
       name,
-      targetAmount: parseFloat(targetAmount),
+      targetAmount: parseFloat(targetAmount || '5000'),
       category,
-      autoRoundUp,
-      roundUpMultiple,
+      autoRoundUp: autoRoundUp !== undefined ? !!autoRoundUp : true,
+      roundUpMultiple: roundUpMultiple ? parseInt(roundUpMultiple, 10) : 10,
     });
     return res.json({ success: true, vault });
   } catch (err: any) {
@@ -440,9 +519,15 @@ apiRouter.post('/vaults', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.post('/vaults/:id/deposit', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
+    const vault = db.get('vaults').find((v) => v.id === req.params.id);
+    if (!vault) return res.status(404).json({ success: false, message: 'Vault not found.' });
+    if (vault.userId !== req.userId && !req.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Unauthorized vault deposit attempt.' });
+    }
+
     const { amount } = req.body;
-    const vault = VaultService.deposit(req.params.id as string, req.userId!, parseFloat(amount));
-    return res.json({ success: true, vault });
+    const updated = VaultService.deposit(req.params.id as string, req.userId!, parseFloat(amount));
+    return res.json({ success: true, vault: updated });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -450,13 +535,23 @@ apiRouter.post('/vaults/:id/deposit', authMiddleware, (req: AuthenticatedRequest
 
 apiRouter.post('/vaults/:id/withdraw', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
+    const vault = db.get('vaults').find((v) => v.id === req.params.id);
+    if (!vault) return res.status(404).json({ success: false, message: 'Vault not found.' });
+    if (vault.userId !== req.userId && !req.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Unauthorized vault withdrawal attempt.' });
+    }
+
     const { amount } = req.body;
-    const vault = VaultService.withdraw(req.params.id as string, req.userId!, parseFloat(amount));
-    return res.json({ success: true, vault });
+    const updated = VaultService.withdraw(req.params.id as string, req.userId!, parseFloat(amount));
+    return res.json({ success: true, vault: updated });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
+
+// ==========================================
+// 9. SPLIT BILLS
+// ==========================================
 
 apiRouter.get('/split', authMiddleware, (req: AuthenticatedRequest, res) => {
   const splits = SplitService.getSplitsForUser(req.userId!);
@@ -466,13 +561,13 @@ apiRouter.get('/split', authMiddleware, (req: AuthenticatedRequest, res) => {
 apiRouter.post('/split', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { title, totalAmount, participants } = req.body;
-    const bill = SplitService.createSplitBill({
+    const splitBill = SplitService.createSplitBill({
       createdByUserId: req.userId!,
       title,
       totalAmount: parseFloat(totalAmount),
       participants,
     });
-    return res.json({ success: true, splitBill: bill });
+    return res.json({ success: true, splitBill });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -480,16 +575,20 @@ apiRouter.post('/split', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.post('/split/:id/pay/:participantId', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const bill = SplitService.markParticipantPaid(req.params.id as string, req.params.participantId as string);
-    return res.json({ success: true, splitBill: bill });
+    const splitBill = SplitService.markParticipantPaid(
+      req.params.id as string,
+      req.params.participantId as string
+    );
+    return res.json({ success: true, splitBill });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
 
 // ==========================================
-// 9. DISPUTES
+// 10. DISPUTES & CHARGEBACKS
 // ==========================================
+
 apiRouter.get('/disputes', authMiddleware, (req: AuthenticatedRequest, res) => {
   const disputes = DisputeService.getDisputesForUser(req.userId!);
   return res.json({ success: true, disputes });
@@ -497,11 +596,12 @@ apiRouter.get('/disputes', authMiddleware, (req: AuthenticatedRequest, res) => {
 
 apiRouter.post('/disputes', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const { txnId, upiRrn, amount, category, description } = req.body;
+    const { txnId, amount, category, description } = req.body;
+    const txn = db.get('transactions').find((t) => t.id === txnId);
     const dispute = DisputeService.createDispute({
       userId: req.userId!,
       txnId,
-      upiRrn,
+      upiRrn: txn?.upiRrn || `RRN-${Date.now()}`,
       amount: parseFloat(amount),
       category,
       description,
@@ -513,9 +613,10 @@ apiRouter.post('/disputes', authMiddleware, (req: AuthenticatedRequest, res) => 
 });
 
 // ==========================================
-// 10. PSP / NPCI SIMULATOR TOGGLES
+// 11. BANKING SWITCH SIMULATOR & CONTROL (Admin Protected - Issue 10 & 38)
 // ==========================================
-apiRouter.get('/psp-simulator/status', (req, res) => {
+
+apiRouter.get('/psp-simulator/status', adminAuthMiddleware, (req, res) => {
   return res.json({
     success: true,
     currentMode: pspSimulator.getMode(),
@@ -523,7 +624,7 @@ apiRouter.get('/psp-simulator/status', (req, res) => {
   });
 });
 
-apiRouter.post('/psp-simulator/mode', (req, res) => {
+apiRouter.post('/psp-simulator/mode', adminAuthMiddleware, (req, res) => {
   const { mode } = req.body;
   if (!['SUCCESS', 'FLAKY', 'FAIL_MPIN', 'TIMEOUT', 'INSUFFICIENT_FUNDS'].includes(mode)) {
     return res.status(400).json({ success: false, message: 'Invalid simulator mode.' });
@@ -533,8 +634,9 @@ apiRouter.post('/psp-simulator/mode', (req, res) => {
 });
 
 // ==========================================
-// 11. BBPS UTILITY BILL PAYMENTS & RECHARGES
+// 12. BBPS UTILITY BILL PAYMENTS & RECHARGES
 // ==========================================
+
 apiRouter.get('/bills/billers', (req, res) => {
   const category = req.query.category as string | undefined;
   return res.json({ success: true, billers: BillPayService.getBillers(category) });
@@ -554,15 +656,18 @@ apiRouter.post('/bills/fetch', authMiddleware, (req: AuthenticatedRequest, res) 
   }
 });
 
-apiRouter.post('/bills/pay', authMiddleware, (req: AuthenticatedRequest, res) => {
+apiRouter.post('/bills/pay', authMiddleware, paymentRateLimiter, (req: AuthenticatedRequest, res) => {
   try {
     const { billerId, consumerNumber, amount, mpin, billNumber, planOrUsage } = req.body;
+    if (!mpin || String(mpin).trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'Valid UPI MPIN is required to pay utility bills.' });
+    }
     const result = BillPayService.payBill({
       userId: req.userId!,
       billerId,
       consumerNumber,
       amount: parseFloat(amount),
-      mpin: mpin || '1234',
+      mpin: String(mpin).trim(),
       billNumber,
       planOrUsage,
     });
@@ -577,8 +682,9 @@ apiRouter.get('/bills/history', authMiddleware, (req: AuthenticatedRequest, res)
 });
 
 // ==========================================
-// 12. BANK AUTO-SIP & WEALTH PLANS
+// 13. BANK AUTO-SIP & WEALTH PLANS
 // ==========================================
+
 apiRouter.get('/sip/plans', authMiddleware, (req: AuthenticatedRequest, res) => {
   const data = SipService.getPlansAndPortfolio(req.userId!);
   return res.json({ success: true, ...data });
@@ -587,12 +693,15 @@ apiRouter.get('/sip/plans', authMiddleware, (req: AuthenticatedRequest, res) => 
 apiRouter.post('/sip/create', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { planId, monthlyAmount, debitDay, mpin } = req.body;
+    if (!mpin || String(mpin).trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'UPI MPIN is required to establish auto-debit mandate.' });
+    }
     const result = SipService.createSipMandate({
       userId: req.userId!,
       planId,
       monthlyAmount: parseFloat(monthlyAmount),
       debitDay: parseInt(debitDay || '5', 10),
-      mpin: mpin || '1234',
+      mpin: String(mpin).trim(),
     });
     return res.json(result);
   } catch (err: any) {
@@ -600,14 +709,17 @@ apiRouter.post('/sip/create', authMiddleware, (req: AuthenticatedRequest, res) =
   }
 });
 
-apiRouter.post('/sip/:id/installment', authMiddleware, (req: AuthenticatedRequest, res) => {
+apiRouter.post('/sip/:id/installment', authMiddleware, paymentRateLimiter, (req: AuthenticatedRequest, res) => {
   try {
     const { amount, mpin } = req.body;
+    if (!mpin || String(mpin).trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'UPI MPIN required to authorize installment debit.' });
+    }
     const result = SipService.payAdditionalInstallment({
       userId: req.userId!,
       sipId: req.params.id as string,
       amount: amount ? parseFloat(amount) : undefined,
-      mpin: mpin || '1234',
+      mpin: String(mpin).trim(),
     });
     return res.json(result);
   } catch (err: any) {
@@ -618,10 +730,13 @@ apiRouter.post('/sip/:id/installment', authMiddleware, (req: AuthenticatedReques
 apiRouter.post('/sip/:id/redeem', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const { mpin } = req.body;
+    if (!mpin || String(mpin).trim().length < 4) {
+      return res.status(400).json({ success: false, message: 'UPI MPIN required to authorize redemption.' });
+    }
     const result = SipService.redeemSipToBank({
       userId: req.userId!,
       sipId: req.params.id as string,
-      mpin: mpin || '1234',
+      mpin: String(mpin).trim(),
     });
     return res.json(result);
   } catch (err: any) {
@@ -635,14 +750,55 @@ apiRouter.get('/merchants/local', (req, res) => {
 });
 
 // ==========================================
-// 13. LIVE GATEWAY & SMS API KEY CONFIGURATION
+// 14. DOUBLE-ENTRY LEDGER & RECONCILIATION AUDIT (Issue 26 & 29)
 // ==========================================
-apiRouter.get('/config/gateway', (req, res) => {
-  return res.json({ success: true, gateway: SmsService.getGatewayStatus() });
+
+apiRouter.get('/ledger/my-entries', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const userAccounts = db.get('accounts').filter((a) => a.userId === req.userId);
+  const userAccountIds = new Set(userAccounts.map((a) => a.id));
+
+  const entries = db
+    .get('ledger')
+    .filter((e) => userAccountIds.has(e.accountId))
+    .slice(-100);
+
+  return res.json({ success: true, ledgerEntries: entries });
 });
 
-apiRouter.post('/config/gateway', (req, res) => {
+apiRouter.get('/ledger/reconcile/:accountId', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const account = db.get('accounts').find((a) => a.id === req.params.accountId);
+  if (!account) return res.status(404).json({ success: false, message: 'Account not found.' });
+  if (account.userId !== req.userId && !req.isAdmin) {
+    return res.status(403).json({ success: false, message: 'Unauthorized reconciliation query.' });
+  }
+
+  const result = LedgerService.reconcileAccount(account.id);
+  return res.json({ success: true, accountId: account.id, ...result });
+});
+
+// ==========================================
+// 15. LIVE GATEWAY & SMS API KEY CONFIGURATION (Admin Protected - Issue 38)
+// ==========================================
+
+apiRouter.get('/config/gateway', adminAuthMiddleware, (req, res) => {
+  const status = SmsService.getGatewayStatus();
+  return res.json({
+    success: true,
+    gateway: {
+      ...status,
+      // Mask credentials
+      apiKeyMasked: (status.fast2smsConfigured || status.msg91Configured || status.twilioConfigured) ? '••••••••' : 'None',
+    },
+  });
+});
+
+apiRouter.post('/config/gateway', adminAuthMiddleware, (req, res) => {
   SmsService.updateGatewayConfig(req.body || {});
+  AuditService.log({
+    actorId: (req as any).userId || 'ADMIN',
+    action: 'GATEWAY_CREDENTIALS_UPDATED',
+    resource: 'SMS_GATEWAY',
+  });
   return res.json({
     success: true,
     message: 'Live Gateway & SMS credentials updated.',
