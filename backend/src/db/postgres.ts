@@ -894,7 +894,17 @@ export class PostgresDatabase implements IDatabase {
   }
 
   public async save(): Promise<void> {
-    // Immediate per-query persistence in PostgreSQL
+    if (!this.initialized) return;
+    try {
+      for (const u of this.data.users) {
+        await this.writeThroughInsert('users', u);
+      }
+      for (const a of this.data.accounts) {
+        await this.writeThroughInsert('accounts', a);
+      }
+    } catch (err) {
+      console.error('[POSTGRESQL]: Save sync failed:', err);
+    }
   }
 
   public async testConnection(): Promise<boolean> {

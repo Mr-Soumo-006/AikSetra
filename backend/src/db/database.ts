@@ -262,17 +262,6 @@ export class UnifiedDatabase implements IDatabase {
   constructor() {
     this.jsonDb = new JsonDatabase();
     this.pgDb = postgresDb;
-
-    // P1: Automatically select PostgreSQL whenever DATABASE_URL is configured
-    const hasPostgresConfig = Boolean(
-      process.env.DATABASE_URL ||
-      (process.env.PG_HOST && process.env.PG_DATABASE) ||
-      config?.databaseUrl
-    );
-
-    if (hasPostgresConfig) {
-      this.activeEngine = 'postgres';
-    }
   }
 
   /**
@@ -280,7 +269,13 @@ export class UnifiedDatabase implements IDatabase {
    * In production mode, connection failure fails safely instead of silently falling back to JSON file storage.
    */
   public async init(): Promise<boolean> {
-    if (this.activeEngine === 'postgres') {
+    const hasPostgresConfig = Boolean(
+      process.env.DATABASE_URL ||
+      (process.env.PG_HOST && process.env.PG_DATABASE) ||
+      config?.databaseUrl
+    );
+
+    if (hasPostgresConfig) {
       const ok = await this.pgDb.init();
       if (!ok) {
         if (config.isProduction) {
@@ -292,6 +287,7 @@ export class UnifiedDatabase implements IDatabase {
         this.activeEngine = 'json';
         return false;
       }
+      this.activeEngine = 'postgres';
       return true;
     }
 
@@ -310,7 +306,7 @@ export class UnifiedDatabase implements IDatabase {
   }
 
   public getActiveEngine(): 'json' | 'postgres' {
-    return this.activeEngine;
+    return (this.activeEngine === 'postgres' && this.pgDb?.isReady()) ? 'postgres' : 'json';
   }
 
   public get<K extends keyof DatabaseSchema>(collection: K): DatabaseSchema[K] {

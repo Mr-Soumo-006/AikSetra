@@ -1413,8 +1413,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
     if (!mounted) return;
     if (res['success'] == true) {
+      await _syncLiveState();
+      if (!mounted) return;
       setState(() {
-        _fetchedBill!['alreadyPaid'] = true;
+        if (_fetchedBill != null) _fetchedBill!['alreadyPaid'] = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2020,6 +2022,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                       debitDay: selectedDay,
                       mpin: mpin,
                     );
+                    await _syncLiveState();
                     if (!mounted) return;
                     setState(() {});
                     if (res['success'] == true) {
@@ -4972,7 +4975,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text('Enter your 4-digit UPI MPIN', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Enter your 4-digit UPI MPIN', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                Text('Demo PIN: 1234', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.bold)),
+              ],
+            ),
             const SizedBox(height: 12),
             Center(
               child: OutlinedButton.icon(
