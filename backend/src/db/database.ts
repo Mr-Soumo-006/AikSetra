@@ -277,17 +277,30 @@ export class UnifiedDatabase implements IDatabase {
 
   /**
    * Initializes active database engine (auto-connects and runs migrations for PostgreSQL)
+   * In production mode, connection failure fails safely instead of silently falling back to JSON file storage.
    */
   public async init(): Promise<boolean> {
     if (this.activeEngine === 'postgres') {
       const ok = await this.pgDb.init();
       if (!ok) {
+        if (config.isProduction) {
+          throw new Error(
+            'FATAL: PostgreSQL database connection/initialization failed in production mode. Refusing silent fallback to JSON storage.'
+          );
+        }
         console.warn('⚠️ [DATABASE]: PostgreSQL connection unavailable, falling back to JsonDatabase.');
         this.activeEngine = 'json';
         return false;
       }
       return true;
     }
+
+    if (config.isProduction) {
+      throw new Error(
+        'FATAL: DATABASE_URL must be configured in production mode. JSON database is strictly prohibited for production settlement.'
+      );
+    }
+
     return true;
   }
 

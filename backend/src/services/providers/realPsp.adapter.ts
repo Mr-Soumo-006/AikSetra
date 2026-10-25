@@ -18,7 +18,7 @@ export class RealPspAdapter implements IPaymentProvider {
   constructor() {
     this.apiKey = config.npciMerchantKey;
     this.apiSecret = config.npciMerchantSecret;
-    this.gatewayUrl = process.env.NPCI_GATEWAY_URL || 'https://api.npci-partner.bank/upi/v2';
+    this.gatewayUrl = process.env.NPCI_GATEWAY_URL || '';
   }
 
   /**
@@ -28,13 +28,13 @@ export class RealPspAdapter implements IPaymentProvider {
   public async initiatePayment(req: ProviderPaymentRequest): Promise<ProviderPaymentResult> {
     const now = new Date().toISOString();
 
-    if (!this.apiKey || !this.apiSecret) {
+    if (!this.apiKey || !this.apiSecret || !this.gatewayUrl || this.gatewayUrl.includes('api.npci-partner.bank')) {
       return {
         success: false,
         upiRrn: '',
         responseCode: 'U90',
         responseMessage:
-          'Real Banking Switch unavailable: Authorized partner bank credentials (NPCI_MERCHANT_KEY and NPCI_MERCHANT_SECRET) must be configured in environment.',
+          'Real Banking Switch unavailable: NPCI_GATEWAY_URL must be configured with an authorized partner bank switch endpoint, and NPCI_MERCHANT_KEY/SECRET must be provided. Placeholder endpoints are prohibited.',
         settlementType: 'UNSETTLED',
         isSimulated: false,
         timestamp: now,
@@ -166,12 +166,12 @@ export class RealPspAdapter implements IPaymentProvider {
   public async verifyStatus(txnRef: string, upiRrn?: string): Promise<ProviderPaymentResult> {
     const now = new Date().toISOString();
 
-    if (!this.apiKey || !this.apiSecret) {
+    if (!this.apiKey || !this.apiSecret || !this.gatewayUrl || this.gatewayUrl.includes('api.npci-partner.bank')) {
       return {
         success: false,
         upiRrn: upiRrn || '',
         responseCode: 'U90',
-        responseMessage: 'Banking partner credentials not configured for status inquiry.',
+        responseMessage: 'Banking partner switch endpoint and credentials not configured for status inquiry.',
         settlementType: 'UNSETTLED',
         isSimulated: false,
         timestamp: now,
