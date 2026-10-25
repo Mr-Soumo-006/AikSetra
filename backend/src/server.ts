@@ -15,20 +15,12 @@ import { escapeHtml, sanitizeUrl } from './utils/sanitize.js';
 // Validate configuration at startup (Issue 2 & 10)
 validateConfig();
 
-// Wire PostgreSQL into the runtime (ACID transactions & pessimistic row locking)
-if (config.databaseUrl) {
-  try {
-    const { postgresDb } = await import('./db/postgres.js');
-    const connected = await postgresDb.init();
-    if (connected) {
-      db.usePostgres(postgresDb);
-      console.log('🐘 [POSTGRESQL]: Runtime database active on PostgreSQL (aiksetra_db) with ACID transactions and row locking.');
-    } else {
-      console.warn('⚠️ [POSTGRESQL]: DATABASE_URL configured but initialization failed. Falling back to transactional JsonDatabase.');
-    }
-  } catch (err) {
-    console.warn('⚠️ [POSTGRESQL]: Could not initialize PostgreSQL. Falling back to JsonDatabase.', err);
-  }
+// Initialize active database engine (auto-connects and runs migrations for PostgreSQL if configured)
+await db.init();
+if (db.getActiveEngine() === 'postgres') {
+  console.log('🐘 [POSTGRESQL]: Runtime database active on PostgreSQL (aiksetra_db) with ACID transactions and row locking.');
+} else {
+  console.log('📁 [DATABASE]: Running on transactional JsonDatabase.');
 }
 
 // Initialize baseline data

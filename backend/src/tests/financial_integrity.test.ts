@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+import { test, describe, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { LedgerService } from '../services/ledger.service.js';
 import { CrossBorderService } from '../services/crossBorder.service.js';
@@ -6,9 +6,16 @@ import { RecoveryService } from '../services/recovery.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import { hashMpin } from '../services/auth.service.js';
 import { db } from '../db/database.js';
+import { postgresDb } from '../db/postgres.js';
 import type { BankAccount, Transaction, User } from '../types/index.js';
 
 describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
+  after(async () => {
+    try {
+      await postgresDb.close();
+    } catch (_) {}
+  });
+
   let senderAcc: BankAccount;
   let receiverAcc: BankAccount;
 

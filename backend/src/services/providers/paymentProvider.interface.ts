@@ -14,6 +14,12 @@ export interface ProviderPaymentRequest {
   beneficiaryBankCode?: string;
 }
 
+export type SettlementType =
+  | 'DEMO_SIMULATION'
+  | 'CONFIRMED_REAL_SETTLEMENT'
+  | 'PENDING_SETTLEMENT'
+  | 'UNSETTLED';
+
 export interface ProviderPaymentResult {
   success: boolean;
   upiRrn: string;
@@ -21,7 +27,7 @@ export interface ProviderPaymentResult {
   responseMessage: string;
   bankRefNumber?: string;
   isSimulated: boolean;
-  settlementType: 'DEMO_SIMULATION' | 'CONFIRMED_REAL_SETTLEMENT';
+  settlementType: SettlementType;
   timestamp: string;
 }
 

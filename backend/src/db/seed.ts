@@ -114,6 +114,18 @@ export function runSeed(force = false): void {
         balance: 51200.75,
         upiPinSet: true,
       },
+      {
+        id: 'acc_priya_01',
+        userId: 'usr_priya_03',
+        bankName: 'Axis Bank',
+        bankCode: 'UTIB',
+        ifsc: 'UTIB0001020',
+        maskedAccountNumber: '•••• •••• 7712',
+        accountType: 'SAVINGS',
+        isPrimary: true,
+        balance: 62400.0,
+        upiPinSet: true,
+      },
     ],
     vpas: [
       {

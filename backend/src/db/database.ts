@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config/index.js';
 import type { IDatabase } from './database.interface.js';
+import { postgresDb, PostgresDatabase } from './postgres.js';
+import { AsyncMutex } from '../utils/mutex.js';
+export { AsyncMutex };
 import type {
   User,
   BankAccount,
@@ -61,32 +64,6 @@ const defaultDatabase: DatabaseSchema = {
   fraudRegistry: [],
 };
 
-class AsyncMutex {
-  private queue: Array<() => void> = [];
-  private locked = false;
-
-  public async acquire(): Promise<() => void> {
-    if (!this.locked) {
-      this.locked = true;
-      return () => this.release();
-    }
-    return new Promise<() => void>((resolve) => {
-      this.queue.push(() => {
-        resolve(() => this.release());
-      });
-    });
-  }
-
-  private release(): void {
-    const next = this.queue.shift();
-    if (next) {
-      next();
-    } else {
-      this.locked = false;
-    }
-  }
-}
-
 class JsonDatabase {
   private filePath: string;
   private backupPath: string;
@@ -139,6 +116,7 @@ class JsonDatabase {
   // P1 Issue 28: Crash-Safe Atomic Persistence via Temp-Swap & Rolling Backup
   private persist(): void {
     if (
+      (typeof db !== 'undefined' && db.getActiveEngine() === 'postgres') ||
       this.transactionDepth > 0 ||
       process.env.NODE_ENV === 'test' ||
       Boolean(process.env.NODE_TEST_CONTEXT) ||
@@ -279,13 +257,41 @@ class JsonDatabase {
 export class UnifiedDatabase implements IDatabase {
   private activeEngine: 'json' | 'postgres' = 'json';
   private jsonDb: JsonDatabase;
-  private pgDb?: IDatabase;
+  private pgDb: PostgresDatabase;
 
   constructor() {
     this.jsonDb = new JsonDatabase();
+    this.pgDb = postgresDb;
+
+    // P1: Automatically select PostgreSQL whenever DATABASE_URL is configured
+    const hasPostgresConfig = Boolean(
+      process.env.DATABASE_URL ||
+      (process.env.PG_HOST && process.env.PG_DATABASE) ||
+      config?.databaseUrl
+    );
+
+    if (hasPostgresConfig) {
+      this.activeEngine = 'postgres';
+    }
   }
 
-  public usePostgres(pgDb: IDatabase): void {
+  /**
+   * Initializes active database engine (auto-connects and runs migrations for PostgreSQL)
+   */
+  public async init(): Promise<boolean> {
+    if (this.activeEngine === 'postgres') {
+      const ok = await this.pgDb.init();
+      if (!ok) {
+        console.warn('⚠️ [DATABASE]: PostgreSQL connection unavailable, falling back to JsonDatabase.');
+        this.activeEngine = 'json';
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  public usePostgres(pgDb: PostgresDatabase): void {
     this.pgDb = pgDb;
     this.activeEngine = 'postgres';
   }

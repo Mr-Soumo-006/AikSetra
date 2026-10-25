@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { AsyncMutex } from '../utils/mutex.js';
 import type { DatabaseSchema } from './database.js';
 import type { IDatabase } from './database.interface.js';
 import type {
@@ -19,6 +20,7 @@ const { Pool } = pg;
 export class PostgresDatabase implements IDatabase {
   private pool: pg.Pool;
   private initialized = false;
+  private txMutex = new AsyncMutex();
   private data: DatabaseSchema = {
     users: [],
     accounts: [],
@@ -67,6 +69,20 @@ export class PostgresDatabase implements IDatabase {
       const client = await this.pool.connect();
       try {
         await client.query('SELECT 1');
+
+        // Verify and apply PostgreSQL migrations automatically if tables not yet initialized
+        try {
+          const tableCheck = await client.query(
+            "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'bank_accounts'"
+          );
+          if ((tableCheck.rowCount ?? 0) === 0) {
+            console.log('🐘 [POSTGRESQL]: Schema tables not found. Automatically applying 001_init.sql migrations...');
+            const { runMigrations } = await import('./migrate.js');
+            await runMigrations();
+          }
+        } catch (migErr) {
+          console.warn('⚠️ [POSTGRESQL]: Auto-migration verification warning:', migErr);
+        }
 
         // 1. Users
         const usersRes = await client.query('SELECT * FROM users ORDER BY created_at ASC');
@@ -811,10 +827,13 @@ export class PostgresDatabase implements IDatabase {
   }
 
   /**
-   * Real ACID PostgreSQL Transaction using dedicated client from connection pool
+   * Real ACID PostgreSQL Transaction using dedicated client from connection pool,
+   * mutex concurrency serialization, and in-memory cache rollback on abort.
    */
   public async transaction<T>(operation: (client?: any) => Promise<T>): Promise<T> {
+    const releaseLock = await this.txMutex.acquire();
     const client = await this.pool.connect();
+    const snapshot = JSON.stringify(this.data);
     try {
       await client.query('BEGIN');
       const result = await operation(client);
@@ -822,44 +841,56 @@ export class PostgresDatabase implements IDatabase {
       return result;
     } catch (err) {
       await client.query('ROLLBACK');
+      this.data = JSON.parse(snapshot);
       throw err;
     } finally {
       client.release();
+      releaseLock();
     }
   }
 
   /**
    * Database-Enforced Atomic Idempotency Key Insertion with Uniqueness Constraint
    */
-  public async reserveIdempotencyKey(key: string, ttlMs: number = 120000): Promise<boolean> {
-    const expiresAt = new Date(Date.now() + ttlMs).toISOString();
-    try {
-      const res = await this.pool.query(
-        `INSERT INTO idempotency_keys (key, created_at, expires_at)
-         VALUES ($1, NOW(), $2)
-         ON CONFLICT (key) DO NOTHING
-         RETURNING key`,
-        [key, expiresAt]
-      );
-      const acquired = (res.rowCount ?? 0) > 0;
-      if (acquired) {
-        this.data.idempotencyKeys.push({
-          key,
-          createdAt: new Date().toISOString(),
-          expiresAt,
+  public reserveIdempotencyKey(key: string, ttlMs: number = 120000): boolean {
+    const now = Date.now();
+    this.data.idempotencyKeys = (this.data.idempotencyKeys || []).filter(
+      (k) => new Date(k.expiresAt).getTime() > now
+    );
+
+    const existsInCache = this.data.idempotencyKeys.some((k) => k.key === key);
+    if (existsInCache) return false;
+    const existsInTx = this.data.transactions.some((t) => t.idempotencyKey === key);
+    if (existsInTx) return false;
+
+    const expiresAt = new Date(now + ttlMs).toISOString();
+    this.data.idempotencyKeys.push({
+      key,
+      createdAt: new Date().toISOString(),
+      expiresAt,
+    });
+
+    if (this.initialized) {
+      this.pool
+        .query(
+          `INSERT INTO idempotency_keys (key, created_at, expires_at)
+           VALUES ($1, NOW(), $2)
+           ON CONFLICT (key) DO NOTHING`,
+          [key, expiresAt]
+        )
+        .catch((err) => {
+          console.error('[POSTGRESQL]: Background write-through idempotency key insert error:', err);
         });
-      }
-      return acquired;
-    } catch {
-      return false;
     }
+
+    return true;
   }
 
-  public async releaseIdempotencyKey(key: string): Promise<void> {
-    try {
-      await this.pool.query('DELETE FROM idempotency_keys WHERE key = $1', [key]);
-      this.data.idempotencyKeys = this.data.idempotencyKeys.filter((k) => k.key !== key);
-    } catch (_) {}
+  public releaseIdempotencyKey(key: string): void {
+    this.data.idempotencyKeys = this.data.idempotencyKeys.filter((k) => k.key !== key);
+    if (this.initialized) {
+      this.pool.query('DELETE FROM idempotency_keys WHERE key = $1', [key]).catch(() => {});
+    }
   }
 
   public async save(): Promise<void> {

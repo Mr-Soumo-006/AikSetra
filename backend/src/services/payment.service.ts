@@ -209,7 +209,48 @@ export class PaymentService {
       }
     }
 
-    // 8. Atomic Double-Entry Ledger Posting (Issue 17 & 26)
+    // 8. Settlement Verification & Atomic Double-Entry Ledger Posting
+    // Critical Invariant: Balances are ONLY updated when backed by verified settlement outcomes
+    const isSimulated = pspResult.isSimulated || provider.isSimulation;
+
+    if (!isSimulated && pspResult.settlementType !== 'CONFIRMED_REAL_SETTLEMENT') {
+      // Payment accepted by switch but awaiting asynchronous clearing callback.
+      // Record transaction in PENDING_PARTNER_SETTLEMENT without premature balance deduction.
+      const pendingTxn: Transaction = {
+        id: txnId,
+        txnRef,
+        upiRrn: pspResult.upiRrn,
+        senderUserId,
+        senderVpa: user.primaryVpa,
+        senderAccountId: remitterAccount.id,
+        receiverUserId: beneficiaryUserId,
+        receiverVpa,
+        receiverName: beneficiaryName,
+        amount,
+        currency: 'INR',
+        txnType: beneficiaryVpa?.isMerchant ? 'P2M' : 'P2P',
+        status: 'PENDING_PARTNER_SETTLEMENT',
+        remark,
+        scamShieldScore: scamAnalysis.riskScore,
+        idempotencyKey,
+        createdAt: new Date().toISOString(),
+        metadata: {
+          isSimulated: false,
+          provider: provider.providerName,
+          settlementType: pspResult.settlementType,
+          settlementStatus: 'AWAITING_PROVIDER_CONFIRMATION',
+        },
+      };
+
+      db.insert('transactions', pendingTxn);
+      return {
+        success: true,
+        transaction: pendingTxn,
+        scamShieldAnalysis: scamAnalysis,
+        updatedBalance: remitterAccount.balance,
+      };
+    }
+
     const { senderBalanceAfter } = await LedgerService.executeDoubleEntryTransfer({
       transactionId: txnId,
       senderAccount: remitterAccount,
@@ -238,7 +279,6 @@ export class PaymentService {
 
     // 10. Create Transaction Record (Separating Simulation from Real Bank Settlement)
     // Critical Invariant: Simulator responses are NEVER labeled as confirmed bank settlements or SUCCESS
-    const isSimulated = pspResult.isSimulated || provider.isSimulation;
     const paymentStatus = isSimulated ? ('SIMULATED_SUCCESS' as const) : ('SUCCESS' as const);
     const transaction: Transaction = {
       id: txnId,
@@ -297,10 +337,15 @@ export class PaymentService {
       roundedUpAmount,
       updatedBalance: senderBalanceAfter,
     };
-    } finally {
+    } catch (err) {
+      // Release in-flight reservation on pre-transaction error so caller can retry with valid params
       if (idempotencyKey) {
-        db.releaseIdempotencyKey(idempotencyKey);
+        const txnExists = db.get('transactions').some((t) => t.idempotencyKey === idempotencyKey);
+        if (!txnExists) {
+          await db.releaseIdempotencyKey(idempotencyKey);
+        }
       }
+      throw err;
     }
   }
 
