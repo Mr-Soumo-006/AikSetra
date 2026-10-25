@@ -204,6 +204,18 @@ export class AccountService {
     };
 
     db.insert('transactions', transaction as any);
+    db.insert('ledger', {
+      id: `led_dep_${uuidv4().replace(/-/g, '').slice(0, 10)}`,
+      transactionId: txnId,
+      accountId: account.id,
+      accountType: 'USER_ACCOUNT',
+      entryType: 'CREDIT',
+      amount: Number(amount.toFixed(2)),
+      currency: 'INR',
+      balanceAfter: newBal,
+      description: `${sourceNote} -> ${account.bankName}`,
+      createdAt: new Date().toISOString(),
+    });
     db.save();
 
     return {

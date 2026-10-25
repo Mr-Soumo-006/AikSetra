@@ -306,24 +306,55 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   ],
                 ),
               ),
-              InkWell(
-                onTap: _showSelfTransferModal,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: () => _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF334155)),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF046A38),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF046A38).withValues(alpha: 0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text('+ Add Money', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.swap_horiz, color: Color(0xFF38BDF8), size: 14),
-                      const SizedBox(width: 4),
-                      Text(_t('self_transfer'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: _showSelfTransferModal,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF334155)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.swap_horiz, color: Color(0xFF38BDF8), size: 14),
+                          const SizedBox(width: 4),
+                          Text(_t('self_transfer'), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -2198,34 +2229,36 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0F172A)),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _fxForeignAmtCtrl,
-                        keyboardType: TextInputType.number,
-                        onChanged: (_) => _refreshFxQuote(),
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-                        decoration: InputDecoration(
-                          suffixText: _fxCurrency,
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ...[50, 100, 250].map((preset) => Padding(
-                          padding: const EdgeInsets.only(left: 4),
+                TextField(
+                  controller: _fxForeignAmtCtrl,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => _refreshFxQuote(),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
+                  decoration: InputDecoration(
+                    labelText: 'Foreign Amount to Send',
+                    prefixText: '$_fxCurrency ',
+                    suffixText: _fxCurrency,
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [50, 100, 250, 500, 1000].map((preset) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
                           child: ActionChip(
                             label: Text('$preset $_fxCurrency', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            backgroundColor: const Color(0xFFF1F5F9),
                             onPressed: () {
                               _fxForeignAmtCtrl.text = preset.toString();
                               _refreshFxQuote();
                             },
                           ),
-                        )),
-                  ],
+                        )).toList(),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -2263,8 +2296,103 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   ),
 
                 const SizedBox(height: 14),
-                const Text('3. International Beneficiary Details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('3. International Beneficiary / Contacts', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                    const Text('Saved Contacts', style: TextStyle(color: Color(0xFF4F46E5), fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Beneficiary Contacts Selector
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ...[
+                        {
+                          'name': 'Soumo Naskar',
+                          'flag': '🇺🇸',
+                          'corridor': 'USD',
+                          'rail': 'Fedwire / ACH',
+                          'iban': 'US64CHAS12345678901234',
+                          'purpose': 'S0301 - Family Maintenance & Savings',
+                          'label': 'Soumo (US Chase)',
+                        },
+                        {
+                          'name': 'University of Oxford',
+                          'flag': '🇬🇧',
+                          'corridor': 'GBP',
+                          'rail': 'Faster Payments',
+                          'iban': 'GB29BARC20041538291044',
+                          'purpose': 'S0305 - Overseas University Tuition',
+                          'label': 'Oxford (UK Tuition)',
+                        },
+                        {
+                          'name': 'Priya Sharma',
+                          'flag': '🇸🇬',
+                          'corridor': 'SGD',
+                          'rail': 'UPI-PayNow Direct',
+                          'iban': 'SG12DBS992817293',
+                          'purpose': 'S0301 - Family Maintenance & Savings',
+                          'label': 'Priya (PayNow SG)',
+                        },
+                        {
+                          'name': 'Emirates Living Trust',
+                          'flag': '🇦🇪',
+                          'corridor': 'AED',
+                          'rail': 'NPCI-AANI Rupee',
+                          'iban': 'AE070330000000001234567',
+                          'purpose': 'S0306 - International Travel / Hotel',
+                          'label': 'Dubai Living (UAE)',
+                        },
+                        {
+                          'name': 'Toronto Family Care',
+                          'flag': '🇨🇦',
+                          'corridor': 'CAD',
+                          'rail': 'Interac EFT',
+                          'iban': 'CA040001000000009876543',
+                          'purpose': 'S0301 - Family Maintenance & Savings',
+                          'label': 'Toronto Care (CA)',
+                        },
+                      ].map((contact) {
+                        final isSel = _fxBenNameCtrl.text == contact['name'];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            selected: isSel,
+                            selectedColor: const Color(0xFF312E81),
+                            labelStyle: TextStyle(
+                              color: isSel ? Colors.white : const Color(0xFF0F172A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                            label: Text('${contact['flag']} ${contact['label']}'),
+                            onSelected: (_) {
+                              setState(() {
+                                _fxBenNameCtrl.text = contact['name']!;
+                                _fxBenIbanCtrl.text = contact['iban']!;
+                                _fxPurposeCode = contact['purpose']!;
+                                _fxCurrency = contact['corridor']!;
+                              });
+                              _refreshFxQuote();
+                            },
+                          ),
+                        );
+                      }),
+                      ActionChip(
+                        label: const Text('+ Clear / Custom', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          setState(() {
+                            _fxBenNameCtrl.clear();
+                            _fxBenIbanCtrl.clear();
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _fxBenNameCtrl,
                   decoration: InputDecoration(
@@ -2408,6 +2536,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     if (!mounted) return;
     setState(() {});
     if (res['success'] == true) {
+      await _syncLiveState();
+      if (!mounted) return;
+      setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF046A38),
@@ -2540,17 +2671,24 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           'Balance: ₹${acc.balance.toStringAsFixed(2)}',
                           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF046A38)),
                         ),
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
                           children: [
                             OutlinedButton.icon(
                               onPressed: _showCheckBalanceDialog,
                               icon: const Icon(Icons.account_balance_wallet_outlined, size: 14),
                               label: Text(_t('check_balance'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
-                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: () => _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                              icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
+                              label: const Text('+ Add Money', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
                             ElevatedButton.icon(
                               onPressed: _showSelfTransferModal,
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
                               icon: const Icon(Icons.swap_horiz, size: 14),
                               label: Text(_t('self_transfer'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
@@ -3143,6 +3281,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         bypassScamWarning: true,
                       );
 
+                      await _syncLiveState();
+
                       if (!mounted) return;
                       setState(() {});
                       if (payRes['success'] == true) {
@@ -3506,12 +3646,18 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _showSelfTransferModal() {
-    final amtCtrl = TextEditingController();
+    _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: false);
+  }
+
+  void _showAddMoneyAndSelfTransferModal({bool initialAddMoneyMode = false}) {
+    bool isAddMoney = initialAddMoneyMode;
+    final amtCtrl = TextEditingController(text: initialAddMoneyMode ? '5000' : '');
     String fromBank = _bankName;
     String toBank = BharatOnePayApi.allIndianBanks.firstWhere(
-      (b) => b['name'] != _bankName,
+      (b) => (b['bankName'] ?? b['name']) != _bankName,
       orElse: () => BharatOnePayApi.allIndianBanks.last,
-    )['name']!;
+    )['bankName'] ?? 'HDFC Bank';
+    String fundingSource = 'HDFC NetBanking / Salary Account';
 
     showModalBottomSheet(
       context: context,
@@ -3523,105 +3669,319 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
-            top: 22,
+            top: 20,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('🔄 Transfer to Own Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, size: 20)),
-                ],
-              ),
-              const Text('Instant real-time transfer between your own linked bank accounts', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-              const SizedBox(height: 16),
-              const Text('Transfer From Account:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
-                child: Row(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.account_balance, color: Color(0xFF046A38), size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text('$fromBank ($_maskedAcc)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                    const Text('Primary', style: TextStyle(fontSize: 11, color: Color(0xFF046A38), fontWeight: FontWeight.bold)),
+                    Text(
+                      isAddMoney ? '📥 Add Money to Bank Account' : '🔄 Transfer to Own Account',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    ),
+                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, size: 20)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text('Transfer To Account:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
-              const SizedBox(height: 6),
-              DropdownButtonFormField<String>(
-                value: toBank,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                Text(
+                  isAddMoney
+                      ? 'Instantly deposit funds into $_bankName ($_maskedAcc) for payments & transfers'
+                      : 'Real-time transfer between your own linked bank accounts',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
-                items: BharatOnePayApi.allIndianBanks
-                    .where((b) => b['name'] != fromBank)
-                    .map((b) => DropdownMenuItem<String>(
-                          value: b['name'],
-                          child: Text('${b['icon']} ${b['name']} (•••• ${b['ifsc']?.substring(b['ifsc']!.length - 4) ?? '9021'})', style: const TextStyle(fontSize: 12)),
-                        ))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) setSheetState(() => toBank = v);
-                },
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: amtCtrl,
-                keyboardType: TextInputType.number,
-                autofocus: true,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                decoration: InputDecoration(
-                  labelText: 'Amount (₹)',
-                  prefixText: '₹ ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final amt = double.tryParse(amtCtrl.text.trim()) ?? 0;
-                    if (amt <= 0) return;
-                    Navigator.pop(ctx);
-                    final pin = await _promptForMpin(
-                      title: 'Authorize Self Transfer',
-                      subtitle: 'Transfer ₹${amt.toStringAsFixed(2)} from $fromBank to $toBank',
-                    );
-                    if (pin == null || pin.isEmpty) return;
-                    final res = await BharatOnePayApi.payUpi(
-                      receiverVpa: '${toBank.toLowerCase().replaceAll(' ', '')}@upi',
-                      amount: amt,
-                      mpin: pin,
-                      remark: 'Self Transfer: $fromBank to $toBank',
-                    );
-                    await _syncLiveState();
-                    if (!mounted) return;
-                    if (res['success'] == true) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF046A38),
-                          content: Text('✅ ₹${amt.toStringAsFixed(2)} transferred to $toBank successfully!'),
+                const SizedBox(height: 14),
+
+                // Mode Selector
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setSheetState(() {
+                            isAddMoney = true;
+                            if (amtCtrl.text.isEmpty) amtCtrl.text = '5000';
+                          }),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isAddMoney ? const Color(0xFF046A38) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_circle_outline_rounded, size: 16, color: isAddMoney ? Colors.white : const Color(0xFF475569)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Add Money',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isAddMoney ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.swap_horiz, size: 20),
-                  label: const Text('Transfer to Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setSheetState(() => isAddMoney = false),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: !isAddMoney ? const Color(0xFF0F172A) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.swap_horiz_rounded, size: 16, color: !isAddMoney ? Colors.white : const Color(0xFF475569)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Self Transfer',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: !isAddMoney ? Colors.white : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+
+                if (isAddMoney) ...[
+                  // Target Account Badge
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.account_balance, color: Color(0xFF046A38), size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Crediting to $_bankName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF065F46))),
+                              Text('Acc: $_maskedAcc • IFSC: $_ifsc', style: const TextStyle(fontSize: 11, color: Color(0xFF047857))),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(8)),
+                          child: Text('Bal: ₹${_bankBalance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  const Text('Select Source / Funding Method:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: fundingSource,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'HDFC NetBanking / Salary Account', child: Text('🏦 HDFC NetBanking / Salary Acct', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'State Bank of India NetBanking', child: Text('🏦 State Bank of India NetBanking', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'ICICI Bank NetBanking', child: Text('🏦 ICICI Bank NetBanking', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'Axis Bank NetBanking', child: Text('🏦 Axis Bank NetBanking', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'External Debit Card / CBS Switch Simulator', child: Text('💳 External Debit Card / CBS Switch', style: TextStyle(fontSize: 13))),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setSheetState(() => fundingSource = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: amtCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                    decoration: InputDecoration(
+                      labelText: 'Deposit Amount (₹)',
+                      prefixText: '₹ ',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick preset chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [500, 1000, 2000, 5000, 10000, 25000].map((preset) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ActionChip(
+                          label: Text('+₹$preset', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          onPressed: () => setSheetState(() => amtCtrl.text = preset.toString()),
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final amt = double.tryParse(amtCtrl.text.trim()) ?? 0;
+                        if (amt <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(backgroundColor: Colors.red, content: Text('Please enter a valid amount greater than 0')),
+                          );
+                          return;
+                        }
+                        Navigator.pop(ctx);
+                        final res = await BharatOnePayApi.addMoneyToAccount(
+                          amount: amt,
+                          sourceNote: 'Self Deposit from $fundingSource',
+                        );
+                        await _syncLiveState();
+                        if (!mounted) return;
+                        setState(() {});
+                        if (res['success'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFF046A38),
+                              duration: const Duration(seconds: 4),
+                              content: Text('✅ ₹${amt.toStringAsFixed(2)} added to $_bankName successfully! Current Balance: ₹${_bankBalance.toStringAsFixed(2)}'),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(backgroundColor: Colors.red, content: Text(res['message'] ?? 'Could not add money')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                      label: Text('Deposit ₹${amtCtrl.text.isEmpty ? "0" : amtCtrl.text} to $_bankName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                    ),
+                  ),
+                ] else ...[
+                  // Transfer To Account:
+                  const Text('Transfer From Account:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.account_balance, color: Color(0xFF046A38), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text('$fromBank ($_maskedAcc)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                        const Text('Primary', style: TextStyle(fontSize: 11, color: Color(0xFF046A38), fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Transfer To Account:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: toBank,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    items: BharatOnePayApi.allIndianBanks
+                        .where((b) => (b['bankName'] ?? b['name']) != fromBank)
+                        .map((b) {
+                          final bName = (b['bankName'] ?? b['name'] ?? 'Bank').toString();
+                          final bIcon = (b['icon'] ?? '🏦').toString();
+                          return DropdownMenuItem<String>(
+                            value: bName,
+                            child: Text('$bIcon $bName', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                          );
+                        })
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setSheetState(() => toBank = v);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: amtCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                    decoration: InputDecoration(
+                      labelText: 'Amount (₹)',
+                      prefixText: '₹ ',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final amt = double.tryParse(amtCtrl.text.trim()) ?? 0;
+                        if (amt <= 0) return;
+                        Navigator.pop(ctx);
+                        final pin = await _promptForMpin(
+                          title: 'Authorize Self Transfer',
+                          subtitle: 'Transfer ₹${amt.toStringAsFixed(2)} from $fromBank to $toBank',
+                        );
+                        if (pin == null || pin.isEmpty) return;
+                        final res = await BharatOnePayApi.payUpi(
+                          receiverVpa: '${toBank.toLowerCase().replaceAll(' ', '')}@upi',
+                          amount: amt,
+                          mpin: pin,
+                          remark: 'Self Transfer: $fromBank to $toBank',
+                        );
+                        await _syncLiveState();
+                        if (!mounted) return;
+                        if (res['success'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFF046A38),
+                              content: Text('✅ ₹${amt.toStringAsFixed(2)} transferred to $toBank successfully!'),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(backgroundColor: Colors.red, content: Text(res['message'] ?? 'Transfer declined')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.swap_horiz, size: 20),
+                      label: const Text('Transfer to Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -4019,8 +4379,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         }
                         Navigator.pop(ctx);
                         await BharatOnePayApi.linkBankAccount(
-                          bankName: selectedBank['name'] ?? 'State Bank of India',
-                          bankCode: selectedBank['code'],
+                          bankName: selectedBank['bankName'] ?? selectedBank['name'] ?? 'State Bank of India',
+                          bankCode: selectedBank['code'] ?? selectedBank['bankCode'],
                           ifsc: ifscCtrl.text.trim().isNotEmpty ? ifscCtrl.text.trim() : (selectedBank['ifsc'] ?? 'SBIN0001024'),
                           accountNumber: acc,
                           setAsPrimary: true,
@@ -4030,7 +4390,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF046A38),
-                            content: Text('✅ Linked ${selectedBank['name']} (•••• ${acc.substring(acc.length - 4)}) as Primary Bank!'),
+                            content: Text('✅ Linked ${selectedBank['bankName'] ?? selectedBank['name']} (•••• ${acc.substring(acc.length - 4)}) as Primary Bank!'),
                           ),
                         );
                       },
@@ -4051,9 +4411,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     void _showLinkCardModal() {
     String cardType = 'DEBIT';
     String network = 'RuPay UPI';
-    String defaultBank = BharatOnePayApi.allIndianBanks.any((b) => b['name'] == _bankName)
-        ? _bankName
-        : (BharatOnePayApi.allIndianBanks.first['name'] ?? 'State Bank of India');
+    String defaultBank = BharatOnePayApi.allIndianBanks.firstWhere(
+      (b) => (b['bankName'] ?? b['name']) == _bankName,
+      orElse: () => BharatOnePayApi.allIndianBanks.first,
+    )['bankName'] ?? BharatOnePayApi.allIndianBanks.first['name'] ?? 'State Bank of India (SBI)';
     String issuerBank = defaultBank;
     final cardNumCtrl = TextEditingController();
     final expiryCtrl = TextEditingController();
@@ -4119,9 +4480,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: BharatOnePayApi.allIndianBanks.any((b) => b['name'] == issuerBank)
+                  value: BharatOnePayApi.allIndianBanks.any((b) => (b['bankName'] ?? b['name']) == issuerBank)
                       ? issuerBank
-                      : BharatOnePayApi.allIndianBanks.first['name'],
+                      : (BharatOnePayApi.allIndianBanks.first['bankName'] ?? BharatOnePayApi.allIndianBanks.first['name']),
                   isExpanded: true,
                   decoration: InputDecoration(
                     labelText: 'Issuing Bank',
@@ -4129,10 +4490,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   items: BharatOnePayApi.allIndianBanks
-                      .map((b) => DropdownMenuItem<String>(
-                            value: b['name'],
-                            child: Text('${b['icon']} ${b['name']}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                          ))
+                      .map((b) {
+                        final bName = (b['bankName'] ?? b['name'] ?? 'Bank').toString();
+                        final bIcon = (b['icon'] ?? '🏦').toString();
+                        return DropdownMenuItem<String>(
+                          value: bName,
+                          child: Text('$bIcon $bName', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                        );
+                      })
                       .toList(),
                   onChanged: (v) {
                     if (v != null) setSheetState(() => issuerBank = v);
