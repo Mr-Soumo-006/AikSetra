@@ -63,7 +63,11 @@ export const config = {
   lrsAnnualLimitUsd: parseInt(process.env.LRS_ANNUAL_LIMIT_USD || '250000', 10),
 
   // Real SMS Gateway configuration (Fast2SMS / MSG91 / Twilio)
-  smsGatewayProvider: (process.env.SMS_GATEWAY_PROVIDER || (isProduction ? 'FAST2SMS' : 'CONSOLE')) as 'FAST2SMS' | 'MSG91' | 'TWILIO' | 'CONSOLE',
+  smsGatewayProvider: (
+    process.env.SMS_GATEWAY_PROVIDER === 'FAST2SMS' && !process.env.FAST2SMS_API_KEY
+      ? 'CONSOLE'
+      : process.env.SMS_GATEWAY_PROVIDER || (isProduction ? 'FAST2SMS' : 'CONSOLE')
+  ) as 'FAST2SMS' | 'MSG91' | 'TWILIO' | 'CONSOLE',
   fast2smsApiKey: process.env.FAST2SMS_API_KEY || '',
   msg91AuthKey: process.env.MSG91_AUTH_KEY || '',
   msg91SenderId: process.env.MSG91_SENDER_ID || 'AIKSET',

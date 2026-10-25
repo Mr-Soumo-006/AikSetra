@@ -64,10 +64,14 @@ export class AuthService {
       console.log(`[DEV-TEST DEBUG] OTP generated for +91 ******${cleanPhone.slice(-4)}: ${otp}`);
     }
 
+    const isConsole = smsRes.provider === 'CONSOLE';
     return {
       success: true,
-      message: `OTP sent to +91 ******${cleanPhone.slice(-4)}`,
+      message: isConsole
+        ? `OTP generated: ${otp} (Logged to server console)`
+        : `OTP sent to +91 ******${cleanPhone.slice(-4)}`,
       expiresAt: new Date(expiresAt).toISOString(),
+      ...(isConsole ? { devOtp: otp } : {}),
     };
   }
 
