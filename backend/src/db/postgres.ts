@@ -83,7 +83,20 @@ export class PostgresDatabase implements IDatabase {
     // No-op: PostgreSQL commits are immediate per transaction/query
   }
 
+  public async testConnection(): Promise<boolean> {
+    try {
+      const client = await this.pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   public async close(): Promise<void> {
     await this.pool.end();
   }
 }
+
+export const postgresDb = new PostgresDatabase();

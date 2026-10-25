@@ -3,8 +3,12 @@ import crypto from 'crypto';
 
 dotenv.config();
 
-const nodeEnv = process.env.NODE_ENV || 'development';
-const isProduction = nodeEnv === 'production';
+const isTest =
+  process.env.NODE_ENV === 'test' ||
+  Boolean(process.env.NODE_TEST_CONTEXT) ||
+  process.argv.some((a) => a.toLowerCase().includes('test'));
+const nodeEnv = isTest ? 'test' : process.env.NODE_ENV || 'development';
+const isProduction = !isTest && nodeEnv === 'production';
 
 // Issue 1 & 2: Enforce secure JWT Secret and Admin API Key validation
 let resolvedJwtSecret = process.env.JWT_SECRET || '';
@@ -71,6 +75,7 @@ export const config = {
   npciPspGateway: process.env.NPCI_PSP_GATEWAY || 'YESBANK_UPI20',
   npciMerchantKey: process.env.NPCI_MERCHANT_KEY || '',
   npciMerchantSecret: process.env.NPCI_MERCHANT_SECRET || '',
+  databaseUrl: process.env.DATABASE_URL || '',
 };
 
 export function validateConfig(): void {

@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/tests/**/*.test.ts",
+    "test": "tsx --test src/tests/*.test.ts",
     "start": "tsx src/server.ts",
-    "seed": "tsx src/db/seed.ts"
+    "seed": "tsx src/db/seed.ts",
+    "migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",

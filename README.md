@@ -69,20 +69,25 @@ Designed from the ground up to eliminate fintech complexity, AikSetra replaces c
   - Tax Collected at Source (TCS) itemization under Section 206C(1G) of the Income Tax Act.
 
 ### 5. Multi-Language Localization
-- Working in-app localization supporting **English (`en-IN`)**, **Hindi (`hi-IN` - हिन्दी)**, and **Bengali (`bn-IN` - বাংলা)**.
+- Working in-app localization supporting 5 major Indian languages: **English (`en-IN`)**, **Hindi (`hi-IN` - हिन्दी)**, **Bengali (`bn-IN` - বাংলা)**, **Tamil (`ta-IN` - தமிழ்)**, and **Telugu (`te-IN` - తెలుగు)**.
 - Selecting a language from the top bar immediately updates navigation tabs, greetings, transaction headers, and utility bill screens in real-time.
 
-### 6. Linked Cards & 3D Secure Verification Handshake
-- **RuPay Credit Card on UPI:** Pre-populated verified HDFC Bank RuPay Credit Card (₹1,50,000 limit) for merchant payments.
-- **Debit Card Tokenization:** Link any Indian bank debit or ATM card without null values.
-- **3D Secure / Verified by Visa / RuPay OTP:** Realistic bank security handshake with SMS OTP autofill simulation prior to card tokenization.
+### 6. Clean Payment Provider Architecture (Demo vs. Real Settlement)
+- **Architectural Separation:** Strict separation between `IPaymentProvider` implementations:
+  - **Demo Provider (`PspSimulatorProvider`):** Used during local development and demonstrations. Emulates bank latency and switch responses. Crucially, its responses are strictly tagged with `settlementType: 'DEMO_SIMULATION'` and `status: 'SIMULATED_SUCCESS'`, guaranteeing simulated payments can never be mislabeled as confirmed bank settlements.
+  - **Real Provider Adapter (`RealPspAdapter`):** Connects to authorized banking PSP partner switches (Setu, YesBank, Razorpay UPI). Enforces production startup validation and bank certificate authorization.
+- **Server-Authoritative Provider Selection:** Provider selection is determined strictly by server configuration (`isProduction`, environment credentials), never by client parameters.
 
-### 7. AI Scam Shield & Protected Pay Escrow
-- **Real-Time Fraud Defense:** Flags phishing keywords, high-velocity unverified VPAs, and spoofed payment requests before money leaves your account.
-- **Protected Pay Escrow:** Eliminates marketplace fraud (OLX, freelance milestones). Funds are held securely by the banking switch and only released upon buyer verification.
+### 7. Production PostgreSQL Database & ACID Ledger
+- **PostgreSQL Database Engine:** Backed by PostgreSQL (`aiksetra_db`) running with atomic SQL transactions (`BEGIN`/`COMMIT`/`ROLLBACK`), strict foreign keys, and CHECK constraints.
+- **Double-Entry Ledger:** Balanced debit and credit journal entries with per-account row mutexes (`AccountLockManager`), eliminating race conditions and double-spending.
+- **Durable Idempotency Keys:** Unique database-enforced idempotency key reservation with automatic expiration and duplicate suppression.
+- **Automated Crash Recovery:** Background recovery worker detects and resolves orphaned or in-flight transactions safely.
 
-### 8. Two-Phone Local Network Settlement
-- Configured with dynamic Wi-Fi IP failover (`192.168.29.90:4000`), allowing two physical smartphones on the same Wi-Fi network to exchange real-time UPI payments, instantly crediting the beneficiary account.
+### 8. Two-Phone Local Network Settlement & Demo Transparency
+- **P2P Transfer Over Local Wi-Fi:** Real-time transfer between two smartphones connected to the same network via standard ISO-18004 UPI QR codes.
+- **Demo Mode Transparency:** UI clearly displays `"Demo payment — no real money transferred"` on QR codes, authorization sheets, and confirmation banners.
+- **Instant Beneficiary Notification:** Real-time balance queries and transaction feed updates immediately upon transfer completion.
 
 ### 9. Enterprise Financial Integrity & Security Core
 - **Double-Entry Ledger Architecture:** Full balanced accounting ledger with concurrent `DEBIT` and `CREDIT` entries for all transfers, investments, and utility payments.
@@ -122,7 +127,9 @@ AikSetra/
 │   │   ├── server.ts             # Express & WebSocket server initialization
 │   │   ├── config/               # Secure environment validation & secret management
 │   │   ├── db/
-│   │   │   ├── database.ts       # File-based persistent store (aiksetra_db.json)
+│   │   │   ├── database.ts       # Transactional store with re-entrant mutex
+│   │   │   ├── postgres.ts       # PostgreSQL connection pool & SQL adapter
+│   │   │   ├── migrations/       # Production schema (001_init.sql)
 │   │   │   └── seed.ts           # Baseline verified accounts, PBKDF2 hashes & stocks
 │   │   ├── middleware/
 │   │   │   ├── auth.middleware.ts       # Strict Bearer JWT & Admin API authentication
@@ -132,8 +139,16 @@ AikSetra/
 │   │   │   ├── ledger.service.ts        # Double-entry ledger & per-account concurrency locks
 │   │   │   ├── audit.service.ts         # Append-only SHA-256 hashed audit trail
 │   │   │   ├── payment.service.ts       # Core UPI, Idempotency & Scam Shield
-│   │   │   ├── psp.simulator.ts         # Banking PSP switch rail adapter
+│   │   │   ├── providers/               # Formalized Payment Provider Architecture
+│   │   │   │   ├── paymentProvider.interface.ts # IPaymentProvider contract
+│   │   │   │   ├── pspSimulator.provider.ts     # Demo provider (SIMULATED_SUCCESS)
+│   │   │   │   ├── realPsp.adapter.ts           # Authorized partner bank adapter
+│   │   │   │   └── provider.factory.ts          # Server-configured provider resolver
 │   │   │   └── crossBorder.service.ts   # RBI LRS FX Remittance engine
+│   │   ├── tests/                # Automated Test Suite (24 tests)
+│   │   │   ├── auth_security.test.ts        # PBKDF2, lockout, and registration tests
+│   │   │   ├── api_security.test.ts         # HMAC webhooks, rate limits, input guards
+│   │   │   └── financial_integrity.test.ts  # Double-entry ledger, mutex, recovery
 │   │   └── routes/api.router.ts  # Hardened REST API endpoints (/api/v1/...)
 │   ├── package.json
 │   └── tsconfig.json

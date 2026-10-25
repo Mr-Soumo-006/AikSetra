@@ -195,10 +195,20 @@ export class BillPayService {
 
     let amount = 450;
     let planOrUsage = 'Monthly Billing Cycle';
+    let unitsConsumed: number | undefined;
+    let energyCharges: number | undefined;
+    let fixedCharge: number | undefined;
+    let electricityDuty: number | undefined;
+    let meterNumber: string | undefined;
+
     if (biller.category === 'ELECTRICITY') {
-      const units = 110 + (seed % 240);
-      amount = Math.round(units * 7.25);
-      planOrUsage = `${units} kWh Units Consumed @ ₹7.25/unit`;
+      unitsConsumed = 110 + (seed % 240);
+      energyCharges = Number((unitsConsumed * 6.50).toFixed(2));
+      fixedCharge = 75.00;
+      electricityDuty = Number(((energyCharges + fixedCharge) * 0.06).toFixed(2));
+      amount = Math.round(energyCharges + fixedCharge + electricityDuty);
+      meterNumber = `WB-MTR-${seed + 10492}`;
+      planOrUsage = `${unitsConsumed} kWh • Slabs: 0-100 @₹5.50, >100 @₹7.20 + ₹75 Fixed + 6% Duty`;
     } else if (biller.category === 'WATER') {
       const kl = 12 + (seed % 18);
       amount = Math.round(kl * 24);
@@ -247,6 +257,11 @@ export class BillPayService {
       dueDate,
       planOrUsage,
       amount,
+      unitsConsumed,
+      energyCharges,
+      fixedCharge,
+      electricityDuty,
+      meterNumber,
       alreadyPaid: !!alreadyPaid,
       paidTxnId: alreadyPaid?.id,
     };

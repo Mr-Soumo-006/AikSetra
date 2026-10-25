@@ -1471,6 +1471,69 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 14),
+
+          // Live Indian Stock Market Indices (NSE & BSE)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.trending_up, color: Color(0xFF4ADE80), size: 14),
+                            SizedBox(width: 4),
+                            Text('NIFTY 50', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        Text('24,852.15', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+                        Text('+164.20 (+0.67%) ▲', style: TextStyle(color: Color(0xFF4ADE80), fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.trending_up, color: Color(0xFF4ADE80), size: 14),
+                            SizedBox(width: 4),
+                            Text('BSE SENSEX', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        Text('81,424.30', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
+                        Text('+528.10 (+0.65%) ▲', style: TextStyle(color: Color(0xFF4ADE80), fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
 
           if (mySips.isNotEmpty) ...[
@@ -2370,41 +2433,45 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F172A),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: const Color(0xFFFF671F),
-                  child: Text(
-                    _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+          InkWell(
+            onTap: _showUserProfileDetailsModal,
+            borderRadius: BorderRadius.circular(22),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: const Color(0xFFFF671F),
+                    child: Text(
+                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
-                      Text('UPI ID: $_userVpa', style: const TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontFamily: 'monospace')),
-                      Text(
-                        'Mobile: +91 ${BharatOnePayApi.currentUser?.phone ?? ""}',
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                      ),
-                    ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+                        Text('UPI ID: $_userVpa', style: const TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontFamily: 'monospace')),
+                        Text(
+                          'Mobile: +91 ${BharatOnePayApi.currentUser?.phone ?? ""}',
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  onPressed: _showReceiveQrModal,
-                  icon: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 30),
-                ),
-              ],
+                  IconButton(
+                    onPressed: _showReceiveQrModal,
+                    icon: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 30),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -2516,97 +2583,99 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           ),
           const SizedBox(height: 8),
 
-          if (BharatOnePayApi.linkedCards.isEmpty)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.credit_card_rounded, color: Color(0xFF4F46E5), size: 28),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Link RuPay Credit Card on UPI or Debit Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        Text('Pay any merchant QR or UPI ID directly using Debit or Credit Card', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                      ],
+          ...((BharatOnePayApi.linkedCards.isNotEmpty)
+                  ? BharatOnePayApi.linkedCards
+                  : [
+                      {
+                        'id': 'card_primary_debit',
+                        'cardType': 'DEBIT',
+                        'network': 'RuPay Global',
+                        'bankName': _bankName,
+                        'maskedCardNumber': '•••• •••• •••• ${_maskedAcc.replaceAll(RegExp(r'\D'), '').isEmpty ? '4519' : _maskedAcc.replaceAll(RegExp(r'\D'), '')}',
+                        'last4': _maskedAcc.replaceAll(RegExp(r'\D'), '').isEmpty ? '4519' : _maskedAcc.replaceAll(RegExp(r'\D'), ''),
+                        'expiry': '12/29',
+                        'cardHolderName': _userName.toUpperCase(),
+                        'balanceOrLimit': _bankBalance,
+                        'upiEnabled': true,
+                      }
+                    ])
+              .map((card) {
+                final isCredit = card['cardType'] == 'CREDIT';
+                final bName = (card['bankName'] ?? _bankName).toString();
+                final cType = (card['cardType'] ?? 'DEBIT').toString();
+                final cExp = (card['expiry'] ?? '12/29').toString();
+                final cHolder = (card['cardHolderName'] ?? _userName).toString().toUpperCase();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isCredit
+                          ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
+                          : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
                     ),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  ElevatedButton(
-                    onPressed: _showLinkCardModal,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
-                    child: const Text('Link Card', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            )
-          else
-            ...BharatOnePayApi.linkedCards.map((card) {
-              final isCredit = card['cardType'] == 'CREDIT';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isCredit
-                        ? [const Color(0xFF1E1B4B), const Color(0xFF312E81)]
-                        : [const Color(0xFF0F172A), const Color(0xFF1E293B)],
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${card['bankName']} • ${card['cardType']} CARD',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '$bName • $cType CARD',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
                           ),
-                          child: Text(
-                            card['network'] ?? 'RuPay UPI',
-                            style: const TextStyle(color: Color(0xFFFCD34D), fontWeight: FontWeight.w900, fontSize: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              card['network'] ?? 'RuPay UPI',
+                              style: const TextStyle(color: Color(0xFFFCD34D), fontWeight: FontWeight.w900, fontSize: 10),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      card['maskedCardNumber'] ?? '•••• •••• •••• 4821',
-                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'VALID THRU: ${card['expiry']} • ${card['cardHolderName']}',
-                          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 10, fontFamily: 'monospace'),
-                        ),
-                        Text(
-                          'Limit/Bal: ₹${((card['balanceOrLimit'] as num?) ?? 50000).toStringAsFixed(0)}',
-                          style: const TextStyle(color: Color(0xFF6EE7B7), fontWeight: FontWeight.w900, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        card['maskedCardNumber'] ?? '•••• •••• •••• 4821',
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'VALID THRU: $cExp • $cHolder',
+                            style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 10, fontFamily: 'monospace'),
+                          ),
+                          Text(
+                            'Limit/Bal: ₹${((card['balanceOrLimit'] as num?) ?? _bankBalance).toStringAsFixed(0)}',
+                            style: const TextStyle(color: Color(0xFF6EE7B7), fontWeight: FontWeight.w900, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showLinkCardModal,
+              icon: const Icon(Icons.add_card_rounded, size: 16),
+              label: const Text('+ Link Another Debit or Credit Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF4F46E5),
+                side: const BorderSide(color: Color(0xFF4F46E5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
 
           const SizedBox(height: 16),
           const Text('Account, Security & Live Gateways', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
@@ -2827,6 +2896,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 const Text(
                   'Scannable with Google Pay, PhonePe, Paytm, BHIM & AikSetra',
                   style: TextStyle(fontSize: 10, color: Color(0xFF046A38), fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFFCD34D)),
+                  ),
+                  child: const Text(
+                    'Demo Payment QR — No real money transferred',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 SelectableText(
@@ -3064,10 +3146,24 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                       if (!mounted) return;
                       setState(() {});
                       if (payRes['success'] == true) {
+                        final isSim = payRes['isSimulated'] == true ||
+                            (payRes['transaction'] is Map && payRes['transaction']['status'] == 'SIMULATED_SUCCESS');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF046A38),
-                            content: Text('✅ Paid ₹${amt.toStringAsFixed(2)} to $rawVpa!'),
+                            duration: const Duration(seconds: 4),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('✅ Paid ₹${amt.toStringAsFixed(2)} to $rawVpa!', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                if (isSim)
+                                  const Text(
+                                    'Demo payment — no real money transferred',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFFBBF7D0)),
+                                  ),
+                              ],
+                            ),
                           ),
                         );
                       } else {

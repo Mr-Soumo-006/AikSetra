@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { config } from '../config/index.js';
-import { pspSimulator } from './psp.simulator.js';
+import { getPaymentProvider } from './providers/provider.factory.js';
 import { ScamShieldService } from './scamShield.service.js';
 import { soundboxService } from './soundbox.service.js';
 import { VaultService } from './vault.service.js';
@@ -124,13 +124,14 @@ export class PaymentService {
       throw new Error(`Insufficient funds in ${remitterAccount.bankName} account.`);
     }
 
-    // 6. Invoke Banking Switch Rail
+    // 6. Invoke Banking Switch Rail via Configured Provider
     if (config.isProduction && !config.npciMerchantKey) {
       throw new Error('Authorized Banking PSP Gateway credentials are required in production. Simulated payment processing is prohibited.');
     }
 
+    const provider = getPaymentProvider();
     const txnRef = `BOP${Date.now()}`;
-    const pspResult = await pspSimulator.executeReqPay({
+    const pspResult = await provider.initiatePayment({
       payerVpa: user.primaryVpa,
       payeeVpa: receiverVpa,
       amount,
@@ -236,7 +237,9 @@ export class PaymentService {
     }
 
     // 10. Create Transaction Record (Separating Simulation from Real Bank Settlement)
-    const paymentStatus = config.isSimulationMode ? ('SIMULATED_SUCCESS' as const) : ('SUCCESS' as const);
+    // Critical Invariant: Simulator responses are NEVER labeled as confirmed bank settlements or SUCCESS
+    const isSimulated = pspResult.isSimulated || provider.isSimulation;
+    const paymentStatus = isSimulated ? ('SIMULATED_SUCCESS' as const) : ('SUCCESS' as const);
     const transaction: Transaction = {
       id: txnId,
       txnRef,
@@ -257,8 +260,10 @@ export class PaymentService {
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
       metadata: {
-        isSimulated: config.isSimulationMode,
-        settlementStatus: config.isSimulationMode ? 'SANDBOX_SIMULATION' : 'CONFIRMED_BANK_SETTLEMENT',
+        isSimulated,
+        provider: provider.providerName,
+        settlementType: pspResult.settlementType,
+        settlementStatus: isSimulated ? 'SANDBOX_SIMULATION' : 'CONFIRMED_BANK_SETTLEMENT',
         soundboxAnnounced,
       },
     };
@@ -267,10 +272,10 @@ export class PaymentService {
 
     AuditService.log({
       actorId: senderUserId,
-      action: config.isSimulationMode ? 'PAYMENT_SIMULATED_SUCCESS' : 'PAYMENT_SUCCESS',
+      action: isSimulated ? 'PAYMENT_SIMULATED_SUCCESS' : 'PAYMENT_SUCCESS',
       resource: 'TRANSACTION',
       resourceId: txnId,
-      metadata: { amount, upiRrn: pspResult.upiRrn, receiverVpa, isSimulated: config.isSimulationMode },
+      metadata: { amount, upiRrn: pspResult.upiRrn, receiverVpa, isSimulated },
     });
 
     // 11. Digital Gullak micro-savings round-up

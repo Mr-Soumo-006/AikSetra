@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import { LedgerService } from '../services/ledger.service.js';
 import { CrossBorderService } from '../services/crossBorder.service.js';
 import { RecoveryService } from '../services/recovery.service.js';
+import { PaymentService } from '../services/payment.service.js';
+import { hashMpin } from '../services/auth.service.js';
 import { db } from '../db/database.js';
-import type { BankAccount, Transaction } from '../types/index.js';
+import type { BankAccount, Transaction, User } from '../types/index.js';
 
 describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
   let senderAcc: BankAccount;
@@ -303,5 +305,44 @@ describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
     const recovered = db.get('transactions').find((t) => t.id === 'txn_orphaned_01');
     assert.equal(recovered?.status, 'FAILED');
     assert.ok(recovered?.failureReason?.includes('Auto Recovery'));
+  });
+
+  test('Payment Provider Separation: Simulator payments produce SIMULATED_SUCCESS and are never labeled as real bank settlement', async () => {
+    const salt = 'testsalt1234567890abcdef12345678';
+    const testUser: User = {
+      id: senderAcc.userId,
+      phone: '9876543210',
+      fullName: 'Provider Test User',
+      email: 'testprovider@aiksetra.in',
+      primaryVpa: 'sendertest@aiksetra',
+      deviceId: 'dev_test_01',
+      simId: 'sim_test_01',
+      kycStatus: 'VERIFIED',
+      liteBalance: 0,
+      lrsUsedUsd: 0,
+      mpinSalt: salt,
+      mpinHash: hashMpin('1234', salt),
+      failedMpinAttempts: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    db.insert('users', testUser);
+
+    const paymentRes = await PaymentService.executePayment({
+      senderUserId: senderAcc.userId,
+      senderAccountId: senderAcc.id,
+      receiverVpa: 'beneficiary@aiksetra',
+      amount: 150.0,
+      mpin: '1234',
+      remark: 'Provider separation audit test',
+      bypassScamShieldWarning: true,
+    });
+
+    assert.ok(paymentRes.success, 'Simulated payment succeeded');
+    assert.equal(paymentRes.transaction.status, 'SIMULATED_SUCCESS', 'Simulator payments must have status SIMULATED_SUCCESS');
+    assert.notEqual(paymentRes.transaction.status, 'SUCCESS', 'Simulator payment must NEVER be marked as real SUCCESS settlement');
+    assert.equal(paymentRes.transaction.metadata?.isSimulated, true, 'Metadata isSimulated must be true');
+    assert.equal(paymentRes.transaction.metadata?.settlementStatus, 'SANDBOX_SIMULATION', 'Settlement status must be SANDBOX_SIMULATION');
+    assert.notEqual(paymentRes.transaction.metadata?.settlementStatus, 'CONFIRMED_BANK_SETTLEMENT', 'Settlement status must never be CONFIRMED_BANK_SETTLEMENT');
   });
 });

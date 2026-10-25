@@ -194,8 +194,20 @@ class JsonDatabase {
     this.inFlightKeys.delete(key);
   }
 
-  // P1 Issue 17 & 27 & P1 Audit: Serialized Transaction Execution with Isolated Rollback
+  // P1 Issue 17 & 27 & P1 Audit: Serialized Transaction Execution with Isolated Rollback and Re-entrancy
   public async transaction<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.transactionDepth > 0) {
+      this.transactionDepth++;
+      try {
+        const result = await operation();
+        this.transactionDepth--;
+        return result;
+      } catch (err) {
+        this.transactionDepth--;
+        throw err;
+      }
+    }
+
     const releaseLock = await this.txMutex.acquire();
     try {
       const snapshot = JSON.stringify(this.data);

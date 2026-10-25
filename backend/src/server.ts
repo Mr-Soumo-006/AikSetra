@@ -15,6 +15,19 @@ validateConfig();
 // Initialize baseline data
 runSeed(false);
 
+// Test local PostgreSQL connectivity if configured
+if (config.databaseUrl) {
+  import('./db/postgres.js').then(({ postgresDb }) => {
+    postgresDb.testConnection().then((connected) => {
+      if (connected) {
+        console.log('🐘 [POSTGRESQL]: Connected successfully to PostgreSQL database (aiksetra_db).');
+      } else {
+        console.warn('⚠️ [POSTGRESQL]: DATABASE_URL configured but connection failed. Falling back to transactional JsonDatabase.');
+      }
+    });
+  });
+}
+
 const app = express();
 const server = http.createServer(app);
 
