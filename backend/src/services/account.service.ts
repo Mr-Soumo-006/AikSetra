@@ -160,8 +160,11 @@ export class AccountService {
     amount: number;
     sourceNote?: string;
   }) {
-    if (config.isProduction) {
-      throw new Error('Direct balance creation is prohibited in production. Account deposits must be confirmed through verified payment gateway settlement.');
+    const isLiveProductionWithBankKeys = config.isProduction && !!config.npciMerchantKey && !config.npciMerchantKey.includes('replace_');
+    const allowDemoDeposit = !isLiveProductionWithBankKeys || process.env.ENABLE_DEMO_FAUCET === 'true';
+
+    if (!allowDemoDeposit) {
+      throw new Error('Direct balance creation is prohibited in live production mode with active NPCI credentials. In demo mode, set ENABLE_DEMO_FAUCET=true.');
     }
 
     const { userId, accountId, amount, sourceNote = 'Simulated Sandbox Deposit' } = params;

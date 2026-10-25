@@ -51,6 +51,7 @@ export const config = {
   nodeEnv,
   isProduction,
   isSimulationMode: !isProduction,
+  enableDemoFaucet: process.env.ENABLE_DEMO_FAUCET === 'true' || !isProduction,
   jwtSecret: resolvedJwtSecret,
   adminApiKey: resolvedAdminApiKey,
   webhookSecret: resolvedWebhookSecret,

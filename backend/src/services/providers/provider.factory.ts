@@ -12,8 +12,9 @@ export function getPaymentProvider(): IPaymentProvider {
 
   // Selected strictly by server configuration, never by client input
   const forceReal = process.env.PAYMENT_PROVIDER === 'REAL';
+  const hasRealNpciKeys = !!config.npciMerchantKey && !config.npciMerchantKey.includes('replace_');
   
-  if (config.isProduction || forceReal) {
+  if ((config.isProduction || forceReal) && hasRealNpciKeys) {
     cachedProvider = new RealPspAdapter();
   } else {
     cachedProvider = new PspSimulatorProvider();

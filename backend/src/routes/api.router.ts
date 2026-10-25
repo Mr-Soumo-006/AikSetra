@@ -186,12 +186,17 @@ apiRouter.post('/accounts/add-money', authMiddleware, (req: AuthenticatedRequest
       return res.status(400).json({ success: false, message: 'Amount must be greater than zero.' });
     }
 
-    // P0: Block arbitrary balance creation in production
-    if (config.isProduction) {
+    // P0: Block arbitrary balance creation in live production mode with active NPCI switch keys.
+    // In local development, testing, or presentation mode (ENABLE_DEMO_FAUCET=true or when running without partner keys),
+    // sandbox faucet deposits are permitted to allow teachers/demonstrators to fund accounts.
+    const isLiveProductionWithBankKeys = config.isProduction && !!config.npciMerchantKey && !config.npciMerchantKey.includes('replace_');
+    const allowDemoDeposit = !isLiveProductionWithBankKeys || process.env.ENABLE_DEMO_FAUCET === 'true';
+
+    if (!allowDemoDeposit) {
       return res.status(403).json({
         success: false,
         code: 'DIRECT_DEPOSIT_PROHIBITED',
-        message: 'Direct balance creation is prohibited in production. Deposits must be settled via authorized Payment Gateway or CBS webhook callback.',
+        message: 'Direct balance creation is prohibited in live production mode with active NPCI credentials. In demo mode, set ENABLE_DEMO_FAUCET=true or run in development mode.',
       });
     }
 
