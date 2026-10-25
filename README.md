@@ -3,12 +3,12 @@
 > **A Unified, Next-Generation Indian Financial Space**  
 > *Derived from **ek** (one / unified) and **kshetra** (domain, field, or sphere).*
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.13+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![Node.js](https://img.shields.io/badge/Node.js-22+-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![UPI 2.0](https://img.shields.io/badge/UPI-2.0%20NPCI%20Ready-FF671F)](https://www.npci.org.in)
-[![BBPS](https://img.shields.io/badge/BBPS-Bharat%20BillPay%20Enabled-008080)](https://www.bharatbillpay.com)
+[![Flutter](https://img.shields.io/badge/Flutter-3.47%2B-02569B.svg?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.13%2B-0175C2.svg?logo=dart&logoColor=white)](https://dart.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![UPI 2.0](https://img.shields.io/badge/UPI-2.0%20NPCI%20Ready-FF671F.svg)](https://www.npci.org.in)
+[![BBPS](https://img.shields.io/badge/BBPS-Bharat%20BillPay%20Enabled-008080.svg)](https://www.bharatbillpay.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
