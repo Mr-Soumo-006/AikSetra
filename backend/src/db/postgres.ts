@@ -8,8 +8,13 @@ export class PostgresDatabase implements IDatabase {
   private pool: pg.Pool;
 
   constructor(connectionString?: string) {
+    const connStr =
+      connectionString ||
+      process.env.DATABASE_URL ||
+      `postgresql://${process.env.PG_USER || 'postgres'}:${encodeURIComponent(process.env.PG_PASSWORD || 'root')}@${process.env.PG_HOST || 'localhost'}:${process.env.PG_PORT || '5432'}/${process.env.PG_DATABASE || 'aiksetra_db'}`;
+
     this.pool = new Pool({
-      connectionString: connectionString || process.env.DATABASE_URL,
+      connectionString: connStr,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
