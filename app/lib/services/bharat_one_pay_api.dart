@@ -16,10 +16,145 @@ class BharatOnePayApi {
   static UserModel? currentUser;
   static BankAccountModel? currentAccount;
   static List<BankAccountModel> linkedAccounts = [];
-  static List<Map<String, dynamic>> linkedCards = [];
+  static List<Map<String, dynamic>> linkedCards = [
+    {
+      'id': 'card_hdfc_rupay_01',
+      'cardType': 'CREDIT',
+      'network': 'RuPay UPI',
+      'bankName': 'HDFC Bank',
+      'maskedCardNumber': '•••• •••• •••• 8821',
+      'last4': '8821',
+      'expiry': '08/29',
+      'cardHolderName': 'SOUMO NASKAR',
+      'balanceOrLimit': 150000.0,
+      'upiEnabled': true,
+      'createdAt': DateTime.now().toIso8601String(),
+    },
+    {
+      'id': 'card_sbi_debit_02',
+      'cardType': 'DEBIT',
+      'network': 'RuPay Global',
+      'bankName': 'State Bank of India',
+      'maskedCardNumber': '•••• •••• •••• 4519',
+      'last4': '4519',
+      'expiry': '11/30',
+      'cardHolderName': 'SOUMO NASKAR',
+      'balanceOrLimit': 50000.0,
+      'upiEnabled': true,
+      'createdAt': DateTime.now().toIso8601String(),
+    },
+  ];
   static String configuredAppPin = '1234';
   static double gullakBalance = 0.0;
   static String activeVaultId = 'vlt_simo_01';
+
+  // Live Indian Stock Market Watchlist (BSE / NSE Bluechips)
+  static final List<Map<String, dynamic>> indianStocks = [
+    {
+      'symbol': 'RELIANCE',
+      'name': 'Reliance Industries Ltd',
+      'sector': 'Oil, Gas & 5G Telecom',
+      'price': 2942.30,
+      'change': 41.50,
+      'changePct': 1.43,
+      'isUp': true,
+      'marketCap': '₹19.9 Lakh Cr',
+      'pe': 27.4,
+      'high52': 3217.90,
+      'low52': 2220.30,
+    },
+    {
+      'symbol': 'TCS',
+      'name': 'Tata Consultancy Services',
+      'sector': 'IT Software & Cloud',
+      'price': 4128.50,
+      'change': 32.10,
+      'changePct': 0.78,
+      'isUp': true,
+      'marketCap': '₹14.9 Lakh Cr',
+      'pe': 31.2,
+      'high52': 4585.90,
+      'low52': 3313.00,
+    },
+    {
+      'symbol': 'HDFCBANK',
+      'name': 'HDFC Bank Ltd',
+      'sector': 'Banking & Financials',
+      'price': 1686.40,
+      'change': 19.80,
+      'changePct': 1.19,
+      'isUp': true,
+      'marketCap': '₹12.8 Lakh Cr',
+      'pe': 18.6,
+      'high52': 1794.00,
+      'low52': 1363.55,
+    },
+    {
+      'symbol': 'INFY',
+      'name': 'Infosys Ltd',
+      'sector': 'IT Services & AI',
+      'price': 1874.20,
+      'change': 11.40,
+      'changePct': 0.61,
+      'isUp': true,
+      'marketCap': '₹7.8 Lakh Cr',
+      'pe': 29.1,
+      'high52': 1991.45,
+      'low52': 1358.35,
+    },
+    {
+      'symbol': 'TATAMOTORS',
+      'name': 'Tata Motors Ltd',
+      'sector': 'Automotive & EV',
+      'price': 982.60,
+      'change': 22.40,
+      'changePct': 2.33,
+      'isUp': true,
+      'marketCap': '₹3.6 Lakh Cr',
+      'pe': 10.4,
+      'high52': 1179.05,
+      'low52': 622.00,
+    },
+    {
+      'symbol': 'ITC',
+      'name': 'ITC Limited',
+      'sector': 'FMCG, Paper & Hotels',
+      'price': 494.10,
+      'change': 2.80,
+      'changePct': 0.57,
+      'isUp': true,
+      'marketCap': '₹6.2 Lakh Cr',
+      'pe': 28.3,
+      'high52': 528.55,
+      'low52': 399.30,
+    },
+    {
+      'symbol': 'LT',
+      'name': 'Larsen & Toubro Ltd',
+      'sector': 'Infrastructure & Defense',
+      'price': 3615.80,
+      'change': 28.60,
+      'changePct': 0.80,
+      'isUp': true,
+      'marketCap': '₹4.9 Lakh Cr',
+      'pe': 36.8,
+      'high52': 3919.90,
+      'low52': 2872.00,
+    },
+    {
+      'symbol': 'BHARTIARTL',
+      'name': 'Bharti Airtel Ltd',
+      'sector': 'Telecom & Digital Services',
+      'price': 1712.50,
+      'change': 18.20,
+      'changePct': 1.07,
+      'isUp': true,
+      'marketCap': '₹9.7 Lakh Cr',
+      'pe': 44.5,
+      'high52': 1779.00,
+      'low52': 913.00,
+    },
+  ];
 
   // Complete RBI-Regulated Indian Bank Directory (48 Banks across Public, Private, SFB, Payments & Co-op)
   static final List<Map<String, String>> allIndianBanks = [
@@ -1341,7 +1476,7 @@ class BharatOnePayApi {
       }
     } catch (_) {}
 
-    // Local BBPS deterministic bill statement if server wasn't restarted
+    // Local BBPS realistic itemized tariff calculation per State Electricity Regulatory Commission (SERC)
     final biller = bbpsBillers.firstWhere(
       (b) => b['id'] == billerId,
       orElse: () => {'id': billerId, 'name': 'BBPS Utility Biller', 'category': 'ELECTRICITY'},
@@ -1351,30 +1486,84 @@ class BharatOnePayApi {
     for (int i = 0; i < consumerNumber.length; i++) {
       seed += consumerNumber.codeUnitAt(i) * (i + 1);
     }
+
     double amt = 890.0;
-    String usage = '248 kWh Consumed';
+    String usage = '';
+    Map<String, dynamic> breakdown = {};
+
     if (cat == 'ELECTRICITY') {
-      amt = 650.0 + (seed % 1850);
-      usage = '${140 + (seed % 260)} kWh Consumed • Tariff LT-A';
+      final units = 180 + (seed % 120); // Realistic 180 - 300 kWh consumption
+      double energyCharges = 0;
+      if (units <= 100) {
+        energyCharges = units * 4.60;
+      } else if (units <= 200) {
+        energyCharges = (100 * 4.60) + ((units - 100) * 6.10);
+      } else {
+        energyCharges = (100 * 4.60) + (100 * 6.10) + ((units - 200) * 7.50);
+      }
+      const double fixedDemandCharge = 85.00;
+      final double dutyTax = (energyCharges + fixedDemandCharge) * 0.06;
+      amt = double.parse((energyCharges + fixedDemandCharge + dutyTax).toStringAsFixed(2));
+      usage = '$units kWh Consumed (Reading: ${4820 + seed % 300} to ${4820 + seed % 300 + units})';
+      breakdown = {
+        'Units Consumed': '$units Units (kWh)',
+        'Energy Charges': '₹${energyCharges.toStringAsFixed(2)}',
+        'Fixed Demand Charge': '₹85.00',
+        'State Electricity Duty (6%)': '₹${dutyTax.toStringAsFixed(2)}',
+        'Tariff Class': 'LT-Domestic A (Bi-Monthly)',
+        'Meter Number': 'MTR-${seed % 90000 + 10000}',
+      };
     } else if (cat == 'WATER') {
-      amt = 240.0 + (seed % 460);
-      usage = '${18 + (seed % 25)} KL Municipal Water';
+      final kl = 18 + (seed % 16);
+      final waterCharge = kl * 12.50;
+      const sewerageFee = 60.0;
+      amt = double.parse((waterCharge + sewerageFee).toStringAsFixed(2));
+      usage = '$kl Kilolitres (KL) Municipal Water Metered';
+      breakdown = {
+        'Consumption': '$kl KL',
+        'Water Supply Charges': '₹${waterCharge.toStringAsFixed(2)}',
+        'Sewerage & Sanitation Cess': '₹60.00',
+      };
     } else if (cat == 'GAS') {
-      amt = 853.0;
-      usage = '14.2 Kg Domestic LPG Cylinder Refill';
+      amt = 864.0;
+      usage = '14.2 Kg Domestic LPG Refill Cylinder';
+      breakdown = {
+        'Cylinder Price (Govt Subsidized)': '₹829.00',
+        'Home Delivery & Safety Inspection': '₹35.00',
+        'Booking No': 'LPG-${seed % 900000 + 100000}',
+      };
     } else if (cat == 'BROADBAND') {
-      amt = 999.0;
-      usage = '300 Mbps Unlimited Fiber + OTT';
+      amt = 1178.82;
+      usage = '300 Mbps Unlimited Fiber + 16 OTT Apps';
+      breakdown = {
+        'Base Plan': '₹999.00',
+        'GST (18% IGST)': '₹179.82',
+        'Speed': '300 Mbps Symmetrical',
+      };
     } else if (cat == 'MOBILE') {
       amt = 349.0;
-      usage = 'True 5G Unlimited + 2GB/Day (28 Days)';
+      usage = 'True 5G Unlimited + 2GB/Day + Unlimited Calls (28 Days)';
+      breakdown = {
+        'Recharge Plan': '₹349.00',
+        'Talktime': 'Unlimited Local/STD',
+        'Data': 'Unlimited True 5G',
+      };
     } else if (cat == 'FASTAG') {
       amt = 500.0;
-      usage = 'NHAI FASTag Wallet Top-up';
+      usage = 'NHAI FASTag National Highway Toll Top-up';
+      breakdown = {
+        'Wallet Credit': '₹500.00',
+        'Platform Convenience Fee': '₹0.00 (Free)',
+      };
     } else {
-      amt = 420.0;
-      usage = 'HD Family Sports & Entertainment Pack';
+      amt = 450.0;
+      usage = 'HD Premium Family & Sports Pack (Monthly)';
+      breakdown = {
+        'Network Capacity Fee (NCF)': '₹153.40',
+        'Pay Channels': '₹296.60',
+      };
     }
+
     return {
       'success': true,
       'bill': {
@@ -1382,12 +1571,13 @@ class BharatOnePayApi {
         'billerName': biller['name'],
         'category': cat,
         'consumerNumber': consumerNumber,
-        'consumerName': currentUser?.fullName ?? 'Verified Consumer',
+        'consumerName': currentUser?.fullName ?? 'Soumo Naskar',
         'billNumber': 'BBPS${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}',
         'billPeriod': 'Current Billing Cycle',
-        'dueDate': DateTime.now().add(const Duration(days: 7)).toIso8601String().split('T').first,
+        'dueDate': DateTime.now().add(const Duration(days: 9)).toIso8601String().split('T').first,
         'amount': amt,
         'planOrUsage': usage,
+        'tariffBreakdown': breakdown,
         'alreadyPaid': false,
       },
     };

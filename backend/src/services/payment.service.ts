@@ -134,12 +134,40 @@ export class PaymentService {
     // 7. Debit remitter account
     remitterAccount.balance = Number((remitterAccount.balance - amount).toFixed(2));
 
-    // 8. Credit beneficiary if internal account exists
+    // 8. Credit beneficiary if internal account exists (Two-Phone Transfer Resolution)
+    let beneficiaryUserId: string | undefined;
+    let beneficiaryName = scamAnalysis.verifiedLegalName;
+
+    // Check by VPA table
     const beneficiaryVpa = db.get('vpas').find((v) => v.vpa.toLowerCase() === receiverVpa.toLowerCase());
     if (beneficiaryVpa && beneficiaryVpa.accountId) {
       const benAcc = db.get('accounts').find((a) => a.id === beneficiaryVpa.accountId);
       if (benAcc) {
         benAcc.balance = Number((benAcc.balance + amount).toFixed(2));
+        beneficiaryUserId = benAcc.userId;
+      }
+    }
+
+    // Check by User table (primaryVpa, phone, or prefix match)
+    if (!beneficiaryUserId) {
+      const cleanReceiver = receiverVpa.toLowerCase().trim();
+      const phoneDigits = cleanReceiver.replace(/\D/g, '');
+      const beneficiaryUser = db.get('users').find((u) => {
+        if (u.primaryVpa.toLowerCase() === cleanReceiver) return true;
+        if (phoneDigits.length >= 10 && u.phone.includes(phoneDigits.slice(-10))) return true;
+        const uPrefix = u.primaryVpa.split('@')[0].toLowerCase();
+        const rPrefix = cleanReceiver.split('@')[0].toLowerCase();
+        return uPrefix === rPrefix;
+      });
+
+      if (beneficiaryUser) {
+        beneficiaryUserId = beneficiaryUser.id;
+        beneficiaryName = beneficiaryUser.fullName;
+        const benAccounts = db.get('accounts').filter((a) => a.userId === beneficiaryUser.id);
+        const targetAcc = benAccounts.find((a) => a.isPrimary) || benAccounts[0];
+        if (targetAcc) {
+          targetAcc.balance = Number((targetAcc.balance + amount).toFixed(2));
+        }
       }
     }
 
@@ -151,8 +179,9 @@ export class PaymentService {
       senderUserId,
       senderVpa: user.primaryVpa,
       senderAccountId: remitterAccount.id,
+      receiverUserId: beneficiaryUserId,
       receiverVpa,
-      receiverName: scamAnalysis.verifiedLegalName,
+      receiverName: beneficiaryName,
       amount,
       currency: 'INR',
       txnType: beneficiaryVpa?.isMerchant ? 'P2M' : 'P2P',
@@ -277,7 +306,12 @@ export class PaymentService {
 
     return db
       .get('transactions')
-      .filter((t) => t.senderUserId === userId || t.receiverVpa.toLowerCase() === user.primaryVpa.toLowerCase())
+      .filter((t) => (
+        t.senderUserId === userId ||
+        t.receiverUserId === userId ||
+        t.receiverVpa.toLowerCase() === user.primaryVpa.toLowerCase() ||
+        (user.phone && t.receiverVpa.includes(user.phone))
+      ))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 

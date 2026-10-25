@@ -56,6 +56,7 @@ export interface Transaction {
   senderUserId?: string;
   senderVpa: string;
   senderAccountId?: string;
+  receiverUserId?: string;
   receiverVpa: string;
   receiverName: string;
   amount: number;

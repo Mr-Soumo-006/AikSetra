@@ -71,14 +71,14 @@
       "email": "soumonaska@aiksetra.in",
       "panNumber": "ABCDE8894F",
       "kycStatus": "VERIFIED",
-      "deviceId": "android_studio_device_3038",
-      "simId": "sim_slot_1_jio",
+      "deviceId": "android_npci_device_3038",
+      "simId": "Airtel 5G Plus (Auto-Detected SIM 1)",
       "mpinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
       "primaryVpa": "soumonaska3038@aiksetra",
       "liteBalance": 500,
       "lrsUsedUsd": 127.34,
       "createdAt": "2026-10-24T12:09:37.239Z",
-      "updatedAt": "2026-10-24T18:35:19.392Z"
+      "updatedAt": "2026-10-24T23:18:11.371Z"
     }
   ],
   "accounts": [
@@ -162,6 +162,28 @@
       "accountType": "SAVINGS",
       "isPrimary": false,
       "balance": 99066.5,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_5b6e2db35f",
+      "userId": "usr_21acd1d7f314",
+      "bankName": "State Bank of India",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "accountType": "SAVINGS",
+      "isPrimary": false,
+      "balance": 14057.5,
+      "upiPinSet": true
+    },
+    {
+      "id": "acc_3b633fd8f2",
+      "userId": "usr_21acd1d7f314",
+      "bankName": "State Bank of India (SBI)",
+      "bankCode": "SBIN",
+      "ifsc": "SBIN0001234",
+      "accountType": "SAVINGS",
+      "isPrimary": false,
+      "balance": 81029.5,
       "upiPinSet": true
     }
   ],
