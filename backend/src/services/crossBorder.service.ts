@@ -378,26 +378,86 @@ export class CrossBorderService {
   }
 
   /**
-   * P0: Real Partner Settlement Confirmation
-   * Transitions remittance from PENDING_PARTNER_SETTLEMENT to SUCCESS/FAILED
-   * upon confirmed callback from AD-Bank / NIPL partner rail.
+   * P0: Real Partner Settlement Confirmation & Compensatory Reversal Workflow
+   * Transitions remittance from PENDING_PARTNER_SETTLEMENT to SUCCESS or FAILED.
+   * If FAILED, automatically executes compensatory refund restoring user balance and LRS quota.
    */
-  public static confirmPartnerSettlement(params: {
+  public static async confirmPartnerSettlement(params: {
     transferId: string;
     partnerRrn: string;
     status: 'SUCCESS' | 'FAILED';
     failureReason?: string;
-  }): boolean {
+  }): Promise<boolean> {
     const txn = db.get('transactions').find((t) => t.id === params.transferId);
     if (!txn) return false;
     if (txn.status === 'SUCCESS' && params.status === 'SUCCESS') return true;
-    if (txn.status !== 'PENDING' && txn.status !== 'PENDING_PARTNER_SETTLEMENT') return false;
+    if (txn.status !== 'PENDING' && txn.status !== 'PENDING_PARTNER_SETTLEMENT' && txn.status !== 'SIMULATED_SUCCESS') {
+      return false;
+    }
 
-    txn.status = params.status;
-    txn.upiRrn = params.partnerRrn;
-    if (params.failureReason) txn.failureReason = params.failureReason;
-    txn.completedAt = new Date().toISOString();
-    db.save();
-    return true;
+    return await db.transaction(async () => {
+      const user = db.get('users').find((u) => u.id === txn.senderUserId);
+      const senderAccount = db.get('accounts').find((a) => a.id === txn.senderAccountId);
+
+      if (params.status === 'SUCCESS') {
+        txn.status = 'SUCCESS';
+        txn.upiRrn = params.partnerRrn;
+        txn.completedAt = new Date().toISOString();
+
+        // Paired settlement ledger entry: Move from ESCROW_HOLD to Nostro Clearing
+        db.insert('ledger', {
+          id: `led_fx_settle_${uuidv4().slice(0, 10)}`,
+          transactionId: txn.id,
+          accountId: 'acc_nostro_settlement_00',
+          accountType: 'SETTLEMENT_CLEARING',
+          entryType: 'CREDIT',
+          amount: txn.amount,
+          currency: txn.currency,
+          balanceAfter: 0,
+          description: `NOSTRO SETTLEMENT CONFIRMED: Outward FX via partner bank (${params.partnerRrn})`,
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        // Partner payout failed: Execute compensatory refund
+        txn.status = 'FAILED';
+        txn.failureReason = params.failureReason || 'Partner bank remittance rejected or timed out';
+        txn.completedAt = new Date().toISOString();
+
+        if (senderAccount) {
+          senderAccount.balance = Math.round((senderAccount.balance + txn.amount) * 100) / 100;
+
+          // Compensating refund ledger entry
+          db.insert('ledger', {
+            id: `led_fx_rev_${uuidv4().slice(0, 10)}`,
+            transactionId: txn.id,
+            accountId: senderAccount.id,
+            accountType: 'USER_ACCOUNT',
+            entryType: 'CREDIT',
+            amount: txn.amount,
+            currency: txn.currency,
+            balanceAfter: senderAccount.balance,
+            description: `COMPENSATORY REFUND: FX Remittance failed (${txn.failureReason})`,
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        // Restore consumed LRS quota
+        if (user && txn.metadata?.targetAmount) {
+          const usdEq = txn.metadata.targetCurrency === 'USD' ? txn.metadata.targetAmount : txn.amount / 85.0;
+          user.lrsUsedUsd = Math.max(0, Number(((user.lrsUsedUsd || 0) - usdEq).toFixed(2)));
+          user.updatedAt = new Date().toISOString();
+        }
+      }
+
+      AuditService.log({
+        actorId: 'EXTERNAL_FX_PARTNER_CALLBACK',
+        action: `FX_REMITTANCE_${params.status}`,
+        resource: 'TRANSACTION',
+        resourceId: txn.id,
+        metadata: { partnerRrn: params.partnerRrn, status: params.status, failureReason: params.failureReason },
+      });
+
+      return true;
+    });
   }
 }

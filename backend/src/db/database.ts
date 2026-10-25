@@ -60,12 +60,39 @@ const defaultDatabase: DatabaseSchema = {
   fraudRegistry: [],
 };
 
+class AsyncMutex {
+  private queue: Array<() => void> = [];
+  private locked = false;
+
+  public async acquire(): Promise<() => void> {
+    if (!this.locked) {
+      this.locked = true;
+      return () => this.release();
+    }
+    return new Promise<() => void>((resolve) => {
+      this.queue.push(() => {
+        resolve(() => this.release());
+      });
+    });
+  }
+
+  private release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
 class JsonDatabase {
   private filePath: string;
   private backupPath: string;
   private data: DatabaseSchema;
   private inFlightKeys: Set<string> = new Set();
   private transactionDepth: number = 0;
+  private txMutex = new AsyncMutex();
 
   constructor() {
     const dir = path.resolve(process.cwd(), config.dataDir);
@@ -167,25 +194,30 @@ class JsonDatabase {
     this.inFlightKeys.delete(key);
   }
 
-  // P1 Issue 17 & 27: Transactional Execution with Automatic Rollback (suppresses intermediate persist)
+  // P1 Issue 17 & 27 & P1 Audit: Serialized Transaction Execution with Isolated Rollback
   public async transaction<T>(operation: () => Promise<T>): Promise<T> {
-    const snapshot = JSON.stringify(this.data);
-    this.transactionDepth++;
+    const releaseLock = await this.txMutex.acquire();
     try {
-      const result = await operation();
-      this.transactionDepth--;
-      if (this.transactionDepth === 0) {
-        this.persist();
+      const snapshot = JSON.stringify(this.data);
+      this.transactionDepth++;
+      try {
+        const result = await operation();
+        this.transactionDepth--;
+        if (this.transactionDepth === 0) {
+          this.persist();
+        }
+        return result;
+      } catch (err) {
+        this.transactionDepth--;
+        // Roll back in-memory state on failure
+        this.data = JSON.parse(snapshot);
+        if (this.transactionDepth === 0) {
+          this.persist();
+        }
+        throw err;
       }
-      return result;
-    } catch (err) {
-      this.transactionDepth--;
-      // Roll back in-memory state on failure
-      this.data = JSON.parse(snapshot);
-      if (this.transactionDepth === 0) {
-        this.persist();
-      }
-      throw err;
+    } finally {
+      releaseLock();
     }
   }
 

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { config } from '../config/index.js';
 
 export interface RateLimitStore {
   increment(key: string, windowMs: number): Promise<{ count: number; oldestTimestamp: number }>;
@@ -43,6 +44,7 @@ export function createRateLimiter(options: {
   keyGenerator?: (req: Request) => string;
   message?: string;
   store?: RateLimitStore;
+  failClosed?: boolean;
 }) {
   const store = options.store || defaultSharedStore;
   const { windowMs, maxRequests, message = 'Too many requests. Please try again later.' } = options;
@@ -71,6 +73,14 @@ export function createRateLimiter(options: {
       res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - count));
       next();
     } catch (err) {
+      // P1: Fail closed on errors to prevent rate-limit bypass during outages
+      if (config.isProduction || options.failClosed !== false) {
+        return res.status(503).json({
+          success: false,
+          code: 'RATE_LIMIT_SERVICE_UNAVAILABLE',
+          message: 'Security rate limit verification service is temporarily unavailable. Request blocked for safety.',
+        });
+      }
       next();
     }
   };

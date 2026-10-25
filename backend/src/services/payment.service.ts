@@ -84,6 +84,10 @@ export class PaymentService {
       throw new Error('Selected bank account could not be found or does not belong to user.');
     }
 
+    if (config.isProduction && remitterAccount.isVerified === false) {
+      throw new Error('Unverified bank account cannot be used for UPI payments. Please complete bank account verification.');
+    }
+
     // 3. Mandatory MPIN verification (Issue 14)
     if (!mpin || mpin.trim().length < 4) {
       throw new Error('Valid 4 or 6 digit UPI MPIN is required to authorize transaction.');
@@ -231,7 +235,8 @@ export class PaymentService {
       });
     }
 
-    // 10. Create Successful Transaction Record
+    // 10. Create Transaction Record (Separating Simulation from Real Bank Settlement)
+    const paymentStatus = config.isSimulationMode ? ('SIMULATED_SUCCESS' as const) : ('SUCCESS' as const);
     const transaction: Transaction = {
       id: txnId,
       txnRef,
@@ -245,7 +250,7 @@ export class PaymentService {
       amount,
       currency: 'INR',
       txnType: beneficiaryVpa?.isMerchant ? 'P2M' : 'P2P',
-      status: 'SUCCESS',
+      status: paymentStatus,
       remark,
       scamShieldScore: scamAnalysis.riskScore,
       idempotencyKey,
@@ -253,6 +258,7 @@ export class PaymentService {
       completedAt: new Date().toISOString(),
       metadata: {
         isSimulated: config.isSimulationMode,
+        settlementStatus: config.isSimulationMode ? 'SANDBOX_SIMULATION' : 'CONFIRMED_BANK_SETTLEMENT',
         soundboxAnnounced,
       },
     };
@@ -261,7 +267,7 @@ export class PaymentService {
 
     AuditService.log({
       actorId: senderUserId,
-      action: 'PAYMENT_SUCCESS',
+      action: config.isSimulationMode ? 'PAYMENT_SIMULATED_SUCCESS' : 'PAYMENT_SUCCESS',
       resource: 'TRANSACTION',
       resourceId: txnId,
       metadata: { amount, upiRrn: pspResult.upiRrn, receiverVpa, isSimulated: config.isSimulationMode },

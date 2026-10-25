@@ -186,6 +186,15 @@ apiRouter.post('/accounts/add-money', authMiddleware, (req: AuthenticatedRequest
       return res.status(400).json({ success: false, message: 'Amount must be greater than zero.' });
     }
 
+    // P0: Block arbitrary balance creation in production
+    if (config.isProduction) {
+      return res.status(403).json({
+        success: false,
+        code: 'DIRECT_DEPOSIT_PROHIBITED',
+        message: 'Direct balance creation is prohibited in production. Deposits must be settled via authorized Payment Gateway or CBS webhook callback.',
+      });
+    }
+
     const account = db.get('accounts').find((a) => a.id === accountId);
     if (account && account.userId !== req.userId && !req.isAdmin) {
       return res.status(403).json({ success: false, message: 'Unauthorized account credit attempt.' });
@@ -375,6 +384,21 @@ apiRouter.post('/payments/webhook', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid webhook signature.' });
     }
 
+    // P2: Webhook Replay Attack Protection (5-minute window)
+    const timestampHeader = (req.headers['x-webhook-timestamp'] || req.body?.timestamp) as string;
+    if (timestampHeader) {
+      const parsedTime = new Date(timestampHeader).getTime();
+      if (!isNaN(parsedTime)) {
+        const deltaSeconds = Math.abs(Date.now() - parsedTime) / 1000;
+        if (deltaSeconds > 300) {
+          return res.status(401).json({
+            success: false,
+            message: 'Webhook request timestamp is expired (replay attack protection).',
+          });
+        }
+      }
+    }
+
     const { event, transactionId, status, upiRrn, reason } = req.body;
     if (!transactionId || !status) {
       return res.status(400).json({ success: false, message: 'Missing transactionId or status in webhook payload.' });
@@ -399,8 +423,14 @@ apiRouter.post('/payments/webhook', async (req, res) => {
       return res.json({ success: true, message: `Duplicate webhook event ignored (already ${status}).` });
     }
 
-    const isPending = currentStatus === 'PENDING' || currentStatus === 'PENDING_PARTNER_SETTLEMENT';
-    if (isPending && (status === 'SUCCESS' || status === 'FAILED')) {
+    if (currentStatus === 'PENDING_PARTNER_SETTLEMENT' || transaction.txnType === 'CROSS_BORDER') {
+      await CrossBorderService.confirmPartnerSettlement({
+        transferId: transaction.id,
+        partnerRrn: upiRrn || `PARTNER_${Date.now()}`,
+        status: status === 'SUCCESS' ? 'SUCCESS' : 'FAILED',
+        failureReason: reason,
+      });
+    } else if (currentStatus === 'PENDING' && (status === 'SUCCESS' || status === 'FAILED')) {
       transaction.status = status;
       if (upiRrn) transaction.upiRrn = upiRrn;
       if (status === 'FAILED' && reason) transaction.failureReason = reason;

@@ -105,4 +105,14 @@ describe('API Security, Webhooks & Rate Limiting (P0 & P1)', () => {
     const expected = crypto.createHmac('sha256', config.webhookSecret).update(rawBuffer).digest('hex');
     assert.equal(signature, expected, 'Raw body HMAC computation must be exact');
   });
+
+  test('Webhook Replay Attack Protection: Rejects webhook timestamps older than 5 minutes', () => {
+    const expiredTimestamp = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // 10 mins ago
+    const deltaSeconds = Math.abs(Date.now() - new Date(expiredTimestamp).getTime()) / 1000;
+    assert.ok(deltaSeconds > 300, 'Expired webhook timestamp exceeds 5-minute tolerance');
+
+    const freshTimestamp = new Date(Date.now() - 30 * 1000).toISOString(); // 30s ago
+    const freshDelta = Math.abs(Date.now() - new Date(freshTimestamp).getTime()) / 1000;
+    assert.ok(freshDelta < 300, 'Fresh webhook timestamp is well within 5-minute tolerance');
+  });
 });

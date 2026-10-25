@@ -1,8 +1,10 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { LedgerService } from '../services/ledger.service.js';
+import { CrossBorderService } from '../services/crossBorder.service.js';
+import { RecoveryService } from '../services/recovery.service.js';
 import { db } from '../db/database.js';
-import type { BankAccount } from '../types/index.js';
+import type { BankAccount, Transaction } from '../types/index.js';
 
 describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
   let senderAcc: BankAccount;
@@ -212,5 +214,94 @@ describe('Financial Integrity & Double-Entry Ledger (P1)', () => {
     assert.equal(db.reserveIdempotencyKey(testKey), false, 'Duplicate key reservation must be rejected');
 
     db.releaseIdempotencyKey(testKey);
+  });
+
+  test('Cross-Border Durable Settlement: Compensatory refund on partner failure restores balance and LRS', async () => {
+    const testRemitTxn: Transaction = {
+      id: 'remit_cb_test_01',
+      txnRef: 'TXN_CB_01',
+      upiRrn: '',
+      senderUserId: senderAcc.userId,
+      senderAccountId: senderAcc.id,
+      senderVpa: 'sender@aiksetra',
+      receiverVpa: 'john@usd',
+      receiverName: 'John Beneficiary',
+      amount: 8500.0,
+      currency: 'INR',
+      txnType: 'CROSS_BORDER',
+      status: 'PENDING_PARTNER_SETTLEMENT',
+      remark: 'Abroad Remittance Hold',
+      createdAt: new Date().toISOString(),
+      metadata: { targetCurrency: 'USD', targetAmount: 100 },
+    };
+    db.insert('transactions', testRemitTxn);
+
+    // Initial balance after hold deduction
+    senderAcc.balance = 1500.0;
+
+    // Partner callback reports failure
+    const success = await CrossBorderService.confirmPartnerSettlement({
+      transferId: testRemitTxn.id,
+      partnerRrn: 'SWIFT_REJ_99',
+      status: 'FAILED',
+      failureReason: 'Beneficiary IBAN closed at receiving institution',
+    });
+
+    assert.equal(success, true);
+    assert.equal(testRemitTxn.status, 'FAILED');
+
+    // Verify compensatory refund restored sender balance
+    const updatedSender = db.get('accounts').find((a) => a.id === senderAcc.id);
+    assert.equal(updatedSender?.balance, 10000.0, 'Failed partner settlement must refund user balance in full');
+  });
+
+  test('Concurrent Transaction Isolation: Parallel transactions serialize cleanly via mutex without state clobbering', async () => {
+    let order: string[] = [];
+
+    const tx1 = db.transaction(async () => {
+      order.push('tx1_start');
+      await new Promise((r) => setTimeout(r, 20));
+      order.push('tx1_end');
+    });
+
+    const tx2 = db.transaction(async () => {
+      order.push('tx2_start');
+      await new Promise((r) => setTimeout(r, 10));
+      order.push('tx2_end');
+    });
+
+    await Promise.all([tx1, tx2]);
+
+    // Mutex strictly ensures tx1 finishes completely before tx2 begins
+    assert.deepEqual(order, ['tx1_start', 'tx1_end', 'tx2_start', 'tx2_end'], 'Transactions must not interleave');
+  });
+
+  test('Crash-Safe Auto Recovery: Scans and auto-recovers orphaned pending transactions', async () => {
+    const oldDate = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // 10 mins ago
+    const orphanedTxn: Transaction = {
+      id: 'txn_orphaned_01',
+      txnRef: 'REF_ORPH_01',
+      upiRrn: '',
+      senderUserId: senderAcc.userId,
+      senderAccountId: senderAcc.id,
+      senderVpa: 'sender@aiksetra',
+      receiverVpa: 'merchant@upi',
+      receiverName: 'Orphaned Merchant',
+      amount: 500.0,
+      currency: 'INR',
+      txnType: 'P2M',
+      status: 'PENDING',
+      remark: 'Abandoned transaction',
+      createdAt: oldDate,
+    };
+    db.insert('transactions', orphanedTxn);
+
+    const recoveryResult = await RecoveryService.recoverPendingTransactions(5 * 60 * 1000);
+    assert.ok(recoveryResult.recoveredCount >= 1);
+    assert.ok(recoveryResult.transactionIds.includes('txn_orphaned_01'));
+
+    const recovered = db.get('transactions').find((t) => t.id === 'txn_orphaned_01');
+    assert.equal(recovered?.status, 'FAILED');
+    assert.ok(recovered?.failureReason?.includes('Auto Recovery'));
   });
 });

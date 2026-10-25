@@ -33,6 +33,9 @@ const POPULAR_BANKS = [
 
 export class AccountService {
   public static discoverBankAccounts(phone: string) {
+    if (config.isProduction && !config.npciMerchantKey) {
+      throw new Error('Real-time bank account discovery requires certified NPCI/Setu Account Aggregator integration in production.');
+    }
     // Simulates NPCI/PSP device-bound SMS account discovery
     const lastDigits = phone.slice(-4);
     return POPULAR_BANKS.map((b, idx) => ({
@@ -42,6 +45,7 @@ export class AccountService {
       maskedAccountNumber: `•••• •••• ${lastDigits}`,
       accountType: 'SAVINGS' as const,
       eligibleForUpi: true,
+      isSimulated: config.isSimulationMode,
     }));
   }
 
@@ -56,7 +60,12 @@ export class AccountService {
     initialBalance?: number;
     setAsPrimary?: boolean;
     replaceOnboardingAccount?: boolean;
+    verificationToken?: string;
+    verificationMethod?: 'OTP' | 'PENNY_DROP' | 'CARD_CHALLENGE' | 'ACCOUNT_AGGREGATOR';
   }): BankAccount {
+    if (config.isProduction && !params.verificationToken) {
+      throw new Error('Bank account linking in production requires verified ownership challenge (penny-drop or OTP verification token).');
+    }
     const allAccounts = db.get('accounts');
     const userAccounts = allAccounts.filter((a) => a.userId === params.userId);
     const user = db.get('users').find((u) => u.id === params.userId);
@@ -151,7 +160,11 @@ export class AccountService {
     amount: number;
     sourceNote?: string;
   }) {
-    const { userId, accountId, amount, sourceNote = 'Self Transfer / IMPS Credit' } = params;
+    if (config.isProduction) {
+      throw new Error('Direct balance creation is prohibited in production. Account deposits must be confirmed through verified payment gateway settlement.');
+    }
+
+    const { userId, accountId, amount, sourceNote = 'Simulated Sandbox Deposit' } = params;
     if (!amount || amount <= 0) throw new Error('Please enter a valid deposit amount.');
 
     const userAccounts = db.get('accounts').filter((a) => a.userId === userId);
@@ -162,27 +175,30 @@ export class AccountService {
     if (!account) throw new Error('No linked bank account found.');
 
     const user = db.get('users').find((u) => u.id === userId);
-    account.balance = Number((account.balance + amount).toFixed(2));
+    const txnId = `txn_cr_${uuidv4().replace(/-/g, '').slice(0, 10)}`;
+    const newBal = Number((account.balance + amount).toFixed(2));
+    account.balance = newBal;
 
-    const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const rrn = `4291${Math.floor(10000000 + Math.random() * 90000000)}`;
     const transaction = {
-      id: `txn_cr_${uuidv4().replace(/-/g, '').slice(0, 10)}`,
-      txnRef: `IMPS${Date.now().toString().slice(-8)}`,
+      id: txnId,
+      txnRef: `SIM_DEP_${Date.now().toString().slice(-8)}`,
       upiRrn: rrn,
       senderUserId: userId,
       senderAccountId: account.id,
-      senderVpa: 'imps.clearing@npci',
+      senderVpa: 'sandbox.gateway@npci',
       receiverVpa: user?.primaryVpa || 'user@aiksetra',
       receiverName: `${user?.fullName || 'Account Holder'} (${account.bankName})`,
       amount: Number(amount.toFixed(2)),
       currency: 'INR',
       txnType: 'P2P' as const,
-      status: 'SUCCESS' as const,
+      status: 'SIMULATED_SUCCESS' as const,
       remark: `${sourceNote} -> ${account.bankName} (${account.maskedAccountNumber})`,
       createdAt: new Date().toISOString(),
       metadata: {
         isCredit: true,
         isSelfDeposit: true,
+        isSimulated: true,
         bankName: account.bankName,
       },
     };
@@ -190,16 +206,74 @@ export class AccountService {
     db.insert('transactions', transaction as any);
     db.save();
 
-    console.log(
-      `💰 [AIKSETRA BANK CREDIT] +₹${amount.toFixed(2)} credited to ${account.bankName} (${account.maskedAccountNumber}) | New Balance: ₹${account.balance.toFixed(2)}`
-    );
-
     return {
       success: true,
       account,
-      updatedBalance: account.balance,
       transaction,
+      isSimulated: true,
+      newBalance: account.balance,
     };
+  }
+
+  /**
+   * P0: Real Inbound Payment Gateway Deposit
+   * Called strictly upon verified PG callback (e.g. Razorpay/Setu/YesBank)
+   */
+  public static async processVerifiedGatewayDeposit(params: {
+    accountId: string;
+    amount: number;
+    providerTxnId: string;
+    bankRrn: string;
+    gatewayProvider: string;
+  }) {
+    const { accountId, amount, providerTxnId, bankRrn, gatewayProvider } = params;
+    const account = db.get('accounts').find((a) => a.id === accountId);
+    if (!account) throw new Error('Target bank account not found for verified deposit.');
+
+    const user = db.get('users').find((u) => u.id === account.userId);
+
+    return await db.transaction(async () => {
+      account.balance = Number((account.balance + amount).toFixed(2));
+
+      const txnId = `txn_dep_${uuidv4().slice(0, 10)}`;
+      db.insert('ledger', {
+        id: `led_dep_${uuidv4().slice(0, 10)}`,
+        transactionId: txnId,
+        accountId: account.id,
+        accountType: 'USER_ACCOUNT',
+        entryType: 'CREDIT',
+        amount,
+        currency: 'INR',
+        balanceAfter: account.balance,
+        description: `INBOUND GATEWAY DEPOSIT: ${gatewayProvider} (${providerTxnId})`,
+        createdAt: new Date().toISOString(),
+      });
+
+      const transaction = {
+        id: txnId,
+        txnRef: providerTxnId,
+        upiRrn: bankRrn,
+        receiverUserId: account.userId,
+        senderVpa: `${gatewayProvider.toLowerCase()}@settlement`,
+        receiverVpa: user?.primaryVpa || 'user@aiksetra',
+        receiverName: account.bankName,
+        amount,
+        currency: 'INR',
+        txnType: 'P2M' as const,
+        status: 'SUCCESS' as const,
+        remark: `Verified Bank Deposit via ${gatewayProvider}`,
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        metadata: {
+          isDeposit: true,
+          provider: gatewayProvider,
+          providerTxnId,
+        },
+      };
+
+      db.insert('transactions', transaction as any);
+      return { success: true, balance: account.balance, transaction };
+    });
   }
 
   public static getAccounts(userId: string): BankAccount[] {
