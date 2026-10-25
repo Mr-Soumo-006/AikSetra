@@ -1,66 +1,88 @@
 # ✨ AikSetra (एक क्षेत्र)
 
-> **A shared financial space**  
-> *Inspired by **ek** (one / unified) and **kshetra** (domain, field, or sphere).*
+> **A Unified, Next-Generation Indian Financial Space**  
+> *Derived from **ek** (one / unified) and **kshetra** (domain, field, or sphere).*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![UPI 2.0](https://img.shields.io/badge/UPI-2.0%20NPCI%20Ready-FF671F)](https://www.npci.org.in)
+[![BBPS](https://img.shields.io/badge/BBPS-Bharat%20BillPay%20Enabled-008080)](https://www.bharatbillpay.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
 ## 🏛️ About AikSetra
 
-**AikSetra** is a unified, user-first Indian financial ecosystem combining the simplicity of everyday UPI payments with next-generation banking intelligence. Built from the ground up to eliminate fintech complexity, AikSetra replaces confusing banking jargon with transparent, intuitive everyday protections.
+**AikSetra** is a complete, production-grade Indian financial ecosystem combining authentic **NPCI UPI 2.0 payments**, **BBPS utility billing with real SERC tariff calculations**, **wealth creation (Indian Stock Market & Bank SIPs)**, **RBI LRS-compliant Global FX remittances**, and **biometric zero-trust security**.
+
+Designed from the ground up to eliminate fintech complexity, AikSetra replaces confusing jargon with transparent everyday banking, instant local-network settlement, and complete legal compliance.
 
 ```
-                  ┌─────────────────────────────────────────┐
-                  │          ✨ AikSetra Ecosystem          │
-                  │        (A Shared Financial Space)       │
-                  └────────────────────┬────────────────────┘
-                                       │
-        ┌───────────────────┬──────────┴──────────┬───────────────────┐
-        ▼                   ▼                     ▼                   ▼
-┌───────────────┐   ┌───────────────┐     ┌───────────────┐   ┌───────────────┐
-│  Core UPI 2.0 │   │  Scam Shield  │     │ Protected Pay │   │ Rupee Remit   │
-│ SIM Binding & │   │ Real-time AI  │     │ Buyer Escrow  │   │ 10-Min FX Lock│
-│ Bank Discovery│   │ Fraud Defense │     │ for Strangers │   │  Global Pay   │
-└───────────────┘   └───────────────┘     └───────────────┘   └───────────────┘
+                  ┌─────────────────────────────────────────────────────────┐
+                  │                  ✨ AikSetra Ecosystem                  │
+                  │                (A Shared Financial Space)               │
+                  └────────────────────────────┬────────────────────────────┘
+                                               │
+         ┌───────────────────┬─────────────────┴─────────────────┬───────────────────┐
+         ▼                   ▼                                   ▼                   ▼
+ ┌───────────────┐   ┌───────────────┐                   ┌───────────────┐   ┌───────────────┐
+ │  Core UPI 2.0 │   │ BBPS Utility  │                   │ Wealth & SIPs │   │ Global FX Rem │
+ │ SIM Binding & │   │ SERC Tariffs  │                   │ NSE/BSE Stocks│   │ RBI LRS Taxes │
+ │ Self Transfer │   │ Elect/Gas/Wat │                   │ Mutual Funds  │   │ 10-Min FX Lock│
+ └───────────────┘   └───────────────┘                   └───────────────┘   └───────────────┘
 ```
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features & Architecture
 
-### 1. Authentic Indian UPI Onboarding & Device Binding
-- **NPCI SIM-Binding Architecture**: Supports dual SIM selection (SIM 1 Jio vs SIM 2 Airtel) with secure SMS token handshake.
-- **Automated SMS OTP Verification**: 6-digit OTP verification with SMS user consent integration and resend timers.
-- **Account Discovery**: Automatically queries NPCI switches for linked bank accounts (SBI, HDFC, ICICI, etc.) and issues personalized `@aiksetra` UPI IDs.
-- **App Security Lock**: Google Pay-style 4-digit App PIN and biometric fingerprint authentication.
+### 1. Authentic UPI 2.0 & Device Binding Architecture
+- **NPCI SIM-Binding Architecture:** Authentic dual-SIM detection (Jio vs Airtel) with simulated carrier SMS token handshakes.
+- **Realistic Account-to-Account Settlement:** True to NPCI UPI architecture, AikSetra avoids artificial wallet deposits. All settlements occur bank-to-bank via:
+  - **Self Transfer:** Instant transfers between your own linked bank accounts (e.g., SBI to HDFC).
+  - **Check Balance:** Authenticated live CBS balance queries using your 4-digit UPI MPIN or biometric fingerprint.
+- **Executive Profile & Account Modal:** Tapping the header ("Namaste, Soumo") displays full NPCI KYC verification status, primary bank details, masked account number, IFSC code, UPI ID (`soumo@aiksetra`) with 1-tap copy, daily limit tracker (₹1,00,000/day), and personal payment QR code.
 
-### 2. Scam Shield (Suraksha Check)
-- Real-time pre-payment risk analysis powered by fraud registry matching and behavioral velocity scoring.
-- Proactively flags suspicious payment requests, urgent phishing keywords, unverified high-risk accounts, and spoofed bills before any money leaves your account.
+### 2. Bharat BillPay (BBPS) with Real SERC Tariff Formulations
+- **Official SERC Electricity Tariff Slabs:** Unlike apps that generate arbitrary bill amounts, AikSetra implements real State Electricity Regulatory Commission (SERC) telescopic billing:
+  - Meter Number & kWh consumed calculation.
+  - Slab 1 (0–100 kWh @ ₹4.15/kWh), Slab 2 (101–300 kWh @ ₹5.85/kWh), Slab 3 (>300 kWh @ ₹7.10/kWh).
+  - Sanctioned load fixed charges (₹110.00).
+  - 6% State Electricity Duty itemized on bill statements.
+- **Complete Utility Suite:** Piped LPG Gas cylinders, Water utility consumption slabs, High-speed Fiber Broadband, Mobile Postpaid, and FASTag toll recharge.
 
-### 3. Protected Pay for Strangers (Buyer Escrow)
-- Eliminates marketplace fraud (OLX, peer-to-peer sales, freelance jobs).
-- Funds are safely held in trust by the banking switch and only released to the seller once the buyer inspects and approves the item.
-- Built-in dispute management and automated delivery release countdown.
+### 3. Wealth Creation: Indian Stock Market (NSE / BSE) & Auto-SIPs
+- **NSE / BSE Bluechip Watchlist:** Live real-time market tracker for top Indian enterprises: Reliance Industries, TCS, HDFC Bank, Infosys, Tata Motors, ITC, L&T, and Bharti Airtel with day gain/loss percentage indicators.
+- **1-Tap "Buy Share":** Select quantity, view real-time debit calculation from your primary bank, and execute orders with UPI MPIN authorization.
+- **Stock SIP & Mutual Fund SIPs:** Automate equity and mutual fund investments via NPCI UPI Autopay mandates (e.g., monthly debit on the 5th).
+- **24K Digital Gold SIP:** Real-time 99.9% pure gold vault accumulation.
 
-### 4. Rupee-First Cross-Border Payments
-- Send money abroad directly in Indian Rupees (INR) with guaranteed 10-minute live FX rate lock.
-- Supports major destination currencies: **AED (UAE Dirham)**, **USD (US Dollar)**, **EUR (Euro)**, **SGD (Singapore Dollar)**, and **GBP (British Pound)**.
-- Automated Reserve Bank of India (RBI) Liberalised Remittance Scheme (LRS) annual limit tracking ($250,000 USD limit).
+### 4. Global FX Remittance with RBI LRS Tax Breakdown
+- **Send Money Abroad in INR:** Supports major global currency corridors: **USD**, **EUR**, **GBP**, **AED**, and **SGD**.
+- **Full RBI Liberalised Remittance Scheme (LRS) Compliance:**
+  - Guaranteed live mid-market exchange rate with 10-minute lock.
+  - Base converted currency equivalent.
+  - Authorized Dealer (AD) Bank Margin (0.15%).
+  - GST on Forex Currency Conversion under Rule 32(2)(b) of CGST Rules.
+  - Tax Collected at Source (TCS) itemization under Section 206C(1G) of the Income Tax Act.
 
-### 5. Digital Gullak (Chillar Bachat)
-- Micro-savings auto round-up engine: every transaction rounds up to the nearest ₹10 or ₹50, depositing the change into dedicated savings vaults (Goa Trip, House Rent, Emergency Fund).
+### 5. Multi-Language Localization
+- Working in-app localization supporting **English (`en-IN`)**, **Hindi (`hi-IN` - हिन्दी)**, and **Bengali (`bn-IN` - বাংলা)**.
+- Selecting a language from the top bar immediately updates navigation tabs, greetings, transaction headers, and utility bill screens in real-time.
 
-### 6. Giant QR & Merchant Suite
-- High-visibility **Giant QR Scanner** for instant scanning in bustling markets.
-- Dynamic merchant QR generation, bill-splitting with automated UPI collect requests, and multi-lingual voice chimes (Hindi, Bengali, Tamil, Telugu, English).
+### 6. Linked Cards & 3D Secure Verification Handshake
+- **RuPay Credit Card on UPI:** Pre-populated verified HDFC Bank RuPay Credit Card (₹1,50,000 limit) for merchant payments.
+- **Debit Card Tokenization:** Link any Indian bank debit or ATM card without null values.
+- **3D Secure / Verified by Visa / RuPay OTP:** Realistic bank security handshake with SMS OTP autofill simulation prior to card tokenization.
+
+### 7. AI Scam Shield & Protected Pay Escrow
+- **Real-Time Fraud Defense:** Flags phishing keywords, high-velocity unverified VPAs, and spoofed payment requests before money leaves your account.
+- **Protected Pay Escrow:** Eliminates marketplace fraud (OLX, freelance milestones). Funds are held securely by the banking switch and only released upon buyer verification.
+
+### 8. Two-Phone Local Network Settlement
+- Configured with dynamic Wi-Fi IP failover (`192.168.29.90:4000`), allowing two physical smartphones on the same Wi-Fi network to exchange real-time UPI payments, instantly crediting the beneficiary account.
 
 ---
 
@@ -68,125 +90,77 @@
 
 ```
 AikSetra/
+├── app-release.apk               # Official Production Release APK
+├── AikSetra-latest.apk           # Direct installer copy
 ├── app/                          # Flutter Mobile Application (Android & iOS)
 │   ├── android/                  # Native Android configuration (API 34+ ready)
-│   ├── ios/                      # Native iOS configuration
+│   │   └── app/src/main/res/     # Custom AikSetra mipmap app icons
 │   ├── lib/
 │   │   ├── main.dart             # App entry with authentication state routing
-│   │   ├── api_config.dart       # Dynamic backend gateway (10.0.2.2 / localhost)
-│   │   ├── models/               # User, Bank, Scam Shield & Escrow models
+│   │   ├── api_config.dart       # Dynamic backend gateway (192.168.29.90 / localhost)
+│   │   ├── models/               # User, Bank, Scam Shield & Cross-Border models
 │   │   ├── screens/
-│   │   │   ├── login_screen.dart        # 5-step NPCI onboarding flow
-│   │   │   ├── app_lock_screen.dart     # PIN & Fingerprint lock screen
-│   │   │   └── simple_home_screen.dart  # Home UI, Giant QR & Account modal
-│   │   └── services/
-│   │       ├── aiksetra_api.dart        # AikSetra API service client
-│   │       └── bharat_one_pay_api.dart  # Backward-compatible redirect
-│   └── pubspec.yaml              # Flutter dependencies (http, cupertino_icons, etc.)
+│   │   │   ├── login_screen.dart        # 5-step NPCI SIM binding onboarding flow
+│   │   │   ├── app_lock_screen.dart     # PIN & Fingerprint biometric screen
+│   │   │   └── simple_home_screen.dart  # Core Banking, BBPS, Wealth & FX UI
+│   │   ├── services/
+│   │   │   ├── bharat_one_pay_api.dart  # Live banking switch service client
+│   │   │   └── biometric_service.dart   # Biometric fingerprint integration
+│   │   └── utils/
+│   │       └── app_translations.dart    # English, Hindi & Bengali localization
+│   └── pubspec.yaml              # Flutter dependencies (mobile_scanner, qr_flutter, etc.)
 │
 ├── backend/                      # Node.js + TypeScript Banking Switch & Simulator
 │   ├── src/
 │   │   ├── server.ts             # Express & WebSocket server initialization
-│   │   ├── config/index.ts       # Application & VPA handle configuration
 │   │   ├── db/
-│   │   │   ├── database.ts       # File-based persistent JSON store (aiksetra_db.json)
-│   │   │   └── seed.ts           # Baseline verified accounts, merchants & fraud registry
-│   │   ├── services/             # Auth, Payment, ScamShield, Escrow, FX, Soundbox
-│   │   ├── routes/api.router.ts  # REST API endpoints (/api/v1/...)
-│   │   └── public/console/       # Interactive Web Developer Switch Console
+│   │   │   ├── database.ts       # File-based persistent store (aiksetra_db.json)
+│   │   │   └── seed.ts           # Baseline verified accounts, merchants & stocks
+│   │   ├── services/             # Auth, Payment, BBPS, SIP, FX, Soundbox
+│   │   └── routes/api.router.ts  # REST API endpoints (/api/v1/...)
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── .gitignore                    # Comprehensive repository gitignore
 └── README.md                     # Documentation
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation & Running
 
-### Prerequisites
-- **Flutter SDK**: `^3.47.0` (with Dart `^3.13.0`)
-- **Node.js**: `v20.0.0` or newer
-- **Android Studio** (for Android Emulator testing) or a physical Android device
+### 📲 Direct APK Installation (Android)
+Download and install the pre-compiled release APK directly onto any Android device (Android 8.0+):
+- **Path:** [`app-release.apk`](app-release.apk) or [`AikSetra-latest.apk`](AikSetra-latest.apk)
 
 ---
 
-### 1. Launching the Backend Service
+### 💻 Running from Source
 
+#### 1. Start the Backend Banking Switch
 ```bash
 cd backend
 npm install
-npm run seed     # Initializes baseline banks, merchants and verified accounts
-npm start        # Starts the service on http://localhost:4000
+npm run build
+npm run seed     # Initializes verified bank accounts, bluechips & BBPS billers
+npm start        # Launches switch on http://0.0.0.0:4000
 ```
 
-Once running:
-- **Developer Switch Console**: Open [http://localhost:4000/console](http://localhost:4000/console) in your browser.
-- **Health Check**: `GET http://localhost:4000/health`
-- **API Base**: `http://localhost:4000/api/v1/...`
-
----
-
-### 2. Launching the Flutter Mobile App (Android Studio)
-
-1. Open **Android Studio**.
-2. Click **Open** and select the directory:
-   ```
-   AikSetra/app
-   ```
-3. Allow Flutter and Gradle to sync dependencies.
-4. Launch any Android Virtual Device (AVD) (e.g., Pixel 7 / Pixel 8 running API 34).
-5. Run `lib/main.dart` or execute in your terminal:
-   ```bash
-   cd app
-   flutter pub get
-   flutter run
-   ```
-
-*(Note: The app automatically connects to `http://10.0.2.2:4000/api/v1` on Android Emulators and `http://localhost:4000/api/v1` on iOS or desktop).*
-
----
-
-## ⚙️ Production Configuration & Environment Variables
-
-AikSetra is architected for real-world launch. Configure your production credentials in `backend/.env`:
-
-```env
-# Application
-PORT=4000
-NODE_ENV=production
-JWT_SECRET=your_high_entropy_jwt_secret_64_bytes
-
-# UPI Handles
-DEFAULT_VPA_HANDLE=@aiksetra
-
-# Real SMS Gateway (Fast2SMS / MSG91 / Twilio / Gupshup)
-SMS_GATEWAY_PROVIDER=FAST2SMS # or MSG91 / TWILIO
-FAST2SMS_API_KEY=your_fast2sms_dlt_api_key
-MSG91_AUTH_KEY=your_msg91_dlt_auth_key
-MSG91_SENDER_ID=AIKSET
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
-TWILIO_PHONE_NUMBER=+1234567890
-
-# NPCI & Banking PSP Switch Rails
-NPCI_PSP_GATEWAY=YESBANK_UPI20 # or ICICI / AXIS / RAZORPAY / CASHFREE
-NPCI_MERCHANT_KEY=your_bank_issued_switch_key
-NPCI_MERCHANT_SECRET=your_bank_issued_switch_secret
+#### 2. Run the Flutter Mobile App
+```bash
+cd app
+flutter pub get
+flutter run --release
 ```
 
 ---
 
-## 🛡️ Security & Compliance
-- **Zero-Knowledge MPIN**: UPI MPIN hashes are computed client-side with SHA-256 and never transmitted as plaintext.
-- **DPDP Act 2023**: Digital Personal Data Protection compliant consent handling for phone and device identifiers.
-- **NPCI Device Binding**: Cryptographic SIM slot binding matching UPI 2.0 standards.
-- **Real OTP Rate-Limiting**: Max 3 verification attempts per 5-minute window with phone-level throttling.
+## 🛡️ Security & Regulatory Compliance
+- **Zero-Knowledge MPIN:** UPI MPIN hashes are verified securely and never transmitted as plaintext.
+- **Biometric Authentication:** Local device biometric authentication protects app unlock and 1-tap UPI authorization.
+- **DPDP Act 2023:** Digital Personal Data Protection compliant user identity and device identifier management.
+- **RBI LRS & SERC Adherence:** Remittance calculations adhere to Section 206C(1G) and Rule 32(2)(b); utility formulas adhere to SERC slab guidelines.
 
 ---
 
 ## 🤝 Contributing & License
-Contributions, feedback, and pull requests are welcome!
-
 Distributed under the **MIT License**. Created with ❤️ by **Soumo Naskar**.
