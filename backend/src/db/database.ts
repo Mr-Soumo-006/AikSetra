@@ -59,7 +59,9 @@ const defaultDatabase: DatabaseSchema = {
 
 class JsonDatabase {
   private filePath: string;
+  private backupPath: string;
   private data: DatabaseSchema;
+  private inFlightKeys: Set<string> = new Set();
 
   constructor() {
     const dir = path.resolve(process.cwd(), config.dataDir);
@@ -67,6 +69,7 @@ class JsonDatabase {
       fs.mkdirSync(dir, { recursive: true });
     }
     this.filePath = path.join(dir, 'aiksetra_db.json');
+    this.backupPath = path.join(dir, 'aiksetra_db.bak');
 
     if (fs.existsSync(this.filePath)) {
       try {
@@ -79,9 +82,20 @@ class JsonDatabase {
           auditLogs: parsed.auditLogs || [],
         };
       } catch (e) {
-        console.warn('Could not parse existing database, initializing fresh one.', e);
-        this.data = defaultDatabase;
-        this.persist();
+        console.warn('Could not parse existing database, trying backup file...', e);
+        if (fs.existsSync(this.backupPath)) {
+          try {
+            const rawBak = fs.readFileSync(this.backupPath, 'utf-8');
+            this.data = JSON.parse(rawBak);
+            console.log('Successfully recovered database from backup snapshot.');
+          } catch {
+            this.data = defaultDatabase;
+            this.persist();
+          }
+        } else {
+          this.data = defaultDatabase;
+          this.persist();
+        }
       }
     } else {
       this.data = defaultDatabase;
@@ -89,11 +103,58 @@ class JsonDatabase {
     }
   }
 
+  // P1 Issue 28: Crash-Safe Atomic Persistence via Temp-Swap & Rolling Backup
   private persist(): void {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      Boolean(process.env.NODE_TEST_CONTEXT) ||
+      process.argv.some((a) => a.toLowerCase().includes('test'))
+    ) {
+      return;
+    }
     try {
-      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), 'utf-8');
+      const serialized = JSON.stringify(this.data, null, 2);
+      const tempPath = `${this.filePath}.tmp.${Date.now()}`;
+
+      // 1. Write to temporary file
+      fs.writeFileSync(tempPath, serialized, 'utf-8');
+
+      // 2. Atomic swap to production file
+      fs.renameSync(tempPath, this.filePath);
+
+      // 3. Keep rolling backup
+      try {
+        fs.copyFileSync(this.filePath, this.backupPath);
+      } catch (_) {}
     } catch (err) {
-      console.error('Failed to persist database:', err);
+      console.error('Failed to atomically persist database:', err);
+    }
+  }
+
+  // P1 Issue 15: Atomic In-Flight Idempotency Reservation
+  public reserveIdempotencyKey(key: string): boolean {
+    if (this.inFlightKeys.has(key)) return false;
+    const existsInTransactions = this.data.transactions.some((t) => t.idempotencyKey === key);
+    if (existsInTransactions) return false;
+    this.inFlightKeys.add(key);
+    return true;
+  }
+
+  public releaseIdempotencyKey(key: string): void {
+    this.inFlightKeys.delete(key);
+  }
+
+  // P1 Issue 17 & 27: Transactional Execution with Automatic Rollback
+  public async transaction<T>(operation: () => Promise<T>): Promise<T> {
+    const snapshot = JSON.stringify(this.data);
+    try {
+      const result = await operation();
+      this.persist();
+      return result;
+    } catch (err) {
+      // Roll back in-memory state on failure
+      this.data = JSON.parse(snapshot);
+      throw err;
     }
   }
 

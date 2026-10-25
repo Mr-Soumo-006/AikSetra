@@ -6,18 +6,37 @@ dotenv.config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 
-// Issue 2 & 64: Enforce secure JWT Secret validation
+// Issue 1 & 2: Enforce secure JWT Secret and Admin API Key validation
 let resolvedJwtSecret = process.env.JWT_SECRET || '';
+let resolvedAdminApiKey = process.env.ADMIN_API_KEY || '';
+let resolvedWebhookSecret = process.env.WEBHOOK_SECRET || '';
 
 if (isProduction) {
   if (!resolvedJwtSecret || resolvedJwtSecret.length < 32) {
     console.error('❌ FATAL SECURITY ERROR: JWT_SECRET environment variable is required and must be at least 32 characters in production.');
     process.exit(1);
   }
-} else if (!resolvedJwtSecret) {
-  // In development, generate an ephemeral cryptographic key rather than using a static hardcoded string
-  resolvedJwtSecret = crypto.randomBytes(32).toString('hex');
-  console.warn('⚠️ WARNING [SECURITY]: No JWT_SECRET set in environment. Generated an ephemeral runtime key.');
+  if (!resolvedAdminApiKey || resolvedAdminApiKey.length < 32) {
+    console.error('❌ FATAL SECURITY ERROR: ADMIN_API_KEY environment variable is required and must be at least 32 characters in production.');
+    process.exit(1);
+  }
+  if (!resolvedWebhookSecret || resolvedWebhookSecret.length < 32) {
+    console.error('❌ FATAL SECURITY ERROR: WEBHOOK_SECRET environment variable is required and must be at least 32 characters in production.');
+    process.exit(1);
+  }
+} else {
+  if (!resolvedJwtSecret) {
+    resolvedJwtSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('⚠️ WARNING [SECURITY]: No JWT_SECRET set in environment. Generated an ephemeral runtime key.');
+  }
+  if (!resolvedAdminApiKey) {
+    resolvedAdminApiKey = crypto.randomBytes(32).toString('hex');
+    console.warn('⚠️ WARNING [SECURITY]: No ADMIN_API_KEY set in environment. Generated an ephemeral runtime key.');
+  }
+  if (!resolvedWebhookSecret) {
+    resolvedWebhookSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('⚠️ WARNING [SECURITY]: No WEBHOOK_SECRET set in environment. Generated an ephemeral runtime key.');
+  }
 }
 
 export const config = {
@@ -29,7 +48,9 @@ export const config = {
   isProduction,
   isSimulationMode: !isProduction,
   jwtSecret: resolvedJwtSecret,
-  adminApiKey: process.env.ADMIN_API_KEY || 'aiksetra_sec_admin_7921820',
+  adminApiKey: resolvedAdminApiKey,
+  webhookSecret: resolvedWebhookSecret,
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
   dataDir: process.env.DATA_DIR || './data',
   defaultVpaHandle: process.env.DEFAULT_VPA_HANDLE || '@aiksetra',
   mockPspDelayMs: parseInt(process.env.MOCK_PSP_DELAY_MS || '250', 10),
@@ -54,8 +75,12 @@ export const config = {
 
 export function validateConfig(): void {
   if (config.isProduction) {
-    if (config.mockPspMode !== 'SUCCESS') {
-      console.warn('⚠️ Alert: mockPspMode is enabled in production');
+    if (config.isSimulationMode) {
+      console.warn('⚠️ Alert: Simulation mode is enabled in production configuration.');
+    }
+    if (config.allowedOrigins.length === 0 || config.allowedOrigins.includes('*')) {
+      console.error('❌ FATAL SECURITY ERROR: In production, ALLOWED_ORIGINS must be explicitly configured without wildcards.');
+      process.exit(1);
     }
     if (!config.fast2smsApiKey && !config.msg91AuthKey && !config.twilioAccountSid) {
       console.warn('⚠️ Warning: No production SMS gateway provider keys configured in environment.');

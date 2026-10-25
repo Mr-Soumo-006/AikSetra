@@ -39,8 +39,18 @@ export class AuthService {
 
     activeOtps.set(cleanPhone, { phone: cleanPhone, otp, expiresAt, attempts: 0 });
 
-    // Send via SMS Gateway
-    await SmsService.sendOtpSms(cleanPhone, otp);
+    // Send via SMS Gateway (P2 Issue 4: Truthful SMS delivery status)
+    const smsRes = await SmsService.sendOtpSms(cleanPhone, otp);
+    if (!smsRes.success) {
+      AuditService.log({
+        action: 'AUTH_OTP_DISPATCH_FAILED',
+        resource: 'PHONE',
+        resourceId: cleanPhone,
+        ipAddress: clientIp,
+        metadata: { provider: smsRes.provider, error: smsRes.statusMessage },
+      });
+      throw new Error(`SMS delivery failed: ${smsRes.statusMessage}`);
+    }
 
     AuditService.log({
       action: 'AUTH_OTP_SENT',

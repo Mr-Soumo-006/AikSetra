@@ -1,6 +1,9 @@
-﻿import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
 import { config } from '../config/index.js';
+import { AuthService } from './auth.service.js';
+import { LedgerService } from './ledger.service.js';
+import { AuditService } from './audit.service.js';
 import type { CrossBorderQuote, CorridorType } from '../types/index.js';
 
 interface CurrencyConfig {
@@ -265,6 +268,14 @@ export class CrossBorderService {
   }) {
     const { userId, quoteId, beneficiaryName, beneficiaryAccountOrIban, purposeCode = 'S0301', mpin } = params;
 
+    // Issue 7: Server-side MPIN Verification
+    if (!mpin || mpin.trim().length < 4) {
+      throw new Error('Valid 4 or 6 digit UPI MPIN is required to authorize remittance.');
+    }
+    if (!AuthService.verifyMpin(userId, mpin)) {
+      throw new Error('Incorrect UPI MPIN. Cross-border remittance declined.');
+    }
+
     const quote = this.getValidQuote(quoteId);
     if (!quote) {
       throw new Error('FX Quote has expired or does not exist. Please request a fresh rate.');
@@ -282,16 +293,22 @@ export class CrossBorderService {
       throw new Error(`Insufficient funds. Your bank balance is ₹${account.balance.toLocaleString('en-IN')}, required amount is ₹${quote.totalCostInr.toLocaleString('en-IN')}.`);
     }
 
-    // Deduct funds from account
-    account.balance = Number((account.balance - quote.totalCostInr).toFixed(2));
+    const transferId = `remit_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
+    const now = new Date().toISOString();
+
+    // Issue 7, 17, 26: Atomic Double-Entry Ledger Transfer
+    const { senderBalanceAfter } = await LedgerService.executeDoubleEntryTransfer({
+      transactionId: transferId,
+      senderAccount: account,
+      amount: quote.totalCostInr,
+      currency: 'INR',
+      description: `Cross-Border Remittance: ${quote.targetAmount} ${quote.targetCurrency} to ${beneficiaryName} (${beneficiaryAccountOrIban})`,
+    });
 
     // Update user LRS consumption
     const usdEquivalent = quote.targetCurrency === 'USD' ? quote.targetAmount : quote.totalCostInr / 85.0;
     user.lrsUsedUsd = Number(((user.lrsUsedUsd || 0) + usdEquivalent).toFixed(2));
-    user.updatedAt = new Date().toISOString();
-
-    const transferId = `remit_${uuidv4().replace(/-/g, '').slice(0, 12)}`;
-    const now = new Date().toISOString();
+    user.updatedAt = now;
 
     const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
     const transactionRecord = {
@@ -317,12 +334,26 @@ export class CrossBorderService {
         purposeCode,
         beneficiaryIban: beneficiaryAccountOrIban,
         corridorType: quote.corridorType,
+        isSimulated: config.isSimulationMode,
       },
     };
 
     db.insert('transactions', transactionRecord);
     this.activeRateLocks.delete(quoteId);
     db.save();
+
+    AuditService.log({
+      actorId: userId,
+      action: 'CROSS_BORDER_REMITTANCE_EXECUTED',
+      resource: 'TRANSACTION',
+      resourceId: transferId,
+      metadata: {
+        targetCurrency: quote.targetCurrency,
+        targetAmount: quote.targetAmount,
+        totalCostInr: quote.totalCostInr,
+        beneficiaryName,
+      },
+    });
 
     return {
       success: true,
@@ -334,7 +365,8 @@ export class CrossBorderService {
       beneficiaryAccountOrIban,
       rail: quote.partnerRail,
       status: 'SETTLED',
-      updatedAccountBalance: account.balance,
+      updatedAccountBalance: senderBalanceAfter,
+      isSimulated: config.isSimulationMode,
       timestamp: now,
     };
   }

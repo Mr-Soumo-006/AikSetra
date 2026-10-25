@@ -18,11 +18,40 @@ runSeed(false);
 const app = express();
 const server = http.createServer(app);
 
-// Initialize WebSocket server for Soundbox audio stream
+import jwt from 'jsonwebtoken';
+import { db } from './db/database.js';
+import { escapeHtml, sanitizeUrl } from './utils/sanitize.js';
+
+// Initialize WebSocket server for Soundbox audio stream with authentication (P2)
 const wss = new WebSocketServer({ server, path: '/ws/soundbox' });
 
-wss.on('connection', (ws) => {
-  soundboxService.registerWsClient(ws);
+wss.on('connection', (ws, req) => {
+  try {
+    const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+    const token = url.searchParams.get('token') || (req.headers.authorization ? req.headers.authorization.replace('Bearer ', '').trim() : null);
+    const adminKey = url.searchParams.get('adminKey') || req.headers['x-admin-key'];
+
+    if (adminKey && adminKey === config.adminApiKey) {
+      soundboxService.registerWsClient(ws);
+      return;
+    }
+
+    if (!token) {
+      ws.close(4401, 'Unauthorized: Missing authentication token');
+      return;
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
+    const user = db.get('users').find((u) => u.id === decoded.id);
+    if (!user) {
+      ws.close(4401, 'Unauthorized: User not found');
+      return;
+    }
+
+    soundboxService.registerWsClient(ws);
+  } catch (err) {
+    ws.close(4401, 'Unauthorized: Invalid token');
+  }
 });
 
 // Issue 62: Security HTTP Headers & Request Size Limits
@@ -38,16 +67,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Strict CORS Policy
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['*'];
-
+// Strict CORS Policy (P0 Issue 11: Production Origin Allowlist)
 app.use(
   cors({
-    origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // Allow non-browser clients (native mobile app, curl, server-to-server)
+      if (!config.isProduction) return callback(null, true); // Permissive in dev/test
+      if (config.allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy violation: Origin '${origin}' is not authorized.`));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'x-admin-key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key', 'x-admin-key', 'x-webhook-signature'],
+    credentials: true,
   })
 );
 
@@ -63,12 +96,17 @@ app.get('/', (req, res) => {
   res.redirect('/console');
 });
 
-// Issue 56: Mobile Payment Link landing page with bundled CSS (no external CDN)
+// Issue 56 & P0 Issue 8: Mobile Payment Link landing page with XSS-safe escaping and bundled CSS
 app.get('/pay/:id', (req, res) => {
   const payLink = MerchantService.getPayLink(req.params.id);
   if (!payLink) {
     return res.status(404).send('<h1>Payment Link Not Found or Expired</h1>');
   }
+
+  const safeMerchantName = escapeHtml(payLink.merchantName);
+  const safeDescription = escapeHtml(payLink.description);
+  const safeIntentUrl = sanitizeUrl(payLink.upiIntentUrl);
+  const safeQrCode = payLink.qrCodeDataUrl ? sanitizeUrl(payLink.qrCodeDataUrl) : null;
 
   res.send(`
     <!DOCTYPE html>
@@ -76,7 +114,7 @@ app.get('/pay/:id', (req, res) => {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Pay ${payLink.merchantName} | AikSetra UPI</title>
+      <title>Pay ${safeMerchantName} | AikSetra UPI</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1rem; }
@@ -99,22 +137,22 @@ app.get('/pay/:id', (req, res) => {
         <div class="icon">₹</div>
         <div>
           <div class="subtitle">Paying to</div>
-          <div class="merchant-name">${payLink.merchantName}</div>
-          <div class="desc">${payLink.description}</div>
+          <div class="merchant-name">${safeMerchantName}</div>
+          <div class="desc">${safeDescription}</div>
         </div>
 
         <div class="amount-box">
           <div class="amount">₹${payLink.amount.toFixed(2)}</div>
         </div>
 
-        ${payLink.qrCodeDataUrl ? `
+        ${safeQrCode ? `
           <div class="qr-box">
-            <img src="${payLink.qrCodeDataUrl}" alt="Bharat QR" class="qr-img" />
+            <img src="${safeQrCode}" alt="Bharat QR" class="qr-img" />
             <div class="qr-caption">Scan with any UPI App (AikSetra, BHIM, GPay, PhonePe)</div>
           </div>
         ` : ''}
 
-        <a href="${payLink.upiIntentUrl}" class="btn-pay">
+        <a href="${safeIntentUrl}" class="btn-pay">
           Open in AikSetra / UPI App
         </a>
       </div>

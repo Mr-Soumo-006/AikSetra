@@ -96,3 +96,19 @@ export const mpinRateLimiter = createRateLimiter({
   keyGenerator: (req: any) => `mpin:${req.userId || req.ip}`,
   message: 'Too many MPIN attempts. Account lock protection engaged.',
 });
+
+// 5. Public VPA Resolution rate limiter: 25 requests per minute (P0 Issue 10: Anti-Enumeration Protection)
+export const vpaRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 25,
+  keyGenerator: (req) => `vpa:${req.ip || 'client'}`,
+  message: 'Too many VPA lookup requests. Public enumeration protection active.',
+});
+
+// 6. Merchant operations rate limiter: 30 requests per minute
+export const merchantRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 30,
+  keyGenerator: (req: any) => `merchant:${req.userId || req.ip}`,
+  message: 'Too many merchant requests. Please slow down.',
+});

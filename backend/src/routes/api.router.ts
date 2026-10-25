@@ -1,11 +1,15 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { db } from '../db/database.js';
+import { config } from '../config/index.js';
 import { authMiddleware, adminAuthMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import {
   otpRateLimiter,
   authRateLimiter,
   paymentRateLimiter,
   mpinRateLimiter,
+  vpaRateLimiter,
+  merchantRateLimiter,
 } from '../middleware/rateLimit.middleware.js';
 import { AuthService } from '../services/auth.service.js';
 import { AccountService } from '../services/account.service.js';
@@ -117,7 +121,24 @@ apiRouter.get('/accounts/discover', authMiddleware, (req: AuthenticatedRequest, 
 
 apiRouter.post('/accounts/link', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
-    const account = AccountService.linkAccount({ userId: req.userId!, ...req.body });
+    const { bankName, bankCode, ifsc, accountNumber, accountType, setAsPrimary, replaceOnboardingAccount } = req.body;
+    if (!bankName || !ifsc) {
+      return res.status(400).json({ success: false, message: 'bankName and ifsc are required.' });
+    }
+
+    const account = AccountService.linkAccount({
+      userId: req.userId!,
+      bankName: String(bankName).trim(),
+      bankCode: bankCode ? String(bankCode).trim() : undefined,
+      ifsc: String(ifsc).trim().toUpperCase(),
+      accountNumber: accountNumber ? String(accountNumber).trim() : undefined,
+      accountType: accountType === 'CURRENT' ? 'CURRENT' : 'SAVINGS',
+      setAsPrimary: !!setAsPrimary,
+      replaceOnboardingAccount: !!replaceOnboardingAccount,
+      // P0 Issue 4: In production, client-supplied initial balances are forbidden
+      initialBalance: config.isProduction ? 0.00 : (typeof req.body.initialBalance === 'number' ? req.body.initialBalance : 25000.00),
+    });
+
     AuditService.log({
       actorId: req.userId,
       action: 'ACCOUNT_LINKED',
@@ -185,10 +206,10 @@ apiRouter.get('/accounts/:id/balance', authMiddleware, (req: AuthenticatedReques
   return res.json({ success: true, balance: account.balance, isPrimary: account.isPrimary });
 });
 
-apiRouter.get('/vpa/resolve', (req, res) => {
+apiRouter.get('/vpa/resolve', vpaRateLimiter, (req, res) => {
   const vpa = req.query.vpa as string;
-  if (!vpa) return res.status(400).json({ success: false, message: 'vpa query param required.' });
-  const result = AccountService.resolveVpa(vpa);
+  if (!vpa || typeof vpa !== 'string') return res.status(400).json({ success: false, message: 'vpa query param required.' });
+  const result = AccountService.resolveVpa(vpa.trim().toLowerCase());
   return res.json(result);
 });
 
@@ -232,7 +253,8 @@ apiRouter.post('/payments/pay', authMiddleware, paymentRateLimiter, async (req: 
       bypassScamShieldWarning: !!bypassScamShieldWarning,
     });
 
-    return res.json(result);
+    res.setHeader('X-Simulation-Mode', String(config.isSimulationMode));
+    return res.json({ ...result, isSimulated: config.isSimulationMode });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
   }
@@ -298,6 +320,74 @@ apiRouter.post('/payments/collect/:id/approve', authMiddleware, paymentRateLimit
     return res.json({ success: true, transaction });
   } catch (err: any) {
     return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// P1 Issue 12: Payment Provider Webhook Signatures & Callback Verification
+apiRouter.post('/payments/webhook', async (req, res) => {
+  try {
+    const signature = (req.headers['x-webhook-signature'] || req.headers['x-razorpay-signature'] || '') as string;
+    const rawPayload = JSON.stringify(req.body);
+
+    const expectedSignature = crypto
+      .createHmac('sha256', config.webhookSecret)
+      .update(rawPayload)
+      .digest('hex');
+
+    if (
+      !signature ||
+      signature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+    ) {
+      AuditService.log({
+        actorId: 'EXTERNAL_WEBHOOK',
+        action: 'WEBHOOK_SIGNATURE_INVALID',
+        resource: 'WEBHOOK',
+        resourceId: req.body?.transactionId || 'unknown',
+        metadata: { ip: req.ip },
+      });
+      return res.status(401).json({ success: false, message: 'Invalid webhook signature.' });
+    }
+
+    const { event, transactionId, status, upiRrn, reason } = req.body;
+    if (!transactionId || !status) {
+      return res.status(400).json({ success: false, message: 'Missing transactionId or status in webhook payload.' });
+    }
+
+    const transaction = db.get('transactions').find((t) => t.id === transactionId || t.txnRef === transactionId);
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found for webhook callback.' });
+    }
+
+    // Handle duplicate or out-of-order callbacks idempotently
+    if (transaction.status === 'SUCCESS' && status === 'SUCCESS') {
+      return res.json({ success: true, message: 'Duplicate webhook event ignored (already SUCCESS).' });
+    }
+
+    if (transaction.status === 'PENDING') {
+      if (status === 'SUCCESS') {
+        transaction.status = 'SUCCESS';
+        transaction.upiRrn = upiRrn || transaction.upiRrn;
+        transaction.completedAt = new Date().toISOString();
+      } else if (status === 'FAILED') {
+        transaction.status = 'FAILED';
+        transaction.failureReason = reason || 'Payment declined by banking switch rail';
+        transaction.completedAt = new Date().toISOString();
+      }
+      db.save();
+    }
+
+    AuditService.log({
+      actorId: 'EXTERNAL_WEBHOOK',
+      action: `WEBHOOK_PAYMENT_${status}`,
+      resource: 'TRANSACTION',
+      resourceId: transaction.id,
+      metadata: { event, status, upiRrn },
+    });
+
+    return res.json({ success: true, message: 'Webhook callback processed successfully.' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -439,15 +529,15 @@ apiRouter.get('/cross-border/lrs-status', authMiddleware, (req: AuthenticatedReq
 });
 
 // ==========================================
-// 7. MERCHANTS & SOUNDBOX
+// 7. MERCHANTS & SOUNDBOX (P0 Issue 9 & P2: Auth & Ownership Checks)
 // ==========================================
 
-apiRouter.post('/merchants/qr', async (req, res) => {
+apiRouter.post('/merchants/qr', authMiddleware, merchantRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { merchantVpa, merchantName, amount, description } = req.body;
     const qrData = await MerchantService.generateUpiQr({
-      vpa: merchantVpa,
-      payeeName: merchantName,
+      vpa: merchantVpa || req.userVpa!,
+      payeeName: merchantName || 'AikSetra Merchant',
       amount: amount ? parseFloat(amount) : undefined,
       transactionNote: description,
     });
@@ -457,12 +547,27 @@ apiRouter.post('/merchants/qr', async (req, res) => {
   }
 });
 
-apiRouter.post('/merchants/paylinks', async (req, res) => {
+apiRouter.post('/merchants/paylinks', authMiddleware, merchantRateLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const { merchantId, amount, description } = req.body;
+    if (!merchantId || !amount) {
+      return res.status(400).json({ success: false, message: 'merchantId and amount are required.' });
+    }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Amount must be greater than zero.' });
+    }
+
+    // Verify merchant ownership
+    const merchant = db.get('merchants').find((m) => m.id === merchantId);
+    if (!merchant) return res.status(404).json({ success: false, message: 'Merchant not found.' });
+    if (merchant.userId !== req.userId && !req.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: You do not own this merchant profile.' });
+    }
+
     const payLink = await MerchantService.createPayLink({
       merchantId,
-      amount: parseFloat(amount),
+      amount: numAmount,
       description,
     });
     return res.json({ success: true, payLink });
@@ -477,17 +582,22 @@ apiRouter.get('/merchants/paylinks/:id', (req, res) => {
   return res.json({ success: true, payLink });
 });
 
-apiRouter.get('/merchants/dashboard/:id', (req, res) => {
+apiRouter.get('/merchants/dashboard/:id', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const merchant = db.get('merchants').find((m) => m.id === req.params.id);
+  if (!merchant) return res.status(404).json({ success: false, message: 'Merchant not found.' });
+  if (merchant.userId !== req.userId && !req.isAdmin) {
+    return res.status(403).json({ success: false, message: 'Unauthorized: Access to merchant dashboard denied.' });
+  }
+
   const dashboard = MerchantService.getMerchantDashboard(req.params.id as string);
-  if (!dashboard) return res.status(404).json({ success: false, message: 'Merchant not found.' });
   return res.json({ success: true, dashboard });
 });
 
-apiRouter.get('/merchants/soundbox/stream', (req, res) => {
+apiRouter.get('/merchants/soundbox/stream', authMiddleware, (req: AuthenticatedRequest, res) => {
   soundboxService.registerSseClient(res);
 });
 
-apiRouter.get('/merchants/soundbox/recent', (req, res) => {
+apiRouter.get('/merchants/soundbox/recent', authMiddleware, (req: AuthenticatedRequest, res) => {
   return res.json({ success: true, events: soundboxService.getRecentEvents() });
 });
 

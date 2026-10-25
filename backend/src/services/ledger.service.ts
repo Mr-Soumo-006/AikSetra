@@ -28,6 +28,26 @@ class AccountLockManager {
       release();
     }
   }
+
+  /**
+   * P1 Issue 4: Coordinated Dual-Account Locking (Deadlock-Free Sorted Mutex)
+   * Locks all involved account IDs in sorted order to prevent race conditions and deadlocks.
+   */
+  public async acquireMultiple<T>(accountIds: string[], operation: () => Promise<T>): Promise<T> {
+    const uniqueSorted = Array.from(new Set(accountIds)).sort();
+    if (uniqueSorted.length === 0) return await operation();
+
+    const acquireRecursive = async (index: number): Promise<T> => {
+      if (index >= uniqueSorted.length) {
+        return await operation();
+      }
+      return await this.acquire(uniqueSorted[index], async () => {
+        return await acquireRecursive(index + 1);
+      });
+    };
+
+    return await acquireRecursive(0);
+  }
 }
 
 export class LedgerService {
@@ -35,7 +55,7 @@ export class LedgerService {
 
   /**
    * Atomic Double-Entry Transfer Execution
-   * Ensures debits and credits are committed together atomically.
+   * Ensures debits and credits are committed together atomically with coordinated multi-account locks.
    */
   public static async executeDoubleEntryTransfer(params: {
     transactionId: string;
@@ -51,80 +71,83 @@ export class LedgerService {
       throw new Error('Invalid transfer amount. Amount must be a positive finite number.');
     }
 
-    // Execute within sender account lock to prevent concurrent overdrafts
-    return await this.lockManager.acquire(senderAccount.id, async () => {
-      // Re-fetch account from DB to get the latest atomic balance state
-      const currentSender = db.get('accounts').find((a) => a.id === senderAccount.id);
-      if (!currentSender) {
-        throw new Error('Sender bank account no longer exists.');
-      }
+    const lockIds = [senderAccount.id, receiverAccount?.id].filter(Boolean) as string[];
 
-      if (currentSender.balance < amount) {
-        throw new Error(`Insufficient funds. Available: ₹${currentSender.balance.toFixed(2)}, Required: ₹${amount.toFixed(2)}`);
-      }
+    // Execute within coordinated multi-account locks (P1 Issue 4) and transactional boundary (P1 Issue 17)
+    return await this.lockManager.acquireMultiple(lockIds, async () => {
+      return await db.transaction(async () => {
+        // Re-fetch account from DB to get the latest atomic balance state
+        const currentSender = db.get('accounts').find((a) => a.id === senderAccount.id);
+        if (!currentSender) {
+          throw new Error('Sender bank account no longer exists.');
+        }
 
-      const initialSenderBal = currentSender.balance;
-      const initialReceiverBal = receiverAccount ? receiverAccount.balance : 0;
+        if (currentSender.balance < amount) {
+          throw new Error(`Insufficient funds. Available: ₹${currentSender.balance.toFixed(2)}, Required: ₹${amount.toFixed(2)}`);
+        }
 
-      const senderBalanceAfter = Math.round((currentSender.balance - amount) * 100) / 100;
-      currentSender.balance = senderBalanceAfter;
+        const senderBalanceAfter = Math.round((currentSender.balance - amount) * 100) / 100;
+        currentSender.balance = senderBalanceAfter;
 
-      // 1. Paired DEBIT Ledger Entry on Sender
-      const debitEntry: LedgerEntry = {
-        id: `led_${uuidv4().replace(/-/g, '').slice(0, 14)}`,
-        transactionId,
-        accountId: currentSender.id,
-        accountType: 'USER_ACCOUNT',
-        entryType: 'DEBIT',
-        amount,
-        currency,
-        balanceAfter: senderBalanceAfter,
-        description: `DEBIT: ${description}`,
-        createdAt: new Date().toISOString(),
-      };
-
-      let creditEntry: LedgerEntry;
-      let receiverBalanceAfter: number | undefined;
-
-      if (receiverAccount) {
-        receiverBalanceAfter = Math.round((receiverAccount.balance + amount) * 100) / 100;
-        receiverAccount.balance = receiverBalanceAfter;
-
-        // 2a. Paired CREDIT Ledger Entry on Internal Beneficiary
-        creditEntry = {
+        // 1. Paired DEBIT Ledger Entry on Sender
+        const debitEntry: LedgerEntry = {
           id: `led_${uuidv4().replace(/-/g, '').slice(0, 14)}`,
           transactionId,
-          accountId: receiverAccount.id,
+          accountId: currentSender.id,
           accountType: 'USER_ACCOUNT',
-          entryType: 'CREDIT',
+          entryType: 'DEBIT',
           amount,
           currency,
-          balanceAfter: receiverBalanceAfter,
-          description: `CREDIT: ${description}`,
+          balanceAfter: senderBalanceAfter,
+          description: `DEBIT: ${description}`,
           createdAt: new Date().toISOString(),
         };
-      } else {
-        // 2b. Paired CREDIT Ledger Entry to NPCI Interbank Clearing Account
-        creditEntry = {
-          id: `led_${uuidv4().replace(/-/g, '').slice(0, 14)}`,
-          transactionId,
-          accountId: 'NPCI_CLEARING_HOUSE_IN',
-          accountType: 'SETTLEMENT_CLEARING',
-          entryType: 'CREDIT',
-          amount,
-          currency,
-          balanceAfter: 0,
-          description: `EXTERNAL CLEARING: ${description}`,
-          createdAt: new Date().toISOString(),
-        };
-      }
 
-      // Persist atomic state
-      db.get('ledger').push(debitEntry);
-      db.get('ledger').push(creditEntry);
-      db.save();
+        let creditEntry: LedgerEntry;
+        let receiverBalanceAfter: number | undefined;
 
-      return { senderBalanceAfter, receiverBalanceAfter };
+        if (receiverAccount) {
+          const currentReceiver = db.get('accounts').find((a) => a.id === receiverAccount.id);
+          if (currentReceiver) {
+            receiverBalanceAfter = Math.round((currentReceiver.balance + amount) * 100) / 100;
+            currentReceiver.balance = receiverBalanceAfter;
+          }
+
+          // 2a. Paired CREDIT Ledger Entry on Internal Beneficiary
+          creditEntry = {
+            id: `led_${uuidv4().replace(/-/g, '').slice(0, 14)}`,
+            transactionId,
+            accountId: receiverAccount.id,
+            accountType: 'USER_ACCOUNT',
+            entryType: 'CREDIT',
+            amount,
+            currency,
+            balanceAfter: receiverBalanceAfter ?? receiverAccount.balance,
+            description: `CREDIT: ${description}`,
+            createdAt: new Date().toISOString(),
+          };
+        } else {
+          // 2b. Paired CREDIT Ledger Entry to Clearing House (Nostro / Switch settlement)
+          creditEntry = {
+            id: `led_${uuidv4().replace(/-/g, '').slice(0, 14)}`,
+            transactionId,
+            accountId: 'acc_clearing_switch_00',
+            accountType: 'SETTLEMENT_CLEARING',
+            entryType: 'CREDIT',
+            amount,
+            currency,
+            balanceAfter: 0,
+            description: `CLEARING CREDIT: ${description}`,
+            createdAt: new Date().toISOString(),
+          };
+        }
+
+        // Commit entries to immutable ledger store
+        db.insert('ledger', debitEntry);
+        db.insert('ledger', creditEntry);
+
+        return { senderBalanceAfter, receiverBalanceAfter };
+      });
     });
   }
 

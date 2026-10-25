@@ -67,10 +67,11 @@ export class AccountService {
     const rawNum = (params.accountNumber || params.maskedAccountNumber || user?.phone || '4519').replace(/[^0-9]/g, '');
     const last4 = rawNum.length >= 4 ? rawNum.slice(-4) : '4519';
     const masked = `•••• •••• ${last4}`;
-    const balanceVal =
-      typeof params.initialBalance === 'number' && !isNaN(params.initialBalance) && params.initialBalance >= 0
-        ? Number(params.initialBalance.toFixed(2))
-        : 25000.0;
+    const balanceVal = config.isProduction
+      ? 0.0
+      : (typeof params.initialBalance === 'number' && !isNaN(params.initialBalance) && params.initialBalance >= 0
+          ? Number(params.initialBalance.toFixed(2))
+          : 25000.0);
 
     // If called during onboarding Step 4, update the default account created during Step 3 OTP verification
     if (params.replaceOnboardingAccount && userAccounts.length === 1) {

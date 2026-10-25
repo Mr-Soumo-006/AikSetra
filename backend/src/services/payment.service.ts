@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/database.js';
+import { config } from '../config/index.js';
 import { pspSimulator } from './psp.simulator.js';
 import { ScamShieldService } from './scamShield.service.js';
 import { soundboxService } from './soundbox.service.js';
@@ -49,13 +50,18 @@ export class PaymentService {
       throw new Error('Invalid payment amount. Amount must be a positive number.');
     }
 
-    // 1. Idempotency Check (Issue 15)
+    // 1. Idempotency Check & Atomic Reservation (P1 Issue 15)
     if (idempotencyKey) {
       const existing = db.get('transactions').find((t) => t.idempotencyKey === idempotencyKey);
       if (existing) {
         return { success: true, transaction: existing };
       }
+      if (!db.reserveIdempotencyKey(idempotencyKey)) {
+        throw new Error('Payment with this idempotency key is already in progress. Please wait.');
+      }
     }
+
+    try {
 
     // 2. Fetch sender user & account (Issue 6 & 21)
     const user = db.get('users').find((u) => u.id === senderUserId);
@@ -204,7 +210,24 @@ export class PaymentService {
       description: `${remark} (${user.primaryVpa} -> ${receiverVpa})`,
     });
 
-    // 9. Create Successful Transaction Record
+    // 9. Soundbox Audio Trigger (if recipient is a merchant)
+    let soundboxAnnounced = false;
+    const merchant = db.get('merchants').find((m) => m.merchantVpa.toLowerCase() === receiverVpa.toLowerCase());
+    if (merchant) {
+      merchant.totalVolumeInr += amount;
+      soundboxAnnounced = true;
+      soundboxService.broadcastPayment({
+        merchantId: merchant.id,
+        merchantName: merchant.businessName,
+        amount,
+        currency: 'INR',
+        payerName: user.fullName,
+        payerVpa: user.primaryVpa,
+        language: merchant.soundboxLanguage,
+      });
+    }
+
+    // 10. Create Successful Transaction Record
     const transaction: Transaction = {
       id: txnId,
       txnRef,
@@ -224,6 +247,10 @@ export class PaymentService {
       idempotencyKey,
       createdAt: new Date().toISOString(),
       completedAt: new Date().toISOString(),
+      metadata: {
+        isSimulated: config.isSimulationMode,
+        soundboxAnnounced,
+      },
     };
 
     db.insert('transactions', transaction);
@@ -233,25 +260,8 @@ export class PaymentService {
       action: 'PAYMENT_SUCCESS',
       resource: 'TRANSACTION',
       resourceId: txnId,
-      metadata: { amount, upiRrn: pspResult.upiRrn, receiverVpa },
+      metadata: { amount, upiRrn: pspResult.upiRrn, receiverVpa, isSimulated: config.isSimulationMode },
     });
-
-    // 10. Soundbox Audio Trigger (if recipient is a merchant)
-    let soundboxAnnounced = false;
-    const merchant = db.get('merchants').find((m) => m.merchantVpa.toLowerCase() === receiverVpa.toLowerCase());
-    if (merchant) {
-      merchant.totalVolumeInr += amount;
-      soundboxAnnounced = true;
-      soundboxService.broadcastPayment({
-        merchantId: merchant.id,
-        merchantName: merchant.businessName,
-        amount,
-        currency: 'INR',
-        payerName: user.fullName,
-        payerVpa: user.primaryVpa,
-        language: merchant.soundboxLanguage,
-      });
-    }
 
     // 11. Digital Gullak micro-savings round-up
     let roundedUpAmount = 0;
@@ -272,6 +282,11 @@ export class PaymentService {
       roundedUpAmount,
       updatedBalance: senderBalanceAfter,
     };
+    } finally {
+      if (idempotencyKey) {
+        db.releaseIdempotencyKey(idempotencyKey);
+      }
+    }
   }
 
   public static async executeLitePayment(params: {

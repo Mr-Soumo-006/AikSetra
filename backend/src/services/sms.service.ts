@@ -71,13 +71,21 @@ export class SmsService {
 
       case 'CONSOLE':
       default:
-        console.log(`[SMS GATEWAY DISPATCH] Provider: ${this.runtimeProvider} | To: +91 ${cleanPhone}`);
-        console.log(`[SMS BODY] "${message}"`);
+        if (config.isProduction) {
+          console.error('[SMS GATEWAY ERROR] CONSOLE delivery is prohibited in production.');
+          return {
+            success: false,
+            provider: 'NONE',
+            statusMessage: 'Production SMS gateway not configured or unavailable.',
+          };
+        }
+        console.log(`[DEV SMS GATEWAY DISPATCH] Provider: CONSOLE | To: +91 ${cleanPhone}`);
+        console.log(`[DEV SMS BODY] "${message}"`);
         return {
           success: true,
           messageId: `msg_${Date.now()}_${cleanPhone}`,
-          provider: 'AIKSETRA_NPCI_DISPATCH',
-          statusMessage: `SMS OTP dispatched to +91 ${cleanPhone}`,
+          provider: 'DEV_CONSOLE_MOCK',
+          statusMessage: `Dev SMS OTP printed to terminal console for +91 ${cleanPhone}`,
         };
     }
   }
@@ -85,8 +93,8 @@ export class SmsService {
   private static async sendViaFast2Sms(phone: string, otp: string): Promise<SmsSendResult> {
     const apiKey = this.runtimeFast2SmsKey || config.fast2smsApiKey;
     if (!apiKey) {
-      console.warn('[Fast2SMS] Missing FAST2SMS_API_KEY. Defaulting to gateway dispatch.');
-      return { success: true, provider: 'FAST2SMS_LOCAL', statusMessage: 'Dispatched to gateway.' };
+      console.error('[Fast2SMS] Missing FAST2SMS_API_KEY.');
+      return { success: false, provider: 'FAST2SMS', statusMessage: 'Fast2SMS credentials not configured.' };
     }
     try {
       const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
@@ -115,12 +123,13 @@ export class SmsService {
   }
 
   private static async sendViaMsg91(phone: string, otp: string): Promise<SmsSendResult> {
-    if (!config.msg91AuthKey) {
-      console.warn('[MSG91] Missing MSG91_AUTH_KEY. Defaulting to gateway dispatch.');
-      return { success: true, provider: 'MSG91_LOCAL', statusMessage: 'Dispatched to gateway.' };
+    const authKey = this.runtimeMsg91Key || config.msg91AuthKey;
+    if (!authKey) {
+      console.error('[MSG91] Missing MSG91_AUTH_KEY.');
+      return { success: false, provider: 'MSG91', statusMessage: 'MSG91 credentials not configured.' };
     }
     try {
-      const url = `https://control.msg91.com/api/v5/otp?template_id=default&mobile=91${phone}&authkey=${config.msg91AuthKey}&otp=${otp}`;
+      const url = `https://control.msg91.com/api/v5/otp?template_id=default&mobile=91${phone}&authkey=${authKey}&otp=${otp}`;
       const response = await fetch(url, { method: 'POST' });
       const data: any = await response.json();
       return {
@@ -136,16 +145,19 @@ export class SmsService {
   }
 
   private static async sendViaTwilio(phone: string, body: string): Promise<SmsSendResult> {
-    if (!config.twilioAccountSid || !config.twilioAuthToken) {
-      console.warn('[Twilio] Missing Twilio credentials. Defaulting to gateway dispatch.');
-      return { success: true, provider: 'TWILIO_LOCAL', statusMessage: 'Dispatched to gateway.' };
+    const sid = this.runtimeTwilioSid || config.twilioAccountSid;
+    const token = this.runtimeTwilioToken || config.twilioAuthToken;
+    const fromPhone = this.runtimeTwilioFrom || config.twilioPhoneNumber;
+    if (!sid || !token || !fromPhone) {
+      console.error('[Twilio] Missing Twilio credentials or phone number.');
+      return { success: false, provider: 'TWILIO', statusMessage: 'Twilio credentials not configured.' };
     }
     try {
-      const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${config.twilioAccountSid}/Messages.json`;
-      const authHeader = 'Basic ' + Buffer.from(`${config.twilioAccountSid}:${config.twilioAuthToken}`).toString('base64');
+      const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+      const authHeader = 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64');
       const params = new URLSearchParams({
         To: `+91${phone}`,
-        From: config.twilioPhoneNumber,
+        From: fromPhone,
         Body: body,
       });
 
@@ -159,7 +171,7 @@ export class SmsService {
       });
       const data: any = await response.json();
       return {
-        success: !data.error_code,
+        success: !data.error_code && response.status < 400,
         messageId: data.sid,
         provider: 'TWILIO',
         statusMessage: data.status || 'Dispatched via Twilio',

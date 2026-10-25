@@ -1,7 +1,14 @@
 import { db, DatabaseSchema } from './database.js';
+import { config } from '../config/index.js';
 import crypto from 'crypto';
 
 export function runSeed(force = false): void {
+  // P0 Issue 4 & P2: Never seed synthetic users, demo MPINs, or fabricated balances in production
+  if (config.isProduction) {
+    console.warn('⚠️ [SEED]: Refusing to seed synthetic demo users and balances in production environment.');
+    return;
+  }
+
   const existingUsers = db.get('users');
   if (existingUsers.length > 0 && !force) {
     console.log(`Database already has ${existingUsers.length} users. Skipping seed.`);
