@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from 'path';
+import os from 'os';
 import jwt from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
 import { config, validateConfig } from './config/index.js';
@@ -214,12 +215,28 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 wss.on('error', () => {});
 
+function getLanIps(): string[] {
+  const ips: string[] = [];
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips.length > 0 ? ips : ['localhost'];
+}
+
 const onServerListening = () => {
+  const lanIps = getLanIps();
   console.log('===========================================================');
   console.log(`✨ AikSetra Core Banking & Switch Service is running!`);
   console.log(`   A shared financial space; inspired by ek and kshetra`);
-  console.log(`📡 Base URL:          http://localhost:${config.port}`);
-  console.log(`📶 LAN URL:           http://192.168.29.90:${config.port}`);
+  console.log(`📡 Localhost URL:     http://localhost:${config.port}`);
+  lanIps.forEach((ip) => {
+    console.log(`📶 Wi-Fi / LAN IP:    http://${ip}:${config.port}`);
+  });
   console.log(`🖥️ Developer Console:  http://localhost:${config.port}/console`);
   console.log(`⚡ API Endpoints:      http://localhost:${config.port}/api/v1/...`);
   console.log(`🔊 Soundbox WS:       ws://localhost:${config.port}/ws/soundbox`);

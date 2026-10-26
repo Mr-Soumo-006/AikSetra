@@ -8,6 +8,7 @@ import '../utils/app_translations.dart';
 import '../services/biometric_service.dart';
 import '../models/scam_shield_model.dart';
 import '../models/cross_border_model.dart';
+import '../api_config.dart';
 import 'login_screen.dart';
 
 class SimpleHomeScreen extends StatefulWidget {
@@ -186,6 +187,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
       ),
       actions: [
+        IconButton(
+          onPressed: _showServerConfigDialog,
+          icon: const Icon(Icons.wifi_tethering_rounded, color: Color(0xFF34D399), size: 20),
+          tooltip: 'Configure Backend Server IP',
+        ),
         IconButton(
           onPressed: () {
             _syncLiveState();
@@ -2859,6 +2865,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             onTap: _showScamShieldModal,
           ),
           _buildToolTile(
+            icon: Icons.wifi_tethering_rounded,
+            title: 'Backend Server Wi-Fi & IP',
+            subtitle: 'Host: ${ApiConfig.activeHost}:4000 (Tap to change IP)',
+            onTap: _showServerConfigDialog,
+          ),
+          _buildToolTile(
             icon: Icons.logout_rounded,
             title: 'Switch Account / Logout',
             subtitle: 'Sign in with another mobile number or bank account',
@@ -4872,6 +4884,99 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showServerConfigDialog() {
+    final ipCtrl = TextEditingController(text: ApiConfig.activeHost);
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.wifi_tethering_rounded, color: Color(0xFF34D399), size: 22),
+              SizedBox(width: 8),
+              Text('Server Wi-Fi & IP', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'When you change Wi-Fi networks, update your PC IPv4 address below (port 4000):',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ipCtrl,
+                style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: '192.168.29.218',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.laptop_chromebook_rounded, color: Color(0xFF38BDF8), size: 20),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text('Quick Select Presets:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    '192.168.29.218',
+                    '192.168.29.90',
+                    '192.168.137.1',
+                    '10.0.2.2',
+                    'https://aiksetra-npci-soumo.loca.lt',
+                  ].map((preset) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ActionChip(
+                        label: Text(preset.length > 20 ? 'Tunnel' : preset, style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        backgroundColor: const Color(0xFF0F172A),
+                        onPressed: () {
+                          ipCtrl.text = preset;
+                          setDlgState(() {});
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+              onPressed: () async {
+                ApiConfig.setCustomHost(ipCtrl.text);
+                Navigator.pop(ctx);
+                await _syncLiveState();
+                if (!mounted) return;
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF046A38),
+                    content: Text('✅ Connected to backend at ${ApiConfig.activeHost}:4000'),
+                  ),
+                );
+              },
+              child: const Text('Connect & Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ),
     );

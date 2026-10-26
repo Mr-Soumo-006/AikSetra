@@ -1,20 +1,22 @@
 import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   // Primary LAN IP of the PC on Wi-Fi / Ethernet
-  static String lanIp = '192.168.29.90';
+  static String lanIp = '192.168.29.218';
 
   // Active host used for HTTP calls
-  static String activeHost = '192.168.29.90';
+  static String activeHost = '192.168.29.218';
 
   // Candidate hosts to try automatically (Emulator, LAN Wi-Fi, Hotspot, Firewall-Free Tunnel, USB)
   static List<String> get candidateHosts {
     final list = <String>[
       activeHost,
-      '10.0.2.2',
+      '192.168.29.218',
       lanIp,
       '192.168.29.90',
       '192.168.137.1',
+      '10.0.2.2',
       'https://aiksetra-npci-soumo.loca.lt',
       '127.0.0.1',
     ];
@@ -22,16 +24,32 @@ class ApiConfig {
     return list.where((h) => h.isNotEmpty && seen.add(h)).toList();
   }
 
-  static void setCustomHost(String host) {
+  static Future<void> loadSavedHost() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('aiksetra_backend_host');
+      if (saved != null && saved.trim().isNotEmpty) {
+        setCustomHost(saved.trim(), persist: false);
+      }
+    } catch (_) {}
+  }
+
+  static void setCustomHost(String host, {bool persist = true}) {
     final clean = host.trim();
+    if (clean.isEmpty) return;
     if (clean.startsWith('http://') || clean.startsWith('https://')) {
       activeHost = clean.replaceAll(RegExp(r'/$'), '');
-      return;
+    } else {
+      final stripped = clean.split(':').first;
+      if (stripped.isNotEmpty) {
+        lanIp = stripped;
+        activeHost = stripped;
+      }
     }
-    final stripped = clean.split(':').first;
-    if (stripped.isNotEmpty) {
-      lanIp = stripped;
-      activeHost = stripped;
+    if (persist) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('aiksetra_backend_host', activeHost);
+      }).catchError((_) {});
     }
   }
 
@@ -41,7 +59,8 @@ class ApiConfig {
       activeHost = 'localhost';
       return;
     }
-    for (final host in ['10.0.2.2', '192.168.29.90', '192.168.137.1']) {
+    await loadSavedHost();
+    for (final host in [activeHost, '192.168.29.218', '192.168.29.90', '192.168.137.1', '10.0.2.2']) {
       try {
         final socket = await Socket.connect(host, 4000, timeout: const Duration(milliseconds: 400));
         socket.destroy();
