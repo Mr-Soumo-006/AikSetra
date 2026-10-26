@@ -369,32 +369,40 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'AVAILABLE BANK BALANCE',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        _showBalance ? '₹${_bankBalance.toStringAsFixed(2)}' : '₹ ••••••',
-                        style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => setState(() => _showBalance = !_showBalance),
-                        child: Icon(
-                          _showBalance ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: const Color(0xFF94A3B8),
-                          size: 18,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'AVAILABLE BANK BALANCE',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _showBalance ? '₹${_bankBalance.toStringAsFixed(2)}' : '₹ ••••••',
+                              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => setState(() => _showBalance = !_showBalance),
+                          child: Icon(
+                            _showBalance ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: const Color(0xFF94A3B8),
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               Row(
                 children: [
@@ -599,16 +607,22 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.receipt_long_rounded, size: 18, color: Color(0xFFFF671F)),
-                  SizedBox(width: 6),
-                  Text(
-                    'Bills, Utilities & Recharges (BBPS)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.receipt_long_rounded, size: 18, color: Color(0xFFFF671F)),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Bills, Utilities & Recharges',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => setState(() => _bottomNavIndex = 1),
                 child: const Text(
@@ -784,10 +798,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Direct UPI Transfer & Safe Escrow',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+              const Expanded(
+                child: Text(
+                  'Direct UPI Transfer & Safe Escrow',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: _showSafePayDialog,
                 child: const Text(
@@ -1002,7 +1020,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1343,7 +1361,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                               '₹${((b['amount'] as num?) ?? 0).toStringAsFixed(0)}',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF046A38)),
                             ),
-                            const Text('BBPS PAID ✓', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                            const Text('BBPS PAID ✓', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
                           ],
                         ),
                       ],
@@ -1361,7 +1379,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Flexible(
             child: Text(
               value,
@@ -1455,7 +1480,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     final wealthGainedCalc = maturityVal - totalInvestedCalc;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1471,10 +1496,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'BANK AUTO-SIP & WEALTH PORTFOLIO',
-                      style: TextStyle(color: Color(0xFFA7F3D0), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                    const Expanded(
+                      child: Text(
+                        'BANK AUTO-SIP & WEALTH',
+                        style: TextStyle(color: Color(0xFFA7F3D0), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -1484,6 +1513,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                       child: Text(
                         'Linked: $_bankName',
                         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -2129,7 +2159,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2504,7 +2534,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(k, style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
+          Expanded(
+            child: Text(
+              k,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Flexible(child: Text(v, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
         ],
       ),
@@ -2569,7 +2606,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   Widget _buildAccountTab() {
     final accounts = BharatOnePayApi.linkedAccounts;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2597,11 +2634,20 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_userName, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
-                        Text('UPI ID: $_userVpa', style: const TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontFamily: 'monospace')),
+                        Text(
+                          _userName,
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'UPI ID: $_userVpa',
+                          style: const TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontFamily: 'monospace'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         Text(
                           'Mobile: +91 ${BharatOnePayApi.currentUser?.phone ?? ""}',
                           style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -2619,14 +2665,22 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Linked Bank Accounts (48+ RBI Banks)',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+              const Expanded(
+                child: Text(
+                  'Linked Bank Accounts (48+ RBI Banks)',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               TextButton.icon(
                 onPressed: _showLinkAnotherBankModal,
                 icon: const Icon(Icons.add_circle_outline, size: 16),
-                label: const Text('Link New Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                label: const Text('Link Bank', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ],
           ),
@@ -2642,66 +2696,159 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     color: acc.isPrimary ? const Color(0xFF046A38) : const Color(0xFFE2E8F0),
                     width: acc.isPrimary ? 2 : 1,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF046A38).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.account_balance_rounded, color: Color(0xFF046A38), size: 20),
                         ),
-                        if (acc.isPrimary)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(6)),
-                            child: const Text('PRIMARY', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                          )
-                        else
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      acc.bankName,
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (acc.isPrimary) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF046A38),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text('PRIMARY', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${acc.maskedAccountNumber} • IFSC: ${acc.ifsc}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontFamily: 'monospace'),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!acc.isPrimary)
                           TextButton(
                             onPressed: () async {
                               await BharatOnePayApi.setPrimaryAccount(acc.id);
                               if (mounted) setState(() {});
                             },
-                            child: const Text('Set Primary', style: TextStyle(fontSize: 11)),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('Set Primary', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
                       ],
                     ),
-                    Text(
-                      '${acc.maskedAccountNumber} • IFSC: ${acc.ifsc}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontFamily: 'monospace'),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'AVAILABLE BALANCE',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.5),
+                                ),
+                                const SizedBox(height: 2),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '₹${acc.balance.toStringAsFixed(2)}',
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF046A38)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _showCheckBalanceDialog,
+                            icon: const Icon(Icons.refresh_rounded, size: 14),
+                            label: Text(_t('check_balance'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF0F172A),
+                              side: const BorderSide(color: Color(0xFFCBD5E1)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Balance: ₹${acc.balance.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF046A38)),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true),
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
+                            label: const Text('+ Add Money', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF046A38),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                          ),
                         ),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: _showCheckBalanceDialog,
-                              icon: const Icon(Icons.account_balance_wallet_outlined, size: 14),
-                              label: Text(_t('check_balance'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _showSelfTransferModal,
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                            label: Text(_t('self_transfer'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
                             ),
-                            ElevatedButton.icon(
-                              onPressed: () => _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
-                              icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
-                              label: const Text('+ Add Money', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                            ElevatedButton.icon(
-                              onPressed: _showSelfTransferModal,
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
-                              icon: const Icon(Icons.swap_horiz, size: 14),
-                              label: Text(_t('self_transfer'), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
@@ -2717,14 +2864,22 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Linked Debit & Credit Cards',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+              const Expanded(
+                child: Text(
+                  'Linked Debit & Credit Cards',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF0F172A)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               TextButton.icon(
                 onPressed: _showLinkCardModal,
                 icon: const Icon(Icons.add_card_rounded, size: 16),
-                label: const Text('Add Debit / Credit Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                label: const Text('Add Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ],
           ),
@@ -2769,10 +2924,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '$bName • $cType CARD',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                          Expanded(
+                            child: Text(
+                              '$bName • $cType CARD',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -2787,18 +2946,26 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        card['maskedCardNumber'] ?? '•••• •••• •••• 4821',
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          card['maskedCardNumber'] ?? '•••• •••• •••• 4821',
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'VALID THRU: $cExp • $cHolder',
-                            style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 10, fontFamily: 'monospace'),
+                          Expanded(
+                            child: Text(
+                              'VALID THRU: $cExp • $cHolder',
+                              style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 10, fontFamily: 'monospace'),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             'Limit/Bal: ₹${((card['balanceOrLimit'] as num?) ?? _bankBalance).toStringAsFixed(0)}',
                             style: const TextStyle(color: Color(0xFF6EE7B7), fontWeight: FontWeight.w900, fontSize: 12),
