@@ -302,6 +302,7 @@ export class BillPayService {
 
     // Deduct from real bank account
     account.balance = Number((account.balance - amount).toFixed(2));
+    db.update('accounts', (a) => a.id === account.id, { balance: account.balance });
 
     const rrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
     const bbpsRef = `BBPS${Date.now().toString().slice(-8)}IN`;

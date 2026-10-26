@@ -304,6 +304,7 @@ export class CrossBorderService {
       currency: 'INR',
       description: `Cross-Border Remittance: ${quote.targetAmount} ${quote.targetCurrency} to ${beneficiaryName} (${beneficiaryAccountOrIban})`,
     });
+    db.update('accounts', (a) => a.id === account.id, { balance: senderBalanceAfter });
 
     // Update user LRS consumption
     const usdEquivalent = quote.targetCurrency === 'USD' ? quote.targetAmount : quote.totalCostInr / 85.0;
