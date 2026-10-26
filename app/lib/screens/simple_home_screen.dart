@@ -10,6 +10,19 @@ import '../models/scam_shield_model.dart';
 import '../models/cross_border_model.dart';
 import '../api_config.dart';
 import 'login_screen.dart';
+import '../models/service_catalogue.dart';
+import 'all_services_screen.dart';
+import 'autopay_screen.dart';
+import 'cards_screen.dart';
+import 'calculators_screen.dart';
+import 'travel_screen.dart';
+import 'beneficiaries_screen.dart';
+import 'rewards_screen.dart';
+import 'business_dashboard_screen.dart';
+import 'tax_payments_screen.dart';
+import 'bank_account_opening_screen.dart';
+import 'statements_screen.dart';
+
 
 class SimpleHomeScreen extends StatefulWidget {
   const SimpleHomeScreen({super.key});
@@ -24,6 +37,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   bool _showBalance = true;
   int _bottomNavIndex = 0;
   bool _isBiometricLockActive = true;
+  ServiceCategory? _selectedCategory;
+  bool _isBusinessMode = false;
+
 
   // BBPS Bill Tab State
   String _selectedBillCategory = 'ELECTRICITY';
@@ -187,6 +203,53 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
       ),
       actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: InkWell(
+            onTap: () {
+              setState(() => _isBusinessMode = !_isBusinessMode);
+              BharatOnePayApi.isBusinessMode = _isBusinessMode;
+              if (_isBusinessMode) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                ).then((_) {
+                  if (mounted) setState(() => _isBusinessMode = BharatOnePayApi.isBusinessMode);
+                });
+              }
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _isBusinessMode ? const Color(0xFFFF9100) : Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _isBusinessMode ? const Color(0xFFFF9100) : Colors.white24,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isBusinessMode ? Icons.storefront : Icons.person_outline,
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isBusinessMode ? 'Business' : 'Personal',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
         IconButton(
           onPressed: _showServerConfigDialog,
           icon: const Icon(Icons.wifi_tethering_rounded, color: Color(0xFF34D399), size: 20),
@@ -243,6 +306,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             _buildPrimaryBankCard(),
             const SizedBox(height: 16),
             _buildHeroQrAndActions(),
+            const SizedBox(height: 20),
+            _buildUniversalServicesCarousel(),
             const SizedBox(height: 20),
             _buildBillsAndUtilitiesQuickGrid(),
             const SizedBox(height: 20),
@@ -579,6 +644,566 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ===========================================================================
+  // UNIVERSAL FINANCIAL SERVICES CAROUSEL & CENTRAL ROUTER
+  // ===========================================================================
+  Widget _buildUniversalServicesCarousel() {
+    final categories = [
+      {'label': 'All Services', 'cat': null, 'icon': Icons.apps_rounded},
+      {'label': 'Payments', 'cat': ServiceCategory.payments, 'icon': Icons.payments_rounded},
+      {'label': 'Bills & BBPS', 'cat': ServiceCategory.bills, 'icon': Icons.receipt_long_rounded},
+      {'label': 'Invest & Save', 'cat': ServiceCategory.investments, 'icon': Icons.trending_up_rounded},
+      {'label': 'Insurance', 'cat': ServiceCategory.insurance, 'icon': Icons.shield_rounded},
+      {'label': 'Taxes & Govt', 'cat': ServiceCategory.taxes, 'icon': Icons.account_balance_rounded},
+      {'label': 'Calculators', 'cat': ServiceCategory.tools, 'icon': Icons.calculate_rounded},
+      {'label': 'Other Services', 'cat': ServiceCategory.other, 'icon': Icons.widgets_rounded},
+    ];
+    final filtered = _selectedCategory == null
+        ? ServiceCatalogue.allServices
+        : ServiceCatalogue.getByCategory(_selectedCategory!);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.grid_view_rounded, size: 16, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Financial Services & Tools',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AllServicesScreen(
+                          onSelectService: _handleServiceRoute,
+                        ),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF671F).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'All Services',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFFF671F)),
+                        ),
+                        SizedBox(width: 2),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFFFF671F)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Horizontal Category Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: categories.map((c) {
+                return _buildCategoryPill(
+                  c['label'] as String,
+                  c['cat'] as ServiceCategory?,
+                  c['icon'] as IconData,
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Horizontally swipeable service cards carousel
+          SizedBox(
+            height: 110,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, idx) {
+                final s = filtered[idx];
+                return InkWell(
+                  onTap: () => _handleServiceRoute(s.routeKey),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 92,
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: s.color.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(s.icon, color: s.color, size: 20),
+                            ),
+                            if (s.badge != null)
+                              Positioned(
+                                top: -4,
+                                right: -8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: s.badge == 'HOT'
+                                        ? const Color(0xFFDC2626)
+                                        : (s.badge == 'NEW' ? const Color(0xFF046A38) : const Color(0xFFFF9100)),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    s.badge!,
+                                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          s.title,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryPill(String label, ServiceCategory? cat, IconData icon) {
+    final isSelected = _selectedCategory == cat;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: () => setState(() => _selectedCategory = cat),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: isSelected ? Colors.white : const Color(0xFF64748B)),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? Colors.white : const Color(0xFF475569),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleServiceRoute(String routeKey) {
+    switch (routeKey) {
+      // Payments
+      case 'scan_pay':
+        _openRealCameraQrScanner();
+        break;
+      case 'send_money':
+        _showSendMoneyDialog();
+        break;
+      case 'my_qr':
+        _showReceiveQrModal();
+        break;
+      case 'self_transfer':
+        _showSelfTransferModal();
+        break;
+      case 'add_money':
+        _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true);
+        break;
+      case 'contacts':
+      case 'beneficiaries':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BeneficiariesScreen(
+              onSelectPayee: (vpa, name) {
+                _showSendMoneyDialog(prefillVpa: vpa, prefillName: name);
+              },
+            ),
+          ),
+        );
+        break;
+      case 'cards':
+      case 'credit_debit_cards':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CardsScreen()));
+        break;
+      case 'autopay':
+      case 'mandates':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AutoPayScreen()));
+        break;
+      case 'merchant_payments':
+        _openRealCameraQrScanner();
+        break;
+
+      // Bills & Utilities
+      case 'electricity':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'ELECTRICITY';
+        });
+        break;
+      case 'water':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'WATER';
+        });
+        break;
+      case 'gas':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'GAS';
+        });
+        break;
+      case 'broadband':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'BROADBAND';
+        });
+        break;
+      case 'mobile':
+      case 'mobile_recharge':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'MOBILE';
+        });
+        break;
+      case 'dth':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'DTH';
+        });
+        break;
+      case 'fastag':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'FASTAG';
+        });
+        break;
+      case 'postpaid':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'MOBILE';
+        });
+        break;
+      case 'landline':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'BROADBAND';
+        });
+        break;
+      case 'subscriptions':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const AutoPayScreen()));
+        break;
+
+      // Investments & Savings
+      case 'sip_mutual_funds':
+      case 'investments':
+      case 'stocks':
+        setState(() => _bottomNavIndex = 2);
+        break;
+      case 'fd':
+      case 'fixed_deposits':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'FD Maturity')));
+        break;
+      case 'rd':
+      case 'recurring_deposits':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'RD Maturity')));
+        break;
+      case 'gullak':
+      case 'savings_products':
+        _showGullakModal();
+        break;
+      case 'gold':
+        _showGullakModal();
+        break;
+
+      // Insurance & Protect
+      case 'health_insurance':
+      case 'life_insurance':
+      case 'vehicle_insurance':
+      case 'travel_insurance':
+      case 'insurance':
+        _showInsuranceDiscoveryModal(routeKey);
+        break;
+
+      // Taxes & Government
+      case 'income_tax':
+      case 'gst':
+      case 'property_tax':
+      case 'municipal_taxes':
+      case 'taxes':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TaxPaymentsScreen(
+              initialCategory: routeKey.contains('gst')
+                  ? 'GST PMT-06'
+                  : (routeKey.contains('property') ? 'Property Tax' : 'Income Tax'),
+            ),
+          ),
+        );
+        break;
+
+      // Financial Calculators
+      case 'calculators':
+      case 'calculator_centre':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen()));
+        break;
+      case 'calc_emi':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'EMI Loan')));
+        break;
+      case 'calc_sip':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'SIP Return')));
+        break;
+      case 'calc_gst':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'GST Tax')));
+        break;
+      case 'calc_tax':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Income Tax')));
+        break;
+      case 'calc_fx':
+      case 'calc_currency':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Currency FX')));
+        break;
+      case 'calc_fd':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'FD Maturity')));
+        break;
+      case 'calc_rd':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'RD Maturity')));
+        break;
+      case 'calc_compound':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Compound')));
+        break;
+      case 'calc_inflation':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Inflation')));
+        break;
+      case 'calc_goal':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Goal Plan')));
+        break;
+
+      // Travel
+      case 'travel':
+      case 'flights':
+      case 'trains':
+      case 'buses':
+      case 'hotels':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TravelScreen(
+              initialCategory: routeKey == 'travel' ? 'Flights' : routeKey,
+            ),
+          ),
+        );
+        break;
+
+      // Other Services
+      case 'rewards':
+      case 'coupons':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const RewardsScreen()));
+        break;
+      case 'bank_account_opening':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const BankAccountOpeningScreen()));
+        break;
+      case 'statements':
+      case 'documents':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const StatementsScreen()));
+        break;
+      case 'business_account':
+      case 'business':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()));
+        break;
+      case 'expense_tracking':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const StatementsScreen()));
+        break;
+      case 'forex':
+      case 'global_fx':
+        setState(() => _bottomNavIndex = 3);
+        break;
+
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Opening service: $routeKey')),
+        );
+        break;
+    }
+  }
+
+  void _showInsuranceDiscoveryModal(String routeKey) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Insurance & Protection Plans', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.shield, color: Color(0xFF1D4ED8), size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'IRDAI Certified Insurance Partners (HDFC ERGO, Star Health, LIC, Digit)',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            _buildInsuranceCard('Health Insurance', '₹5 Lakh cashless cover in 10,000+ network hospitals', 'Starting ₹380/mo', Icons.health_and_safety, const Color(0xFFDC2626)),
+            _buildInsuranceCard('Term Life Insurance', '₹1 Crore financial shield for family with 99.3% claim settlement', 'Starting ₹490/mo', Icons.family_restroom, const Color(0xFF046A38)),
+            _buildInsuranceCard('Motor & Bike Insurance', 'Zero inspection instant policy renewal with 24x7 roadside assist', 'Starting ₹652/yr', Icons.directions_car, const Color(0xFF1D4ED8)),
+            _buildInsuranceCard('Travel Insurance', 'Medical emergencies abroad, flight delays & lost baggage protection', 'Starting ₹299/trip', Icons.flight, const Color(0xFFFF9100)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsuranceCard(String title, String desc, String price, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.12),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0D1B2A))),
+                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 2),
+                Text(price, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF046A38),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Comparing best $title policies...')),
+              );
+            },
+            child: const Text('View Quotes', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

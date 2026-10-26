@@ -306,6 +306,7 @@ class BharatOnePayApi {
     {'id': 'dth_tataplay', 'name': 'Tata Play / Airtel Digital TV', 'category': 'DTH', 'stateOrCircle': 'All India', 'consumerIdLabel': '10-Digit Subscriber ID'},
   ];
   static List<ProtectedPayEscrowModel> activeEscrows = [];
+  static bool isBusinessMode = false;
 
   static bool get isLoggedIn => currentUser != null && _authToken != null;
 
@@ -1652,6 +1653,128 @@ class BharatOnePayApi {
         if (razorpayKeyId != null) 'razorpayKeyId': razorpayKeyId,
       });
       return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // ==========================================
+  // SUPER-APP EXTENSIONS: AUTOPAY, REWARDS, BUSINESS & TOOLS
+  // ==========================================
+
+  static Future<Map<String, dynamic>> getAutoPayMandates() async {
+    try {
+      final res = await _getWithFailover('/autopay/mandates');
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createAutoPayMandate({
+    required String billerOrPayeeName,
+    required String vpa,
+    required String category,
+    required String frequency,
+    required double maxAmount,
+    required int scheduledDay,
+    required String mpin,
+  }) async {
+    try {
+      final res = await _postWithFailover('/autopay/create', {
+        'billerOrPayeeName': billerOrPayeeName,
+        'vpa': vpa,
+        'category': category,
+        'frequency': frequency,
+        'maxAmount': maxAmount,
+        'scheduledDay': scheduledDay,
+        'mpin': mpin,
+      });
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateAutoPayStatus(String mandateId, String status) async {
+    try {
+      final res = await _postWithFailover('/autopay/$mandateId/status', {'status': status});
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> executeAutoPayDebit(String mandateId, {double? amount}) async {
+    try {
+      final res = await _postWithFailover('/autopay/$mandateId/debit', {
+        if (amount != null) 'amount': amount,
+      });
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getRewardsOverview() async {
+    try {
+      final res = await _getWithFailover('/rewards/overview');
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> claimRewardCoupon(String couponId) async {
+    try {
+      final res = await _postWithFailover('/rewards/coupons/$couponId/claim', {});
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getBusinessProfile() async {
+    try {
+      final res = await _getWithFailover('/business/profile');
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getBusinessInvoices() async {
+    try {
+      final res = await _getWithFailover('/business/invoices');
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> createBusinessInvoice({
+    required String customerName,
+    required String customerPhone,
+    required List<Map<String, dynamic>> items,
+    String? dueDate,
+  }) async {
+    try {
+      final res = await _postWithFailover('/business/invoices/create', {
+        'customerName': customerName,
+        'customerPhone': customerPhone,
+        'items': items,
+        if (dueDate != null) 'dueDate': dueDate,
+      });
+      return jsonDecode(res.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getLiveFxRates() async {
+    try {
+      final res = await _getWithFailover('/tools/fx-rates');
+      return jsonDecode(res.body);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
