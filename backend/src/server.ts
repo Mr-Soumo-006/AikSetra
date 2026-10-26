@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import os from 'os';
+import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
 import { config, validateConfig } from './config/index.js';
@@ -110,6 +111,19 @@ app.use('/console', express.static(consoleDir));
 // Root redirect to console
 app.get('/', (req, res) => {
   res.redirect('/console');
+});
+
+// Direct APK download for instant mobile phone install
+app.get('/download', (req, res) => {
+  const apkPath = path.resolve(process.cwd(), '../app-release.apk');
+  if (fs.existsSync(apkPath)) {
+    return res.download(apkPath, 'AikSetra-Update.apk');
+  }
+  const buildApk = path.resolve(process.cwd(), '../app/build/app/outputs/flutter-apk/app-release.apk');
+  if (fs.existsSync(buildApk)) {
+    return res.download(buildApk, 'AikSetra-Update.apk');
+  }
+  return res.status(404).send('APK not found on server.');
 });
 
 // Issue 56 & P0 Issue 8: Mobile Payment Link landing page with XSS-safe escaping and bundled CSS
