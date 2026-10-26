@@ -44,6 +44,11 @@ export interface DatabaseSchema {
     reason: string;
     flaggedAt: string;
   }>;
+  autopayMandates: import('../types/index.js').AutoPayMandate[];
+  rewards: import('../types/index.js').RewardEntry[];
+  rewardCoupons: import('../types/index.js').RewardCoupon[];
+  businessProfiles: import('../types/index.js').BusinessProfile[];
+  businessInvoices: import('../types/index.js').BusinessInvoice[];
 }
 
 const defaultDatabase: DatabaseSchema = {
@@ -62,6 +67,11 @@ const defaultDatabase: DatabaseSchema = {
   auditLogs: [],
   idempotencyKeys: [],
   fraudRegistry: [],
+  autopayMandates: [],
+  rewards: [],
+  rewardCoupons: [],
+  businessProfiles: [],
+  businessInvoices: [],
 };
 
 class JsonDatabase {

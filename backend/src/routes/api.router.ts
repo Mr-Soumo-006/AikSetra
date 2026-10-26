@@ -28,6 +28,10 @@ import { SmsService } from '../services/sms.service.js';
 import { pspSimulator } from '../services/psp.simulator.js';
 import { LedgerService } from '../services/ledger.service.js';
 import { AuditService } from '../services/audit.service.js';
+import { AutoPayService } from '../services/autopay.service.js';
+import { RewardsService } from '../services/rewards.service.js';
+import { BusinessService } from '../services/business.service.js';
+import { FinancialToolsService } from '../services/financialTools.service.js';
 import { validatePaymentAmount, validateVpa, validateIfsc, sanitizeRemark } from '../utils/validation.js';
 
 export const apiRouter = Router();
@@ -990,4 +994,163 @@ apiRouter.post('/config/gateway', adminAuthMiddleware, (req, res) => {
     message: 'Live Gateway & SMS credentials updated.',
     gateway: SmsService.getGatewayStatus(),
   });
+});
+
+// ==========================================
+// 16. AUTOPAY & RECURRING MANDATES (Section 3)
+// ==========================================
+
+apiRouter.get('/autopay/mandates', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const data = AutoPayService.getMandates(req.userId!);
+    return res.json({ success: true, ...data });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/autopay/create', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { billerOrPayeeName, vpa, category, frequency, maxAmount, scheduledDay, mpin } = req.body;
+    if (!billerOrPayeeName || !vpa || !maxAmount || !mpin) {
+      return res.status(400).json({ success: false, message: 'Mandate details and UPI MPIN are required.' });
+    }
+    const result = AutoPayService.createMandate({
+      userId: req.userId!,
+      billerOrPayeeName,
+      vpa,
+      category: category || 'BILLS',
+      frequency: frequency || 'MONTHLY',
+      maxAmount: Number(maxAmount),
+      scheduledDay: Number(scheduledDay) || 5,
+      mpin: String(mpin).trim(),
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.patch('/autopay/:id/status', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { status } = req.body;
+    if (!['ACTIVE', 'PAUSED', 'CANCELLED'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid mandate status.' });
+    }
+    const result = AutoPayService.updateMandateStatus(req.params.id as string, req.userId!, status);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/autopay/:id/debit', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const result = AutoPayService.executeMandateDebit(req.params.id as string, req.userId!, req.body.amount ? Number(req.body.amount) : undefined);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ==========================================
+// 17. REWARDS & REFERRALS (Section 10)
+// ==========================================
+
+apiRouter.get('/rewards/overview', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const data = RewardsService.getRewardsOverview(req.userId!);
+    return res.json({ success: true, ...data });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/rewards/coupons/:id/claim', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const result = RewardsService.claimCoupon(req.params.id as string);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ==========================================
+// 18. AIKSETRA BUSINESS MODE (Section 11)
+// ==========================================
+
+apiRouter.get('/business/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const data = BusinessService.getBusinessProfile(req.userId!);
+    return res.json({ success: true, ...data });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.get('/business/invoices', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const invoices = BusinessService.getInvoices(req.userId!);
+    return res.json({ success: true, invoices });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+apiRouter.post('/business/invoices/create', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { customerName, customerPhone, items, dueDate } = req.body;
+    if (!customerName || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Customer name and line items are required.' });
+    }
+    const invoice = BusinessService.createInvoice({
+      userId: req.userId!,
+      customerName,
+      customerPhone: customerPhone || '',
+      items,
+      dueDate,
+    });
+    return res.json({ success: true, invoice });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// ==========================================
+// 19. FINANCIAL TOOLS & CALCULATORS (Section 5)
+// ==========================================
+
+apiRouter.get('/tools/fx-rates', (req, res) => {
+  const data = FinancialToolsService.getLiveRates();
+  return res.json(data);
+});
+
+apiRouter.post('/tools/calculate-emi', (req, res) => {
+  const { principal, annualRatePct, tenureMonths } = req.body;
+  const result = FinancialToolsService.calculateEmi(Number(principal) || 500000, Number(annualRatePct) || 8.5, Number(tenureMonths) || 60);
+  return res.json({ success: true, ...result });
+});
+
+apiRouter.post('/tools/calculate-sip', (req, res) => {
+  const { monthlyInvestment, annualRatePct, years } = req.body;
+  const result = FinancialToolsService.calculateSip(Number(monthlyInvestment) || 5000, Number(annualRatePct) || 15.0, Number(years) || 10);
+  return res.json({ success: true, ...result });
+});
+
+apiRouter.post('/tools/calculate-fd', (req, res) => {
+  const { principal, annualRatePct, years, compoundFreq } = req.body;
+  const result = FinancialToolsService.calculateFd(Number(principal) || 100000, Number(annualRatePct) || 7.1, Number(years) || 3, Number(compoundFreq) || 4);
+  return res.json({ success: true, ...result });
+});
+
+apiRouter.post('/tools/calculate-gst', (req, res) => {
+  const { amount, gstRatePct, isExclusive } = req.body;
+  const result = FinancialToolsService.calculateGst(Number(amount) || 1000, Number(gstRatePct) || 18, isExclusive !== false);
+  return res.json({ success: true, ...result });
+});
+
+apiRouter.post('/tools/estimate-tax', (req, res) => {
+  const { annualGrossIncome } = req.body;
+  const result = FinancialToolsService.estimateIncomeTax(Number(annualGrossIncome) || 1200000);
+  return res.json({ success: true, ...result });
 });

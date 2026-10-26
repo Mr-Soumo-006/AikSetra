@@ -396,6 +396,11 @@ export function runSeed(force = false): void {
       },
     ],
     idempotencyKeys: [],
+    autopayMandates: [],
+    rewards: [],
+    rewardCoupons: [],
+    businessProfiles: [],
+    businessInvoices: [],
   };
 
   db.reset(seedData);

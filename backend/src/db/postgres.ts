@@ -37,6 +37,11 @@ export class PostgresDatabase implements IDatabase {
     auditLogs: [],
     idempotencyKeys: [],
     fraudRegistry: [],
+    autopayMandates: [],
+    rewards: [],
+    rewardCoupons: [],
+    businessProfiles: [],
+    businessInvoices: [],
   };
 
   constructor(connectionString?: string) {

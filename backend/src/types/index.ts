@@ -272,3 +272,93 @@ export interface IdempotencyRecord {
   expiresAt: string;
   response?: any;
 }
+
+// ==========================================
+// SUPER-APP EXTENSIONS: AUTOPAY, REWARDS, BUSINESS
+// ==========================================
+
+export type AutoPayFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+export type MandateStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+
+export interface AutoPayMandate {
+  id: string;
+  userId: string;
+  accountId: string;
+  billerOrPayeeName: string;
+  vpa: string;
+  category: string; // 'ELECTRICITY' | 'BROADBAND' | 'SUBSCRIPTION' | 'INSURANCE' | 'SIP' | 'RENT'
+  frequency: AutoPayFrequency;
+  maxAmount: number;
+  scheduledDay: number;
+  nextDebitDate: string;
+  umrn: string; // Unique Mandate Reference Number e.g. NPCISBIN9382104928
+  status: MandateStatus;
+  totalDebited: number;
+  executionCount: number;
+  createdAt: string;
+  lastDebitAt?: string;
+}
+
+export interface RewardEntry {
+  id: string;
+  userId: string;
+  type: 'CASHBACK' | 'REFERRAL' | 'STREAK' | 'REDEMPTION';
+  points: number;
+  amountInr: number;
+  description: string;
+  status: 'CREDITED' | 'REDEEMED';
+  createdAt: string;
+}
+
+export interface RewardCoupon {
+  id: string;
+  brand: string;
+  title: string;
+  code: string;
+  category: string;
+  discount: string;
+  minSpend: number;
+  expiresAt: string;
+  isClaimed: boolean;
+}
+
+export interface BusinessProfile {
+  id: string;
+  userId: string;
+  businessName: string;
+  gstin: string;
+  pan: string;
+  category: string;
+  merchantVpa: string;
+  qrCodeUrl: string;
+  verified: boolean;
+  todayVolume: number;
+  todayTxnCount: number;
+  monthlyVolume: number;
+  settlementAccountId: string;
+  memberSince: string;
+}
+
+export interface InvoiceItem {
+  name: string;
+  qty: number;
+  unitPrice: number;
+  gstRate: number; // e.g. 18
+}
+
+export interface BusinessInvoice {
+  id: string;
+  businessId: string;
+  userId: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerPhone: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  gstTotal: number;
+  grandTotal: number;
+  status: 'UNPAID' | 'PAID' | 'CANCELLED';
+  dueDate: string;
+  createdAt: string;
+  paidAt?: string;
+}
