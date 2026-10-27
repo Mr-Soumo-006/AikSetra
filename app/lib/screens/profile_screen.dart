@@ -12,6 +12,8 @@ import 'rewards_screen.dart';
 import 'business_dashboard_screen.dart';
 import 'bank_account_opening_screen.dart';
 import 'calculators_screen.dart';
+import '../utils/app_translations.dart';
+import '../widgets/language_location_selector_modal.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool isEmbeddedInTab;
@@ -1496,6 +1498,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         setState(() => _isBiometricLockActive = v);
                       },
                     ),
+                  ),
+
+                  _buildNavigationTile(
+                    icon: Icons.language_rounded,
+                    title: 'App Language • भाषा પસંદ કરો',
+                    subtitle:
+                        'Current: ${AppTranslations.supportedLanguages.firstWhere((l) => l.code == AppTranslations.currentLanguage, orElse: () => AppTranslations.supportedLanguages.first).nativeName} (${AppTranslations.supportedLanguages.firstWhere((l) => l.code == AppTranslations.currentLanguage, orElse: () => AppTranslations.supportedLanguages.first).englishName})',
+                    onTap: () async {
+                      final newLang = await LanguageLocationSelectorModal.show(
+                        context,
+                        current: AppTranslations.currentLanguage,
+                      );
+                      if (newLang != null && mounted) {
+                        setState(() {});
+                        widget.onRefreshParent?.call();
+                      }
+                    },
                   ),
 
                   _buildNavigationTile(

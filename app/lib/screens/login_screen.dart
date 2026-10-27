@@ -1,8 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../api_config.dart';
 import '../services/bharat_one_pay_api.dart';
 import '../services/biometric_service.dart';
+import '../utils/app_translations.dart';
+import '../widgets/language_location_selector_modal.dart';
 import 'simple_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,12 +17,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 4-Step Streamlined Real Onboarding:
+  // 5-Step Streamlined Real Onboarding:
+  // 0 = Preferred Language & Location Selection
   // 1 = Mobile & Name (with Automatic SIM & Bank Detection)
   // 2 = 6-Digit SMS OTP Verification
   // 3 = Auto-Detected Bank Confirmation + 48+ Indian Banks & Cards
   // 4 = Set 4-Digit UPI & App MPIN (with Biometric Fingerprint Option)
-  int _currentStep = 1;
+  int _currentStep = 0;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -30,7 +35,10 @@ class _LoginScreenState extends State<LoginScreen> {
   String _simBindingStatusText = '';
 
   // Step 2: OTP
-  final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _otpControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
   int _resendCountdown = 30;
   Timer? _resendTimer;
@@ -42,14 +50,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _bankSearchCtrl = TextEditingController();
   final TextEditingController _customBankNameCtrl = TextEditingController();
   final TextEditingController _accountNoController = TextEditingController();
-  final TextEditingController _ifscController = TextEditingController(text: 'SBIN0001234');
+  final TextEditingController _ifscController = TextEditingController(
+    text: 'SBIN0001234',
+  );
   String _selectedAccountType = 'SAVINGS';
 
   // Debit / Credit Card Linking during Bank Verification
   String _verificationMode = 'DEBIT'; // 'DEBIT' or 'CREDIT'
   String _cardNetwork = 'RuPay UPI'; // 'RuPay UPI', 'VISA', 'Mastercard'
   final TextEditingController _cardDigitsCtrl = TextEditingController();
-  final TextEditingController _cardExpiryCtrl = TextEditingController(text: '08/29');
+  final TextEditingController _cardExpiryCtrl = TextEditingController(
+    text: '08/29',
+  );
   final TextEditingController _cardCvvCtrl = TextEditingController();
 
   // Step 4: Setup PIN
@@ -81,9 +93,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _detectCarrierFromPhone(String phone) {
-    if (phone.startsWith('98') || phone.startsWith('99') || phone.startsWith('97')) {
+    if (phone.startsWith('98') ||
+        phone.startsWith('99') ||
+        phone.startsWith('97')) {
       return 'Airtel 5G Plus (Auto-Detected SIM 1)';
-    } else if (phone.startsWith('90') || phone.startsWith('91') || phone.startsWith('96')) {
+    } else if (phone.startsWith('90') ||
+        phone.startsWith('91') ||
+        phone.startsWith('96')) {
       return 'Vodafone Idea Vi 5G (Auto-Detected SIM 1)';
     } else if (phone.startsWith('94')) {
       return 'BSNL 4G/5G (Auto-Detected SIM 1)';
@@ -93,9 +109,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Map<String, String> _detectBankFromPhone(String phone) {
     final clean = phone.replaceAll(RegExp(r'\D'), '');
-    final last4 = clean.length >= 4 ? clean.substring(clean.length - 4) : '4519';
+    final last4 = clean.length >= 4
+        ? clean.substring(clean.length - 4)
+        : '4519';
 
-    if (clean.endsWith('21') || clean.endsWith('20') || clean.startsWith('99')) {
+    if (clean.endsWith('21') ||
+        clean.endsWith('20') ||
+        clean.startsWith('99')) {
       return {
         'name': 'HDFC Bank',
         'code': 'HDFC',
@@ -106,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
         'handle': 'hdfcbank',
         'branch': 'Central Branch',
       };
-    } else if (clean.endsWith('30') || clean.startsWith('97') || clean.startsWith('96')) {
+    } else if (clean.endsWith('30') ||
+        clean.startsWith('97') ||
+        clean.startsWith('96')) {
       return {
         'name': 'ICICI Bank',
         'code': 'ICIC',
@@ -171,15 +193,24 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = _phoneController.text.trim();
 
     if (name.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your full name as per bank records.');
+      setState(
+        () =>
+            _errorMessage = 'Please enter your full name as per bank records.',
+      );
       return;
     }
     if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      setState(() => _errorMessage = 'Please enter a valid 10-digit Indian mobile number.');
+      setState(
+        () => _errorMessage =
+            'Please enter a valid 10-digit Indian mobile number.',
+      );
       return;
     }
     if (!_consentChecked) {
-      setState(() => _errorMessage = 'Please accept NPCI UPI Device-Binding & DPDP terms.');
+      setState(
+        () => _errorMessage =
+            'Please accept NPCI UPI Device-Binding & DPDP terms.',
+      );
       return;
     }
 
@@ -188,13 +219,15 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
       _errorMessage = null;
       _autoDetectedSimCarrier = detectedCarrier;
-      _simBindingStatusText = '📲 Auto-detecting active SIM ($detectedCarrier)...';
+      _simBindingStatusText =
+          '📲 Auto-detecting active SIM ($detectedCarrier)...';
     });
 
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     setState(() {
-      _simBindingStatusText = '🔐 Sending encrypted NPCI hardware token from +91 $phone...';
+      _simBindingStatusText =
+          '🔐 Sending encrypted NPCI hardware token from +91 $phone...';
     });
 
     final res = await BharatOnePayApi.sendOtp(phone);
@@ -216,7 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
           });
         }
       } else {
-        _errorMessage = res['message'] ?? 'Failed to dispatch OTP. Please try again.';
+        _errorMessage =
+            res['message'] ?? 'Failed to dispatch OTP. Please try again.';
       }
     });
   }
@@ -264,14 +298,22 @@ class _LoginScreenState extends State<LoginScreen> {
       _ifscController.text = detected['ifsc'] ?? 'SBIN0001024';
       _cardDigitsCtrl.text = '4591$last4'.substring(0, 6);
 
-      final detectedIdx = _allBanks.indexWhere((b) => (b['code'] ?? '') == detected['code'] || (b['name'] ?? '') == detected['name']);
+      final detectedIdx = _allBanks.indexWhere(
+        (b) =>
+            (b['code'] ?? '') == detected['code'] ||
+            (b['name'] ?? '') == detected['name'],
+      );
       if (detectedIdx != -1) {
         _selectedBankIndex = detectedIdx;
       }
 
       final acc = BharatOnePayApi.currentAccount;
       if (acc != null) {
-        final idx = _allBanks.indexWhere((b) => (b['name'] ?? '').contains(acc.bankName) || acc.bankName.contains(b['code'] ?? ''));
+        final idx = _allBanks.indexWhere(
+          (b) =>
+              (b['name'] ?? '').contains(acc.bankName) ||
+              acc.bankName.contains(b['code'] ?? ''),
+        );
         if (idx != -1) _selectedBankIndex = idx;
         _ifscController.text = acc.ifsc;
       }
@@ -280,7 +322,8 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } else {
       setState(() {
-        _errorMessage = res['message'] ?? 'Incorrect OTP. Please check the 6-digit OTP.';
+        _errorMessage =
+            res['message'] ?? 'Incorrect OTP. Please check the 6-digit OTP.';
       });
     }
   }
@@ -288,7 +331,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // --- Step 3 Action: Link Selected Bank + Debit/Credit Card & Go to PIN Setup ---
   Future<void> _handleBankAndCardConfirmed() async {
     final bank = _allBanks[_selectedBankIndex];
-    final bankName = bank['bankCode'] == 'NPCI' && _customBankNameCtrl.text.trim().isNotEmpty
+    final bankName =
+        bank['bankCode'] == 'NPCI' && _customBankNameCtrl.text.trim().isNotEmpty
         ? _customBankNameCtrl.text.trim()
         : bank['bankName']!;
     final accNum = _accountNoController.text.trim();
@@ -297,15 +341,23 @@ class _LoginScreenState extends State<LoginScreen> {
     final cardExpiry = _cardExpiryCtrl.text.trim();
 
     if (accNum.length < 4) {
-      setState(() => _errorMessage = 'Please enter at least the last 4 digits of your Bank Account Number.');
+      setState(
+        () => _errorMessage = 'Please enter at least the last 4 digits of your Bank Account Number.',
+      );
       return;
     }
     if (ifsc.length < 8) {
-      setState(() => _errorMessage = 'Please enter a valid Bank IFSC Code (e.g. SBIN0001234).');
+      setState(
+        () => _errorMessage =
+            'Please enter a valid Bank IFSC Code (e.g. SBIN0001234).',
+      );
       return;
     }
     if (cardDigits.length < 4) {
-      setState(() => _errorMessage = 'Please enter at least the last 6 digits of your ${_verificationMode == "CREDIT" ? "Credit" : "Debit"} Card for NPCI verification.');
+      setState(
+        () => _errorMessage =
+            'Please enter at least the last 6 digits of your ${_verificationMode == "CREDIT" ? "Credit" : "Debit"} Card for NPCI verification.',
+      );
       return;
     }
 
@@ -361,7 +413,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _finishOnboarding() async {
     if (_setupPin.length != 4) {
-      setState(() => _errorMessage = 'Please enter a 4-digit UPI PIN to secure your account.');
+      setState(
+        () => _errorMessage =
+            'Please enter a 4-digit UPI PIN to secure your account.',
+      );
       return;
     }
     setState(() => _isLoading = true);
@@ -405,12 +460,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Color(0xFFEF4444),
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
+                        style: const TextStyle(
+                          color: Color(0xFFFCA5A5),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -418,7 +480,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 10,
+                ),
                 child: _buildCurrentStepContent(),
               ),
             ),
@@ -447,7 +512,7 @@ class _LoginScreenState extends State<LoginScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          if (_currentStep > 1)
+          if (_currentStep > 0)
             IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
               onPressed: () {
@@ -462,18 +527,19 @@ class _LoginScreenState extends State<LoginScreen> {
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(4, (index) {
-                final stepNum = index + 1;
-                final isActive = stepNum == _currentStep;
-                final isDone = stepNum < _currentStep;
+              children: List.generate(5, (index) {
+                final isActive = index == _currentStep;
+                final isDone = index < _currentStep;
                 return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isActive ? 28 : 10,
-                  height: 8,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isActive ? 24 : 8,
+                  height: 6,
                   decoration: BoxDecoration(
                     color: isDone
                         ? const Color(0xFF34D399)
-                        : (isActive ? const Color(0xFFFF671F) : const Color(0xFF334155)),
+                        : (isActive
+                              ? const Color(0xFFFF671F)
+                              : const Color(0xFF334155)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -481,11 +547,19 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           Text(
-            'Step $_currentStep/4',
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.bold),
+            'Step ${_currentStep + 1}/5',
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_ethernet, color: Color(0xFF64748B), size: 18),
+            icon: const Icon(
+              Icons.settings_ethernet,
+              color: Color(0xFF64748B),
+              size: 18,
+            ),
             tooltip: 'Configure Backend Server IP',
             onPressed: _showServerConfigDialog,
           ),
@@ -501,7 +575,14 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Backend Server IP (Port 4000)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Backend Server IP (Port 4000)',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,13 +594,18 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: ipCtrl,
-              style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'monospace',
+              ),
               decoration: InputDecoration(
                 hintText: '192.168.29.90',
                 hintStyle: const TextStyle(color: Color(0xFF64748B)),
                 filled: true,
                 fillColor: const Color(0xFF0F172A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -527,18 +613,33 @@ class _LoginScreenState extends State<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF94A3B8)),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF671F)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF671F),
+            ),
             onPressed: () {
               ApiConfig.setCustomHost(ipCtrl.text);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Backend host set to ${ApiConfig.activeHost}:4000')),
+                SnackBar(
+                  content: Text(
+                    'Backend host set to ${ApiConfig.activeHost}:4000',
+                  ),
+                ),
               );
             },
-            child: const Text('Save Host', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Save Host',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -547,6 +648,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildCurrentStepContent() {
     switch (_currentStep) {
+      case 0:
+        return _buildStep0LanguageAndLocation();
       case 1:
         return _buildStep1MobileWithAutoSim();
       case 2:
@@ -561,11 +664,32 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ===========================================================================
+  // STEP 0: Location-Wise & Manual Language Selection
+  // ===========================================================================
+  Widget _buildStep0LanguageAndLocation() {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.76,
+      child: LanguageLocationSelectorModal(
+        isStandalonePage: true,
+        initialLanguage: AppTranslations.currentLanguage,
+        onLanguageSelected: (code) {
+          setState(() {
+            AppTranslations.setLanguage(code);
+            _currentStep = 1;
+          });
+        },
+      ),
+    );
+  }
+
+  // ===========================================================================
   // STEP 1: Full Name & Mobile Input with AUTOMATIC SIM Detection & Binding
   // ===========================================================================
   Widget _buildStep1MobileWithAutoSim() {
     final phone = _phoneController.text.trim();
-    final detectedSim = phone.length >= 2 ? _detectCarrierFromPhone(phone) : 'Auto-Detect Active SIM Slot';
+    final detectedSim = phone.length >= 2
+        ? _detectCarrierFromPhone(phone)
+        : 'Auto-Detect Active SIM Slot';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -590,12 +714,23 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           alignment: Alignment.center,
-          child: const Text('ऐ', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white)),
+          child: const Text(
+            'ऐ',
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
         ),
         const SizedBox(height: 14),
         const Text(
           'Welcome to AikSetra UPI',
-          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 4),
         const Text(
@@ -603,33 +738,88 @@ class _LoginScreenState extends State<LoginScreen> {
           textAlign: TextAlign.center,
           style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 10),
+        ActionChip(
+          avatar: const Icon(
+            Icons.language_rounded,
+            size: 14,
+            color: Color(0xFFFF671F),
+          ),
+          label: Text(
+            '${AppTranslations.supportedLanguages.firstWhere((l) => l.code == AppTranslations.currentLanguage, orElse: () => AppTranslations.supportedLanguages.first).nativeName} • Change Language',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: const Color(0xFF1E293B),
+          side: const BorderSide(color: Color(0xFF334155)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          onPressed: () => setState(() => _currentStep = 0),
+        ),
+        const SizedBox(height: 16),
 
         const Align(
           alignment: Alignment.centerLeft,
-          child: Text('Your Full Legal Name (As per Bank / PAN)', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Your Full Legal Name (As per Bank / PAN)',
+            style: TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: _nameController,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
           decoration: InputDecoration(
             hintText: 'Enter your full name',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
-            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFFFF671F)),
+            prefixIcon: const Icon(
+              Icons.person_outline,
+              color: Color(0xFFFF671F),
+            ),
             filled: true,
             fillColor: const Color(0xFF1E293B),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFF671F), width: 2)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF334155)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF334155)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFFF671F), width: 2),
+            ),
           ),
         ),
         const SizedBox(height: 16),
 
         const Align(
           alignment: Alignment.centerLeft,
-          child: Text('Bank-Registered Mobile Number', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Bank-Registered Mobile Number',
+            style: TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -637,7 +827,12 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: TextInputType.phone,
           maxLength: 10,
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
           decoration: InputDecoration(
             counterText: '',
             prefixIcon: Container(
@@ -651,7 +846,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: const [
                   Text('🇮🇳', style: TextStyle(fontSize: 16)),
                   SizedBox(width: 6),
-                  Text('+91', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    '+91',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -659,10 +861,22 @@ class _LoginScreenState extends State<LoginScreen> {
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             filled: true,
             fillColor: const Color(0xFF1E293B),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF334155))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFFF671F), width: 2)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF334155)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF334155)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFFF671F), width: 2),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -673,11 +887,17 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF046A38).withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+            border: Border.all(
+              color: const Color(0xFF10B981).withValues(alpha: 0.4),
+            ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.sim_card_rounded, color: Color(0xFF34D399), size: 20),
+              const Icon(
+                Icons.sim_card_rounded,
+                color: Color(0xFF34D399),
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -685,7 +905,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       'Auto-SIM Binding: $detectedSim',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                     const Text(
                       'Active SIM slot & carrier are detected automatically upon proceeding',
@@ -694,55 +918,84 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.verified_rounded, color: Color(0xFF34D399), size: 18),
+              const Icon(
+                Icons.verified_rounded,
+                color: Color(0xFF34D399),
+                size: 18,
+              ),
             ],
           ),
         ),
         const SizedBox(height: 10),
 
         if (phone.length == 10) ...[
-          Builder(builder: (context) {
-            final detected = _detectBankFromPhone(phone);
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF064E3B), Color(0xFF1E293B)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+          Builder(
+            builder: (context) {
+              final detected = _detectBankFromPhone(phone);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF064E3B), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF34D399)),
                 ),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF34D399)),
-              ),
-              child: Row(
-                children: [
-                  Text(detected['icon'] ?? '🏦', style: const TextStyle(fontSize: 24)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Detected Bank: ${detected['name']}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                        Text(
-                          'A/c: ${detected['masked']} • ${detected['branch']} • Active KYC ✓',
-                          style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 11),
-                        ),
-                      ],
+                child: Row(
+                  children: [
+                    Text(
+                      detected['icon'] ?? '🏦',
+                      style: const TextStyle(fontSize: 24),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(6)),
-                    child: const Text('DETECTED', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
-                  ),
-                ],
-              ),
-            );
-          }),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Detected Bank: ${detected['name']}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            'A/c: ${detected['masked']} • ${detected['branch']} • Active KYC ✓',
+                            style: const TextStyle(
+                              color: Color(0xFF6EE7B7),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF046A38),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'DETECTED',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
         const SizedBox(height: 12),
 
@@ -755,7 +1008,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Checkbox(
                 value: _consentChecked,
                 activeColor: const Color(0xFFFF671F),
-                onChanged: (val) => setState(() => _consentChecked = val ?? true),
+                onChanged: (val) =>
+                    setState(() => _consentChecked = val ?? true),
               ),
             ),
             const SizedBox(width: 8),
@@ -780,12 +1034,23 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFF34D399), strokeWidth: 2.5)),
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF34D399),
+                    strokeWidth: 2.5,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _simBindingStatusText,
-                    style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Color(0xFF6EE7B7),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -797,15 +1062,31 @@ class _LoginScreenState extends State<LoginScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFFF671F),
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 4,
           ),
           child: _isLoading
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Text('Auto-Verify SIM & Send OTP', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text(
+                      'Auto-Verify SIM & Send OTP',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     SizedBox(width: 8),
                     Icon(Icons.arrow_forward, color: Colors.white, size: 18),
                   ],
@@ -834,11 +1115,19 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 16),
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFF34D399),
+                size: 16,
+              ),
               const SizedBox(width: 6),
               Text(
                 'Bound to $_autoDetectedSimCarrier',
-                style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFFCBD5E1),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -851,18 +1140,38 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF064E3B).withValues(alpha: 0.85),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.5)),
+              border: Border.all(
+                color: const Color(0xFF10B981).withValues(alpha: 0.5),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.sms_outlined, color: Color(0xFF34D399), size: 22),
+                const Icon(
+                  Icons.sms_outlined,
+                  color: Color(0xFF34D399),
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('SMS Auto-Read • NPCI-AIKSETRA', style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 11)),
-                      Text('Your 6-Digit Verification OTP is $_receivedOtp', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'SMS Auto-Read • NPCI-AIKSETRA',
+                        style: TextStyle(
+                          color: Color(0xFF34D399),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        'Your 6-Digit Verification OTP is $_receivedOtp',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -870,19 +1179,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => _autoFillOtp(_receivedOtp!),
                   style: TextButton.styleFrom(
                     backgroundColor: const Color(0xFF059669),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text('Auto-Fill', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                  child: const Text(
+                    'Auto-Fill',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
-        const Text('Verify 6-Digit OTP', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+        const Text(
+          'Verify 6-Digit OTP',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 6),
-        Text('Sent to +91 $phone', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+        Text(
+          'Sent to +91 $phone',
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+        ),
         const SizedBox(height: 22),
 
         Row(
@@ -897,15 +1228,32 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 maxLength: 1,
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                ),
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
                   contentPadding: EdgeInsets.zero,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF671F), width: 2)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF334155)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFFF671F),
+                      width: 2,
+                    ),
+                  ),
                 ),
                 onChanged: (val) {
                   if (val.isNotEmpty && index < 5) {
@@ -926,9 +1274,19 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Didn't receive SMS? ", style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            const Text(
+              "Didn't receive SMS? ",
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            ),
             if (_resendCountdown > 0)
-              Text('Resend in ${_resendCountdown}s', style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold))
+              Text(
+                'Resend in ${_resendCountdown}s',
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
             else
               InkWell(
                 onTap: () async {
@@ -938,7 +1296,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     setState(() => _receivedOtp = r['otp'].toString());
                   }
                 },
-                child: const Text('Resend OTP', style: TextStyle(color: Color(0xFFFF671F), fontSize: 12, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Resend OTP',
+                  style: TextStyle(
+                    color: Color(0xFFFF671F),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
           ],
         ),
@@ -949,12 +1314,28 @@ class _LoginScreenState extends State<LoginScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF046A38),
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 4,
           ),
           child: _isLoading
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-              : const Text('Verify OTP & Fetch Bank Accounts →', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : const Text(
+                  'Verify OTP & Fetch Bank Accounts →',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ],
     );
@@ -964,19 +1345,27 @@ class _LoginScreenState extends State<LoginScreen> {
   // STEP 3: ALL 48+ INDIAN BANKS + DEBIT / CREDIT CARD VERIFICATION
   // ===========================================================================
   Widget _buildStep3AllBanksAndCardVerification() {
-    final cleanName = _nameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final cleanName = _nameController.text.trim().toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]'),
+      '',
+    );
     final phoneLast4 = _phoneController.text.trim().length >= 4
-        ? _phoneController.text.trim().substring(_phoneController.text.trim().length - 4)
+        ? _phoneController.text.trim().substring(
+            _phoneController.text.trim().length - 4,
+          )
         : '4519';
-    final assignedVpa = BharatOnePayApi.currentUser?.primaryVpa ??
+    final assignedVpa =
+        BharatOnePayApi.currentUser?.primaryVpa ??
         '${cleanName.isNotEmpty ? cleanName.substring(0, cleanName.length > 10 ? 10 : cleanName.length) : "user"}$phoneLast4@aiksetra';
 
     final query = _bankSearchCtrl.text.trim().toLowerCase();
     final filteredBanks = <MapEntry<int, Map<String, String>>>[];
     for (int i = 0; i < _allBanks.length; i++) {
       final b = _allBanks[i];
-      final matchesSector = _bankSectorFilter == 'ALL' || b['sector'] == _bankSectorFilter;
-      final matchesQuery = query.isEmpty ||
+      final matchesSector =
+          _bankSectorFilter == 'ALL' || b['sector'] == _bankSectorFilter;
+      final matchesQuery =
+          query.isEmpty ||
           b['bankName']!.toLowerCase().contains(query) ||
           b['bankCode']!.toLowerCase().contains(query) ||
           b['ifsc']!.toLowerCase().contains(query);
@@ -992,12 +1381,20 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         const Text(
           '1. Select Your Bank (48+ RBI Regulated Banks)',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           'NPCI Mapper discovered accounts linked to +91 ${_phoneController.text.trim()}',
-          style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Color(0xFF34D399),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 10),
 
@@ -1009,10 +1406,18 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             hintText: 'Search 48+ Banks (e.g. SBI, HDFC, Bandhan, UCO, PNB, Canara, Airtel)...',
             hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-            prefixIcon: const Icon(Icons.search, color: Color(0xFFFF671F), size: 18),
+            prefixIcon: const Icon(
+              Icons.search,
+              color: Color(0xFFFF671F),
+              size: 18,
+            ),
             suffixIcon: _bankSearchCtrl.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, color: Color(0xFF94A3B8), size: 16),
+                    icon: const Icon(
+                      Icons.clear,
+                      color: Color(0xFF94A3B8),
+                      size: 16,
+                    ),
                     onPressed: () {
                       _bankSearchCtrl.clear();
                       setState(() {});
@@ -1021,8 +1426,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 : null,
             filled: true,
             fillColor: const Color(0xFF1E293B),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF334155))),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF334155)),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -1031,30 +1442,32 @@ class _LoginScreenState extends State<LoginScreen> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: [
-              {'id': 'ALL', 'label': 'All Banks (48)'},
-              {'id': 'PUBLIC', 'label': 'PSU Banks (12)'},
-              {'id': 'PRIVATE', 'label': 'Private Banks (20)'},
-              {'id': 'SFB_PAY', 'label': 'Payments & SFB (10)'},
-              {'id': 'OTHER', 'label': 'Co-op / Foreign / Other'},
-            ].map((tab) {
-              final isSel = _bankSectorFilter == tab['id'];
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(
-                  label: Text(tab['label']!),
-                  selected: isSel,
-                  selectedColor: const Color(0xFFFF671F),
-                  backgroundColor: const Color(0xFF1E293B),
-                  labelStyle: TextStyle(
-                    color: isSel ? Colors.white : const Color(0xFFCBD5E1),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  onSelected: (_) => setState(() => _bankSectorFilter = tab['id']!),
-                ),
-              );
-            }).toList(),
+            children:
+                [
+                  {'id': 'ALL', 'label': 'All Banks (48)'},
+                  {'id': 'PUBLIC', 'label': 'PSU Banks (12)'},
+                  {'id': 'PRIVATE', 'label': 'Private Banks (20)'},
+                  {'id': 'SFB_PAY', 'label': 'Payments & SFB (10)'},
+                  {'id': 'OTHER', 'label': 'Co-op / Foreign / Other'},
+                ].map((tab) {
+                  final isSel = _bankSectorFilter == tab['id'];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(tab['label']!),
+                      selected: isSel,
+                      selectedColor: const Color(0xFFFF671F),
+                      backgroundColor: const Color(0xFF1E293B),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFFCBD5E1),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onSelected: (_) =>
+                          setState(() => _bankSectorFilter = tab['id']!),
+                    ),
+                  );
+                }).toList(),
           ),
         ),
         const SizedBox(height: 8),
@@ -1070,8 +1483,10 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: filteredBanks.isEmpty
               ? const Center(
-                  child: Text('No bank matched. Select "Other RBI-Regulated Bank" to enter custom bank.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  child: Text(
+                    'No bank matched. Select "Other RBI-Regulated Bank" to enter custom bank.',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                  ),
                 )
               : GridView.builder(
                   itemCount: filteredBanks.length,
@@ -1095,25 +1510,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF046A38).withValues(alpha: 0.35)
                               : const Color(0xFF1E293B),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSelected ? const Color(0xFF10B981) : const Color(0xFF334155),
+                            color: isSelected
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFF334155),
                             width: isSelected ? 2 : 1,
                           ),
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: isSelected ? const Color(0xFF059669) : const Color(0xFF334155),
+                              backgroundColor: isSelected
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF334155),
                               radius: 11,
                               child: Text(
                                 bank['bankCode']!.substring(0, 2),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -1121,8 +1547,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Text(
                                 bank['bankName']!,
                                 style: TextStyle(
-                                  color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0xFFCBD5E1),
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
                                   fontSize: 11,
                                 ),
                                 maxLines: 2,
@@ -1147,7 +1577,9 @@ class _LoginScreenState extends State<LoginScreen> {
               labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
               filled: true,
               fillColor: const Color(0xFF1E293B),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1161,14 +1593,26 @@ class _LoginScreenState extends State<LoginScreen> {
               child: TextField(
                 controller: _accountNoController,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                ),
                 decoration: InputDecoration(
                   labelText: 'Account No (Discovered)',
-                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 11,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -1178,14 +1622,26 @@ class _LoginScreenState extends State<LoginScreen> {
               child: TextField(
                 controller: _ifscController,
                 textCapitalization: TextCapitalization.characters,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                ),
                 decoration: InputDecoration(
                   labelText: 'Branch IFSC',
-                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 11,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -1198,7 +1654,11 @@ class _LoginScreenState extends State<LoginScreen> {
         // =====================================================================
         const Text(
           '2. Verify & Link via Debit Card or Credit Card',
-          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(height: 6),
         Row(
@@ -1208,18 +1668,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 onTap: () => setState(() => _verificationMode = 'DEBIT'),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: _verificationMode == 'DEBIT' ? const Color(0xFFFF671F) : const Color(0xFF1E293B),
+                    color: _verificationMode == 'DEBIT'
+                        ? const Color(0xFFFF671F)
+                        : const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _verificationMode == 'DEBIT' ? const Color(0xFFFF671F) : const Color(0xFF334155)),
+                    border: Border.all(
+                      color: _verificationMode == 'DEBIT'
+                          ? const Color(0xFFFF671F)
+                          : const Color(0xFF334155),
+                    ),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.credit_card, color: Colors.white, size: 16),
                       SizedBox(width: 6),
-                      Text('Debit / ATM Card', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text(
+                        'Debit / ATM Card',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1231,18 +1707,38 @@ class _LoginScreenState extends State<LoginScreen> {
                 onTap: () => setState(() => _verificationMode = 'CREDIT'),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: _verificationMode == 'CREDIT' ? const Color(0xFF4F46E5) : const Color(0xFF1E293B),
+                    color: _verificationMode == 'CREDIT'
+                        ? const Color(0xFF4F46E5)
+                        : const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _verificationMode == 'CREDIT' ? const Color(0xFF818CF8) : const Color(0xFF334155)),
+                    border: Border.all(
+                      color: _verificationMode == 'CREDIT'
+                          ? const Color(0xFF818CF8)
+                          : const Color(0xFF334155),
+                    ),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 16),
+                      Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                       SizedBox(width: 6),
-                      Text('Credit Card / RuPay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text(
+                        'Credit Card / RuPay',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1284,15 +1780,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _cardDigitsCtrl,
                 keyboardType: TextInputType.number,
                 maxLength: 16,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                ),
                 decoration: InputDecoration(
                   counterText: '',
-                  labelText: '${_verificationMode == "CREDIT" ? "Credit" : "Debit"} Card (Last 6 or 16 Digits)',
-                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                  labelText:
+                      '${_verificationMode == "CREDIT" ? "Credit" : "Debit"} Card (Last 6 or 16 Digits)',
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 10,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -1301,14 +1810,26 @@ class _LoginScreenState extends State<LoginScreen> {
               flex: 2,
               child: TextField(
                 controller: _cardExpiryCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                ),
                 decoration: InputDecoration(
                   labelText: 'Valid Thru (MM/YY)',
-                  labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 10,
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF1E293B),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -1329,11 +1850,26 @@ class _LoginScreenState extends State<LoginScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Assigned NPCI UPI ID', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
-                  Text(assignedVpa, style: const TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace')),
+                  const Text(
+                    'Assigned NPCI UPI ID',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                  ),
+                  Text(
+                    assignedVpa,
+                    style: const TextStyle(
+                      color: Color(0xFFFF671F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                 ],
               ),
-              const Icon(Icons.qr_code_2_rounded, color: Color(0xFFFF671F), size: 24),
+              const Icon(
+                Icons.qr_code_2_rounded,
+                color: Color(0xFFFF671F),
+                size: 24,
+              ),
             ],
           ),
         ),
@@ -1344,14 +1880,26 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: const Color(0xFF046A38),
             foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 4,
           ),
           child: _isLoading
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
               : Text(
                   'Verify $_cardNetwork ${_verificationMode == "CREDIT" ? "Credit" : "Debit"} Card & Set UPI PIN →',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
         ),
       ],
@@ -1372,7 +1920,9 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+            border: Border.all(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+            ),
           ),
           alignment: Alignment.center,
           child: const Text('🔒', style: TextStyle(fontSize: 30)),
@@ -1380,7 +1930,11 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 16),
         const Text(
           'Set 4-Digit UPI & App PIN',
-          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -1402,7 +1956,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 shape: BoxShape.circle,
                 color: isFilled ? const Color(0xFFF59E0B) : Colors.transparent,
                 border: Border.all(
-                  color: isFilled ? const Color(0xFFF59E0B) : const Color(0xFF64748B),
+                  color: isFilled
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF64748B),
                   width: 2,
                 ),
               ),
@@ -1422,14 +1978,28 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.fingerprint_rounded, color: Color(0xFF34D399), size: 28),
+              const Icon(
+                Icons.fingerprint_rounded,
+                color: Color(0xFF34D399),
+                size: 28,
+              ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Enable 👆 Fingerprint Unlock', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                    Text('Quick login & 1-tap UPI payment auth', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                    Text(
+                      'Enable 👆 Fingerprint Unlock',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      'Quick login & 1-tap UPI payment auth',
+                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                    ),
                   ],
                 ),
               ),
@@ -1456,7 +2026,11 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 _buildKeyButton('Clear', onTap: _onPinClear, isText: true),
                 _buildKeyButton('0', onTap: () => _onPinKeyPress('0')),
-                _buildKeyButton('✓ Done', onTap: _finishOnboarding, isAction: true),
+                _buildKeyButton(
+                  '✓ Done',
+                  onTap: _finishOnboarding,
+                  isAction: true,
+                ),
               ],
             ),
           ],
@@ -1468,11 +2042,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildKeypadRow(List<String> keys) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: keys.map((k) => _buildKeyButton(k, onTap: () => _onPinKeyPress(k))).toList(),
+      children: keys
+          .map((k) => _buildKeyButton(k, onTap: () => _onPinKeyPress(k)))
+          .toList(),
     );
   }
 
-  Widget _buildKeyButton(String label, {required VoidCallback onTap, bool isText = false, bool isAction = false}) {
+  Widget _buildKeyButton(
+    String label, {
+    required VoidCallback onTap,
+    bool isText = false,
+    bool isAction = false,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),

@@ -23,6 +23,8 @@ import 'tax_payments_screen.dart';
 import 'bank_account_opening_screen.dart';
 import 'statements_screen.dart';
 import 'profile_screen.dart';
+import 'universal_search_screen.dart';
+import '../widgets/language_location_selector_modal.dart';
 
 class SimpleHomeScreen extends StatefulWidget {
   const SimpleHomeScreen({super.key});
@@ -38,6 +40,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   int _bottomNavIndex = 0;
   ServiceCategory? _selectedCategory;
   bool _isBusinessMode = false;
+  bool _isTransactionsExpanded = false;
 
   // BBPS Bill Tab State
   String _selectedBillCategory = 'ELECTRICITY';
@@ -60,14 +63,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _fxPurposeCode = 'S0301 - Family Maintenance & Savings';
   CrossBorderQuoteModel? _fxQuote;
   bool _isLoadingFxQuote = false;
-
-  final Map<String, String> _langNames = {
-    'en-IN': 'English',
-    'hi-IN': 'हिंदी',
-    'bn-IN': 'বাংলা',
-    'ta-IN': 'தமிழ்',
-    'te-IN': 'తెలుగు',
-  };
 
   @override
   void initState() {
@@ -305,40 +300,186 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           icon: const Icon(Icons.sync, color: Color(0xFF38BDF8), size: 20),
           tooltip: 'Sync with Bank Switch',
         ),
-        Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedLang,
-              dropdownColor: const Color(0xFF1E293B),
-              icon: const Icon(
-                Icons.language,
-                color: Color(0xFFFF671F),
-                size: 16,
-              ),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-              items: _langNames.entries
-                  .map(
-                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
-                  )
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedLang = val);
-                }
-              },
-            ),
-          ),
+        IconButton(
+          onPressed: _openUniversalSearch,
+          icon: const Icon(Icons.search_rounded, color: Colors.white, size: 24),
+          tooltip: 'Search Services, Billers & Payments',
         ),
       ],
     );
   }
 
   // ===========================================================================
+
+  void _openUniversalSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UniversalSearchScreen(
+          onActionSelected: (key) {
+            _handleSearchAction(key);
+          },
+          onRefreshParent: _syncLiveState,
+        ),
+      ),
+    );
+  }
+
+  void _handleSearchAction(String key) {
+    switch (key) {
+      case 'scan_qr':
+        _openRealCameraQrScanner();
+        break;
+      case 'send_money':
+        _showSendMoneyDialog();
+        break;
+      case 'my_qr':
+        _showReceiveQrModal();
+        break;
+      case 'self_transfer':
+        _showSelfTransferModal();
+        break;
+      case 'add_money':
+        _showAddMoneyAndSelfTransferModal(initialAddMoneyMode: true);
+        break;
+      case 'check_balance':
+        _showCheckBalanceDialog();
+        break;
+      case 'bill_electricity':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'ELECTRICITY';
+        });
+        break;
+      case 'bill_water':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'WATER';
+        });
+        break;
+      case 'bill_gas':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'GAS';
+        });
+        break;
+      case 'bill_broadband':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'BROADBAND';
+        });
+        break;
+      case 'bill_mobile':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'MOBILE';
+        });
+        break;
+      case 'bill_fastag':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'FASTAG';
+        });
+        break;
+      case 'bill_dth':
+        setState(() {
+          _bottomNavIndex = 1;
+          _selectedBillCategory = 'DTH';
+        });
+        break;
+      case 'wealth_sip':
+        setState(() => _bottomNavIndex = 2);
+        break;
+      case 'wealth_gold':
+        setState(() => _bottomNavIndex = 2);
+        break;
+      case 'gullak':
+        _showGullakModal();
+        break;
+      case 'language':
+        LanguageLocationSelectorModal.show(
+          context,
+          current: _selectedLang,
+        ).then((v) {
+          if (v != null && mounted) {
+            setState(() => _selectedLang = v);
+          }
+        });
+        break;
+      case 'cards':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CardsScreen()),
+        );
+        break;
+      case 'autopay':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AutoPayScreen()),
+        );
+        break;
+      case 'statements':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StatementsScreen()),
+        );
+        break;
+      case 'beneficiaries':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BeneficiariesScreen()),
+        );
+        break;
+      case 'rewards':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RewardsScreen()),
+        );
+        break;
+      case 'business':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+        );
+        break;
+      case 'tax':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TaxPaymentsScreen()),
+        );
+        break;
+      case 'account_opening':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BankAccountOpeningScreen()),
+        );
+        break;
+      case 'travel':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TravelScreen()),
+        );
+        break;
+      case 'all_services':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                AllServicesScreen(onSelectService: _handleServiceRoute),
+          ),
+        );
+        break;
+      default:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfileScreen(onRefreshParent: _syncLiveState),
+          ),
+        );
+        break;
+    }
+  }
+
   // TAB 0: HOME SCREEN
   // ===========================================================================
   Widget _buildHomeTab() {
@@ -2054,13 +2195,38 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 color: Color(0xFF0F172A),
               ),
             ),
-            Text(
-              '${txns.length} Recorded',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B),
-              ),
+            Row(
+              children: [
+                Text(
+                  _isTransactionsExpanded
+                      ? 'Showing All (${txns.length})'
+                      : 'Recent 7 of ${txns.length}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                if (txns.length > 7) ...[
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () => setState(
+                      () => _isTransactionsExpanded = !_isTransactionsExpanded,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Icon(
+                        _isTransactionsExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                        color: const Color(0xFFFF671F),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -2099,8 +2265,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ],
             ),
           )
-        else
-          ...txns.take(15).map((t) {
+        else ...[
+          ...(_isTransactionsExpanded ? txns : txns.take(7)).map((t) {
             final name =
                 (t['receiverName'] ?? t['receiverVpa'] ?? 'UPI Payment')
                     .toString();
@@ -2186,6 +2352,57 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ),
             );
           }),
+          if (txns.length > 7)
+            InkWell(
+              onTap: () => setState(
+                () => _isTransactionsExpanded = !_isTransactionsExpanded,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
+                margin: const EdgeInsets.only(top: 4, bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _isTransactionsExpanded
+                          ? 'Collapse to Recent 7 Transactions'
+                          : 'View More Transactions (${txns.length - 7} more)',
+                      style: const TextStyle(
+                        color: Color(0xFFFF671F),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      _isTransactionsExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: const Color(0xFFFF671F),
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
