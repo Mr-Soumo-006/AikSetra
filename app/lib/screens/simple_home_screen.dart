@@ -40,7 +40,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _t(String key) => AppTranslations.t(key, _selectedLang);
   int _bottomNavIndex = 0;
   ServiceCategory? _selectedCategory;
-  bool _isBusinessMode = false;
   String _historySearchQuery = '';
   String _historyFilterType = 'ALL';
   final TextEditingController _historySearchCtrl = TextEditingController();
@@ -347,71 +346,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: InkWell(
-            onTap: () {
-              setState(() => _isBusinessMode = !_isBusinessMode);
-              BharatOnePayApi.isBusinessMode = _isBusinessMode;
-              if (_isBusinessMode) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const BusinessDashboardScreen(),
-                  ),
-                ).then((_) {
-                  if (mounted)
-                    setState(
-                      () => _isBusinessMode = BharatOnePayApi.isBusinessMode,
-                    );
-                });
-              }
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _isBusinessMode
-                    ? const Color(0xFFFF9100)
-                    : Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _isBusinessMode
-                      ? const Color(0xFFFF9100)
-                      : Colors.white24,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isBusinessMode ? Icons.storefront : Icons.person_outline,
-                    size: 13,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _isBusinessMode ? 'Business' : 'Personal',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        IconButton(
-          onPressed: _showServerConfigDialog,
-          icon: const Icon(
-            Icons.wifi_tethering_rounded,
-            color: Color(0xFF34D399),
-            size: 20,
-          ),
-          tooltip: 'Configure Backend Server IP',
-        ),
         IconButton(
           onPressed: () {
             _syncLiveState();
@@ -541,6 +475,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           context,
           MaterialPageRoute(builder: (_) => const CardsScreen()),
         );
+        break;
+      case 'server_config':
+      case 'port':
+        _showServerConfigDialog();
         break;
       case 'autopay':
         Navigator.push(
@@ -1327,6 +1265,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           context,
           MaterialPageRoute(builder: (_) => const CardsScreen()),
         );
+        break;
+      case 'server_config':
+      case 'port':
+        _showServerConfigDialog();
         break;
       case 'autopay':
       case 'mandates':
@@ -5178,43 +5120,60 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   // BOTTOM NAVIGATION BAR
   // ===========================================================================
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _bottomNavIndex,
-      selectedItemColor: const Color(0xFFFF671F),
-      unselectedItemColor: const Color(0xFF64748B),
-      type: BottomNavigationBarType.fixed,
-      selectedLabelStyle: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 11,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF0F172A),
+        border: Border(
+          top: BorderSide(color: Color(0xFF1E293B), width: 1),
+        ),
       ),
-      unselectedLabelStyle: const TextStyle(fontSize: 11),
-      onTap: (idx) => setState(() => _bottomNavIndex = idx),
-      items: [
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.home_filled),
-          label: _t('tab_home'),
+      child: BottomNavigationBar(
+        currentIndex: _bottomNavIndex,
+        backgroundColor: const Color(0xFF0F172A),
+        elevation: 0,
+        selectedItemColor: const Color(0xFFFF671F),
+        unselectedItemColor: const Color(0xFF94A3B8),
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
         ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.receipt_long_rounded),
-          label: _t('tab_bills'),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 11,
+          color: Color(0xFF94A3B8),
         ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.trending_up_rounded),
-          label: _t('tab_wealth'),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.public_rounded),
-          label: _t('tab_global'),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.history_rounded),
-          activeIcon: const Icon(
-            Icons.history_rounded,
-            color: Color(0xFFFF671F),
+        onTap: (idx) => setState(() => _bottomNavIndex = idx),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home_filled),
+            activeIcon: const Icon(Icons.home_filled, color: Color(0xFFFF671F)),
+            label: _t('tab_home'),
           ),
-          label: _t('tab_history'),
-        ),
-      ],
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.receipt_long_rounded),
+            activeIcon: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFF671F)),
+            label: _t('tab_bills'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.trending_up_rounded),
+            activeIcon: const Icon(Icons.trending_up_rounded, color: Color(0xFFFF671F)),
+            label: _t('tab_wealth'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.public_rounded),
+            activeIcon: const Icon(Icons.public_rounded, color: Color(0xFFFF671F)),
+            label: _t('tab_global'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.history_rounded),
+            activeIcon: const Icon(
+              Icons.history_rounded,
+              color: Color(0xFFFF671F),
+            ),
+            label: _t('tab_history'),
+          ),
+        ],
+      ),
     );
   }
 

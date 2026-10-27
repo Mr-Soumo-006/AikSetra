@@ -1109,7 +1109,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
+
+                  // BUSINESS ACCOUNT SWITCH CARD (Restricted to Business Account holders)
+                  _buildBusinessAccountSwitchCard(),
+
+                  const SizedBox(height: 16),
 
                   // 2. LINKED BANK ACCOUNTS
                   Row(
@@ -1643,6 +1648,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         setState(() => _isBiometricLockActive = v);
                       },
                     ),
+                  ),
+
+                  _buildNavigationTile(
+                    icon: Icons.wifi_tethering_rounded,
+                    title: 'Backend Server & Network Port',
+                    subtitle: 'Configure developer host IP & port (Current: ${ApiConfig.activeHost})',
+                    onTap: _showServerConfigDialog,
                   ),
 
                   _buildNavigationTile(
@@ -2860,6 +2872,305 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+
+  // ===========================================================================
+  // BUSINESS ACCOUNT SWITCH WIDGET (Positioned below Profile Info Card)
+  // ===========================================================================
+  Widget _buildBusinessAccountSwitchCard() {
+    final isBiz = BharatOnePayApi.isBusinessMode;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isBiz
+              ? const [Color(0xFF046A38), Color(0xFF065F46)]
+              : const [Color(0xFF0F172A), Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isBiz
+              ? const Color(0xFF34D399)
+              : const Color(0xFFFF671F).withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: isBiz
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : const Color(0xFFFF671F).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              isBiz ? Icons.storefront_rounded : Icons.business_center_rounded,
+              color: isBiz ? Colors.white : const Color(0xFFFF671F),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      isBiz ? 'AikSetra Business Mode' : 'Switch to Business Account',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: isBiz ? const Color(0xFF10B981) : const Color(0xFF046A38),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        isBiz ? 'LIVE' : 'VERIFIED',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isBiz
+                      ? 'Managing Merchant QR, Soundbox & GST Invoicing'
+                      : 'Accept merchant payments, Standee QR & GST invoices',
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 10.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              if (!isBiz) {
+                setState(() => BharatOnePayApi.isBusinessMode = true);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                  widget.onRefreshParent?.call();
+                });
+              } else {
+                setState(() => BharatOnePayApi.isBusinessMode = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Switched back to Personal Account mode'),
+                    backgroundColor: Color(0xFF0F172A),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                widget.onRefreshParent?.call();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isBiz ? Colors.white : const Color(0xFFFF671F),
+              foregroundColor: isBiz ? const Color(0xFF046A38) : Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isBiz ? 'Personal' : 'Switch',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(
+                  isBiz ? Icons.person_rounded : Icons.arrow_forward_rounded,
+                  size: 13,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // SERVER CONFIG & NETWORK PORT DIALOG (Moved from Home Top Bar to Settings)
+  // ===========================================================================
+  void _showServerConfigDialog() {
+    final ipCtrl = TextEditingController(text: ApiConfig.activeHost);
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(
+                Icons.wifi_tethering_rounded,
+                color: Color(0xFF34D399),
+                size: 22,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Server Wi-Fi & IP',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Configure the backend host IPv4 address or tunnel URL (port 4000):',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ipCtrl,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
+                decoration: InputDecoration(
+                  hintText: '192.168.29.218',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.laptop_chromebook_rounded,
+                    color: Color(0xFF38BDF8),
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Quick Select Presets:',
+                style: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    '192.168.29.218',
+                    '192.168.29.90',
+                    '192.168.137.1',
+                    '10.0.2.2',
+                    'https://aiksetra-npci-soumo.loca.lt',
+                  ].map((preset) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ActionChip(
+                        label: Text(
+                          preset.length > 20 ? 'Tunnel' : preset,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                        backgroundColor: const Color(0xFF0F172A),
+                        onPressed: () {
+                          ipCtrl.text = preset;
+                          setDlgState(() {});
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF94A3B8)),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF046A38),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                final target = ipCtrl.text.trim();
+                if (target.isNotEmpty) {
+                  ApiConfig.setCustomHost(target);
+                  Navigator.pop(ctx);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Updated backend host to: $target'),
+                        backgroundColor: const Color(0xFF046A38),
+                      ),
+                    );
+                    setState(() {});
+                    widget.onRefreshParent?.call();
+                  }
+                }
+              },
+              child: const Text('Save & Reconnect'),
+            ),
+          ],
+        ),
       ),
     );
   }
