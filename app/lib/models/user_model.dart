@@ -6,6 +6,8 @@ class UserModel {
   final String primaryVpa;
   final double liteBalance;
   final double lrsUsedUsd;
+  final String? dateOfBirth;
+  final String? profilePicture;
 
   UserModel({
     required this.id,
@@ -15,6 +17,8 @@ class UserModel {
     required this.primaryVpa,
     required this.liteBalance,
     required this.lrsUsedUsd,
+    this.dateOfBirth,
+    this.profilePicture,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,46 @@ class UserModel {
       primaryVpa: json['primaryVpa'] ?? '',
       liteBalance: (json['liteBalance'] as num?)?.toDouble() ?? 0.0,
       lrsUsedUsd: (json['lrsUsedUsd'] as num?)?.toDouble() ?? 0.0,
+      dateOfBirth: json['dateOfBirth'],
+      profilePicture: json['profilePicture'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'phone': phone,
+      'fullName': fullName,
+      'email': email,
+      'primaryVpa': primaryVpa,
+      'liteBalance': liteBalance,
+      'lrsUsedUsd': lrsUsedUsd,
+      'dateOfBirth': dateOfBirth,
+      'profilePicture': profilePicture,
+    };
+  }
+
+  UserModel copyWith({
+    String? id,
+    String? phone,
+    String? fullName,
+    String? email,
+    String? primaryVpa,
+    double? liteBalance,
+    double? lrsUsedUsd,
+    String? dateOfBirth,
+    String? profilePicture,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      phone: phone ?? this.phone,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      primaryVpa: primaryVpa ?? this.primaryVpa,
+      liteBalance: liteBalance ?? this.liteBalance,
+      lrsUsedUsd: lrsUsedUsd ?? this.lrsUsedUsd,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      profilePicture: profilePicture ?? this.profilePicture,
     );
   }
 }
@@ -59,5 +103,17 @@ class BankAccountModel {
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       isPrimary: json['isPrimary'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'bankName': bankName,
+      'bankCode': bankCode,
+      'ifsc': ifsc,
+      'maskedAccountNumber': maskedAccountNumber,
+      'balance': balance,
+      'isPrimary': isPrimary,
+    };
   }
 }

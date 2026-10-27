@@ -114,6 +114,34 @@ apiRouter.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
   return res.json({ success: true, user: sanitizedUser, accounts });
 });
 
+apiRouter.put('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const user = db.get('users').find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+  const { fullName, email, dateOfBirth, profilePicture } = req.body;
+  if (fullName && typeof fullName === 'string' && fullName.trim().length > 0) {
+    user.fullName = fullName.trim();
+  }
+  if (email && typeof email === 'string') {
+    user.email = email.trim();
+  }
+  if (dateOfBirth !== undefined) {
+    user.dateOfBirth = dateOfBirth;
+  }
+  if (profilePicture !== undefined) {
+    user.profilePicture = profilePicture;
+  }
+  user.updatedAt = new Date().toISOString();
+
+  const sanitizedUser = {
+    ...user,
+    mpinHash: undefined,
+    mpinSalt: undefined,
+  };
+
+  return res.json({ success: true, message: 'Profile updated successfully.', user: sanitizedUser });
+});
+
 // ==========================================
 // 2. ACCOUNTS & VPA MANAGEMENT (Issue 6: Ownership Authorization)
 // ==========================================

@@ -43,6 +43,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       BharatOnePayApi.currentAccount?.maskedAccountNumber ?? '•••• •••• 3038';
   String get _ifsc => BharatOnePayApi.currentAccount?.ifsc ?? 'SBIN0001234';
   double get _bankBalance => BharatOnePayApi.currentAccount?.balance ?? 0.0;
+  String get _userPhone => BharatOnePayApi.currentUser?.phone ?? '9830113038';
+  String get _userEmail => BharatOnePayApi.currentUser?.email ?? 'soumo@aiksetra.in';
+  String get _userDob => BharatOnePayApi.currentUser?.dateOfBirth ?? '';
+  String? get _userProfilePicture => BharatOnePayApi.currentUser?.profilePicture;
 
   @override
   void initState() {
@@ -912,76 +916,168 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: const Color(0xFFFF671F),
-                          child: Text(
-                            _userName.isNotEmpty
-                                ? _userName[0].toUpperCase()
-                                : 'U',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
+                        Row(
+                          children: [
+                            _buildAvatarWidget(
+                              size: 60,
+                              showEditBadge: true,
+                              onTap: _showProfileSettingsModal,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      _userName,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w900,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          _userName,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.verified,
+                                        color: Color(0xFF00E676),
+                                        size: 16,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 6),
-                                  const Icon(
-                                    Icons.verified,
-                                    color: Color(0xFF00E676),
-                                    size: 16,
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'UPI ID: $_userVpa',
+                                    style: const TextStyle(
+                                      color: Color(0xFFFF671F),
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Mobile: +91 $_userPhone',
+                                    style: const TextStyle(
+                                      color: Color(0xFF94A3B8),
+                                      fontSize: 11,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'UPI ID: $_userVpa',
-                                style: const TextStyle(
-                                  color: Color(0xFFFF671F),
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                            ),
+                            IconButton(
+                              onPressed: _showReceiveQrModal,
+                              icon: const Icon(
+                                Icons.qr_code_2_rounded,
+                                color: Colors.white,
+                                size: 28,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Mobile: +91 ${BharatOnePayApi.currentUser?.phone ?? "9830113038"}',
-                                style: const TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 11,
+                              tooltip: 'My UPI QR',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        // Profile Info Bar (Email, DOB & Quick Edit)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF334155)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: _showProfileSettingsModal,
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.email_outlined,
+                                        size: 14,
+                                        color: Color(0xFF38BDF8),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          _userEmail.isNotEmpty ? _userEmail : 'Add email',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: _userEmail.isNotEmpty
+                                                ? const Color(0xFFE2E8F0)
+                                                : const Color(0xFF94A3B8),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Container(
+                                width: 1,
+                                height: 16,
+                                color: const Color(0xFF334155),
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                              InkWell(
+                                onTap: _showProfileSettingsModal,
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.cake_outlined,
+                                      size: 14,
+                                      color: Color(0xFFF59E0B),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _userDob.isNotEmpty ? _userDob : 'Add DOB',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: _userDob.isNotEmpty
+                                            ? const Color(0xFFE2E8F0)
+                                            : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: _showProfileSettingsModal,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF671F).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.edit, size: 11, color: Color(0xFFFF671F)),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Edit',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFF671F),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _showReceiveQrModal,
-                          icon: const Icon(
-                            Icons.qr_code_2_rounded,
-                            color: Colors.white,
-                            size: 30,
                           ),
                         ),
                       ],
@@ -1467,6 +1563,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 10),
 
+                  _buildNavigationTile(
+                    icon: Icons.manage_accounts_rounded,
+                    title: 'Profile Settings & Personal Info',
+                    subtitle: 'Manage photo, full name, date of birth & email',
+                    onTap: _showProfileSettingsModal,
+                  ),
+
                   Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
@@ -1659,4 +1762,846 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  // ===========================================================================
+  // PROFILE AVATAR & SETTINGS HELPERS
+  // ===========================================================================
+
+  Widget _buildAvatarWidget({
+    required double size,
+    String? customAvatar,
+    String? name,
+    bool showEditBadge = false,
+    VoidCallback? onTap,
+  }) {
+    final avatar = customAvatar ?? _userProfilePicture;
+    final displayName = name ?? _userName;
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+
+    Widget avatarContent;
+
+    if (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
+      avatarContent = ClipOval(
+        child: Image.network(
+          avatar,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+        ),
+      );
+    } else if (avatar != null && avatar.startsWith('preset:')) {
+      final presetKey = avatar.replaceFirst('preset:', '');
+      avatarContent = _buildPresetAvatarContent(presetKey, size, initial);
+    } else {
+      avatarContent = _buildFallbackInitial(size, initial);
+    }
+
+    final avatarWidget = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: avatarContent,
+    );
+
+    if (!showEditBadge) {
+      return onTap != null ? GestureDetector(onTap: onTap, child: avatarWidget) : avatarWidget;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatarWidget,
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(size > 50 ? 5 : 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF671F),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.camera_alt_rounded,
+                size: size > 50 ? 14 : 10,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPresetAvatarContent(String key, double size, String fallbackInitial) {
+    IconData icon;
+    List<Color> colors;
+
+    switch (key) {
+      case 'executive':
+        icon = Icons.business_center_rounded;
+        colors = const [Color(0xFF0F172A), Color(0xFF334155)];
+        break;
+      case 'fintech':
+        icon = Icons.account_balance_wallet_rounded;
+        colors = const [Color(0xFF046A38), Color(0xFF059669)];
+        break;
+      case 'techie':
+        icon = Icons.laptop_chromebook_rounded;
+        colors = const [Color(0xFF4338CA), Color(0xFF6366F1)];
+        break;
+      case 'scholar':
+        icon = Icons.school_rounded;
+        colors = const [Color(0xFF6B21A8), Color(0xFF9333EA)];
+        break;
+      case 'investor':
+        icon = Icons.trending_up_rounded;
+        colors = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+        break;
+      case 'explorer':
+        icon = Icons.rocket_launch_rounded;
+        colors = const [Color(0xFFDC2626), Color(0xFFFF671F)];
+        break;
+      case 'wellness':
+        icon = Icons.spa_rounded;
+        colors = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
+        break;
+      case 'tricolor':
+      default:
+        return Container(
+          width: size,
+          height: size,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [Color(0xFFFF671F), Color(0xFF046A38)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'ऐ',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: size * 0.45,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        icon,
+        color: Colors.white,
+        size: size * 0.5,
+      ),
+    );
+  }
+
+  Widget _buildFallbackInitial(double size, String initial) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF671F), Color(0xFF046A38)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.45,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  void _showProfileSettingsModal() {
+    final nameCtrl = TextEditingController(text: _userName);
+    final emailCtrl = TextEditingController(text: _userEmail);
+    String selectedDob = _userDob;
+    String? selectedAvatar = _userProfilePicture;
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(modalCtx).size.height * 0.90,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline_rounded,
+                            color: Color(0xFFFF671F),
+                            size: 24,
+                          ),
+                          SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Profile Settings',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Update picture, name, date of birth & email',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(modalCtx),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      16,
+                      20,
+                      MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Column(
+                            children: [
+                              _buildAvatarWidget(
+                                size: 84,
+                                customAvatar: selectedAvatar,
+                                name: nameCtrl.text,
+                                showEditBadge: true,
+                                onTap: () {
+                                  _showAvatarPickerSheet(
+                                    modalCtx,
+                                    currentAvatar: selectedAvatar,
+                                    onSelect: (newAvatar) {
+                                      setModalState(() {
+                                        selectedAvatar = newAvatar;
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: () {
+                                  _showAvatarPickerSheet(
+                                    modalCtx,
+                                    currentAvatar: selectedAvatar,
+                                    onSelect: (newAvatar) {
+                                      setModalState(() {
+                                        selectedAvatar = newAvatar;
+                                      });
+                                    },
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.add_a_photo_outlined,
+                                  size: 16,
+                                  color: Color(0xFFFF671F),
+                                ),
+                                label: const Text(
+                                  'Change Photo / Avatar',
+                                  style: TextStyle(
+                                    color: Color(0xFFFF671F),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'Full Name',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: nameCtrl,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.badge_outlined,
+                              color: Color(0xFFFF671F),
+                              size: 20,
+                            ),
+                            hintText: 'Enter your full name',
+                            helperText: 'As registered in bank account / PAN card',
+                            helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'Date of Birth',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () async {
+                            DateTime initialDate = DateTime(1998, 8, 15);
+                            if (selectedDob.isNotEmpty) {
+                              try {
+                                final parts = selectedDob.split('/');
+                                if (parts.length == 3) {
+                                  initialDate = DateTime(
+                                    int.parse(parts[2]),
+                                    int.parse(parts[1]),
+                                    int.parse(parts[0]),
+                                  );
+                                }
+                              } catch (_) {}
+                            }
+                            final picked = await showDatePicker(
+                              context: modalCtx,
+                              initialDate: initialDate,
+                              firstDate: DateTime(1920),
+                              lastDate: DateTime.now(),
+                              helpText: 'SELECT YOUR DATE OF BIRTH',
+                              builder: (context, child) {
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: const ColorScheme.light(
+                                      primary: Color(0xFF046A38),
+                                      onPrimary: Colors.white,
+                                      onSurface: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (picked != null) {
+                              final day = picked.day.toString().padLeft(2, '0');
+                              final month = picked.month.toString().padLeft(2, '0');
+                              final year = picked.year.toString();
+                              setModalState(() {
+                                selectedDob = '$day/$month/$year';
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.cake_outlined,
+                                  color: Color(0xFFF59E0B),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    selectedDob.isNotEmpty
+                                        ? selectedDob
+                                        : 'Tap to select Date of Birth (DD/MM/YYYY)',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: selectedDob.isNotEmpty
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                      color: selectedDob.isNotEmpty
+                                          ? const Color(0xFF0F172A)
+                                          : const Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.calendar_month_rounded,
+                                  color: Color(0xFF64748B),
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          'Email Address',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(
+                              Icons.email_outlined,
+                              color: Color(0xFF38BDF8),
+                              size: 20,
+                            ),
+                            hintText: 'e.g. name@example.com',
+                            helperText: 'For monthly spend reports & e-statements',
+                            helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.shield_outlined, size: 14, color: Color(0xFF046A38)),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'NPCI & Bank Linked Credentials',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF046A38),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '• Registered Phone: +91 $_userPhone (SIM Verified)',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                              Text(
+                                '• Primary UPI ID: $_userVpa',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final fullName = nameCtrl.text.trim();
+                                    final email = emailCtrl.text.trim();
+
+                                    if (fullName.isEmpty) {
+                                      ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please enter your full name'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (email.isNotEmpty && !email.contains('@')) {
+                                      ScaffoldMessenger.of(modalCtx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please enter a valid email address'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setModalState(() => isSaving = true);
+
+                                    await BharatOnePayApi.updateProfile(
+                                      fullName: fullName,
+                                      email: email,
+                                      dateOfBirth: selectedDob,
+                                      profilePicture: selectedAvatar,
+                                    );
+
+                                    if (mounted) {
+                                      setState(() {});
+                                      widget.onRefreshParent?.call();
+                                    }
+
+                                    Navigator.pop(modalCtx);
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          backgroundColor: Color(0xFF046A38),
+                                          content: Text(
+                                            '✅ Profile settings updated: Picture, Name, DOB & Email saved',
+                                          ),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF046A38),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: isSaving
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save Profile Changes ✓',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAvatarPickerSheet(
+    BuildContext parentCtx, {
+    String? currentAvatar,
+    required Function(String?) onSelect,
+  }) {
+    final urlCtrl = TextEditingController(
+      text: (currentAvatar != null && currentAvatar.startsWith('http'))
+          ? currentAvatar
+          : '',
+    );
+
+    final avatars = [
+      {'key': 'preset:executive', 'title': 'Executive', 'icon': Icons.business_center_rounded, 'color': const Color(0xFF0F172A)},
+      {'key': 'preset:fintech', 'title': 'FinTech', 'icon': Icons.account_balance_wallet_rounded, 'color': const Color(0xFF046A38)},
+      {'key': 'preset:techie', 'title': 'Techie', 'icon': Icons.laptop_chromebook_rounded, 'color': const Color(0xFF4338CA)},
+      {'key': 'preset:scholar', 'title': 'Scholar', 'icon': Icons.school_rounded, 'color': const Color(0xFF6B21A8)},
+      {'key': 'preset:investor', 'title': 'Investor', 'icon': Icons.trending_up_rounded, 'color': const Color(0xFFD97706)},
+      {'key': 'preset:explorer', 'title': 'Founder', 'icon': Icons.rocket_launch_rounded, 'color': const Color(0xFFDC2626)},
+      {'key': 'preset:wellness', 'title': 'Minimalist', 'icon': Icons.spa_rounded, 'color': const Color(0xFF0D9488)},
+      {'key': 'preset:tricolor', 'title': 'AikSetra ऐ', 'icon': Icons.account_circle_rounded, 'color': const Color(0xFFFF671F)},
+    ];
+
+    showModalBottomSheet(
+      context: parentCtx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (avatarCtx, setAvatarState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(avatarCtx).size.height * 0.85,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(avatarCtx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Choose Profile Picture',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const Text(
+                    'Select an avatar character, paste a photo link, or use your initials',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    'Avatars & Characters',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: avatars.length,
+                    itemBuilder: (context, idx) {
+                      final item = avatars[idx];
+                      final isSelected = currentAvatar == item['key'];
+                      return InkWell(
+                        onTap: () {
+                          onSelect(item['key'] as String);
+                          Navigator.pop(ctx);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFFFF671F)
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildPresetAvatarContent(
+                                (item['key'] as String).replaceFirst('preset:', ''),
+                                48,
+                                _userName.isNotEmpty ? _userName[0] : 'U',
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                item['title'] as String,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  color: isSelected
+                                      ? const Color(0xFFFF671F)
+                                      : const Color(0xFF334155),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Or Enter Custom Photo URL',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: urlCtrl,
+                          decoration: InputDecoration(
+                            hintText: 'https://example.com/my-photo.jpg',
+                            prefixIcon: const Icon(Icons.link_rounded, size: 20),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          final url = urlCtrl.text.trim();
+                          if (url.startsWith('http://') || url.startsWith('https://')) {
+                            onSelect(url);
+                            Navigator.pop(ctx);
+                          } else {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a valid http/https image URL'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF046A38),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        onSelect(null);
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF64748B)),
+                      label: const Text(
+                        'Reset to Default Initials',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
 }

@@ -24,6 +24,8 @@ export interface User {
   primaryVpa: string;
   liteBalance: number;
   lrsUsedUsd: number;
+  dateOfBirth?: string;
+  profilePicture?: string;
   createdAt: string;
   updatedAt: string;
 }

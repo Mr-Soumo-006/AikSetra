@@ -146,6 +146,105 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
+    Widget _buildHomeTopBarAvatar() {
+    final avatar = BharatOnePayApi.currentUser?.profilePicture;
+    if (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFF671F), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            avatar,
+            width: 36,
+            height: 36,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+          ),
+        ),
+      );
+    } else if (avatar != null && avatar.startsWith('preset:')) {
+      final key = avatar.replaceFirst('preset:', '');
+      IconData icon = Icons.person_rounded;
+      List<Color> colors = const [Color(0xFFFF671F), Color(0xFF046A38)];
+      switch (key) {
+        case 'executive':
+          icon = Icons.business_center_rounded;
+          colors = const [Color(0xFF0F172A), Color(0xFF334155)];
+          break;
+        case 'fintech':
+          icon = Icons.account_balance_wallet_rounded;
+          colors = const [Color(0xFF046A38), Color(0xFF059669)];
+          break;
+        case 'techie':
+          icon = Icons.laptop_chromebook_rounded;
+          colors = const [Color(0xFF4338CA), Color(0xFF6366F1)];
+          break;
+        case 'scholar':
+          icon = Icons.school_rounded;
+          colors = const [Color(0xFF6B21A8), Color(0xFF9333EA)];
+          break;
+        case 'investor':
+          icon = Icons.trending_up_rounded;
+          colors = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+          break;
+        case 'explorer':
+          icon = Icons.rocket_launch_rounded;
+          colors = const [Color(0xFFDC2626), Color(0xFFFF671F)];
+          break;
+        case 'wellness':
+          icon = Icons.spa_rounded;
+          colors = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
+          break;
+        default:
+          return _buildDefaultHomeAvatarIcon();
+      }
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Icon(icon, color: Colors.white, size: 20),
+      );
+    }
+    return _buildDefaultHomeAvatarIcon();
+  }
+
+  Widget _buildDefaultHomeAvatarIcon() {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFF671F), Color(0xFF046A38)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'ऐ',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
   // ===========================================================================
   // TOP APP BAR
   // ===========================================================================
@@ -168,27 +267,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF671F), Color(0xFF046A38)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'ऐ',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              _buildHomeTopBarAvatar(),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -7605,4 +7684,5 @@ class _RealCameraQrScannerScreenState
       },
     );
   }
-}
+
+  }
