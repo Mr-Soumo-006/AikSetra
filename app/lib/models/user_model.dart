@@ -1,3 +1,4 @@
+import '../api_config.dart';
 class UserModel {
   final String id;
   final String phone;
@@ -22,16 +23,20 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    String? rawPic = json['profilePicture'] ?? json['profile_picture'];
+    if (rawPic != null && rawPic.isNotEmpty && rawPic.startsWith('/')) {
+      rawPic = '${ApiConfig.baseUrl}$rawPic';
+    }
     return UserModel(
       id: json['id'] ?? '',
       phone: json['phone'] ?? '',
-      fullName: json['fullName'] ?? '',
+      fullName: json['fullName'] ?? json['full_name'] ?? '',
       email: json['email'] ?? '',
-      primaryVpa: json['primaryVpa'] ?? '',
-      liteBalance: (json['liteBalance'] as num?)?.toDouble() ?? 0.0,
-      lrsUsedUsd: (json['lrsUsedUsd'] as num?)?.toDouble() ?? 0.0,
-      dateOfBirth: json['dateOfBirth'],
-      profilePicture: json['profilePicture'],
+      primaryVpa: json['primaryVpa'] ?? json['primary_vpa'] ?? '',
+      liteBalance: (json['liteBalance'] ?? json['lite_balance'] as num?)?.toDouble() ?? 0.0,
+      lrsUsedUsd: (json['lrsUsedUsd'] ?? json['lrs_used_usd'] as num?)?.toDouble() ?? 0.0,
+      dateOfBirth: json['dateOfBirth'] ?? json['date_of_birth'],
+      profilePicture: rawPic,
     );
   }
 

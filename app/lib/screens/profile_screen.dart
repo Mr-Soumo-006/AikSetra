@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
+import '../api_config.dart';
 
 import '../services/bharat_one_pay_api.dart';
 import '../services/biometric_service.dart';
@@ -49,7 +52,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String get _userPhone => BharatOnePayApi.currentUser?.phone ?? '9830113038';
   String get _userEmail => BharatOnePayApi.currentUser?.email ?? 'soumo@aiksetra.in';
   String get _userDob => BharatOnePayApi.currentUser?.dateOfBirth ?? '';
-  String? get _userProfilePicture => BharatOnePayApi.currentUser?.profilePicture;
+  String? get _userProfilePicture => BharatOnePayApi.currentUser?.profilePicture ?? BharatOnePayApi.savedLocalAvatar;
+  bool _isBalanceRevealed = false;
 
   @override
   void initState() {
@@ -1249,7 +1253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'BALANCE',
+                                      'AVAILABLE BALANCE',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
@@ -1258,11 +1262,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '₹${acc.balance.toStringAsFixed(2)}',
-                                      style: const TextStyle(
+                                      _isBalanceRevealed
+                                          ? '₹${acc.balance.toStringAsFixed(2)}'
+                                          : '₹ ••••••',
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w900,
                                         fontSize: 17,
-                                        color: Color(0xFF046A38),
+                                        color: _isBalanceRevealed
+                                            ? const Color(0xFF046A38)
+                                            : const Color(0xFF0F172A),
+                                        letterSpacing: _isBalanceRevealed ? 0 : 2,
                                       ),
                                     ),
                                   ],
@@ -1270,14 +1279,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Row(
                                   children: [
                                     OutlinedButton.icon(
-                                      onPressed: _checkBalance,
-                                      icon: const Icon(
-                                        Icons.refresh_rounded,
+                                      onPressed: () async {
+                                        if (_isBalanceRevealed) {
+                                          setState(() => _isBalanceRevealed = false);
+                                          return;
+                                        }
+                                        await _checkBalance();
+                                        if (mounted) {
+                                          setState(() => _isBalanceRevealed = true);
+                                        }
+                                      },
+                                      icon: Icon(
+                                        _isBalanceRevealed
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.pin_outlined,
                                         size: 14,
                                       ),
-                                      label: const Text(
-                                        'Check Balance',
-                                        style: TextStyle(
+                                      label: Text(
+                                        _isBalanceRevealed ? 'Hide' : 'Check Balance',
+                                        style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -1823,6 +1843,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         avatarContent = ClipOval(
           child: Image.network(
             avatar,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+          ),
+        );
+      } else if (avatar.startsWith('/')) {
+        avatarContent = ClipOval(
+          child: Image.network(
+            '${ApiConfig.baseUrl}$avatar',
             width: size,
             height: size,
             fit: BoxFit.cover,
@@ -2474,12 +2504,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final dataUri = 'data:image/$ext;base64,$base64String';
 
       // 1. Instantly update current user and save to local disk so photo displays immediately
+      BharatOnePayApi.savedLocalAvatar = dataUri;
       if (BharatOnePayApi.currentUser != null) {
         BharatOnePayApi.currentUser = BharatOnePayApi.currentUser!.copyWith(
           profilePicture: dataUri,
         );
       }
       await BharatOnePayApi.saveSessionToDisk();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('aiksetra_saved_avatar', dataUri);
+      } catch (_) {}
 
       // 2. Notify callback and refresh UI
       onPhotoUploaded(dataUri);

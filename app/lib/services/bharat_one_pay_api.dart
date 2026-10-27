@@ -9,6 +9,7 @@ import '../models/cross_border_model.dart';
 import '../models/protected_pay_model.dart';
 
 class BharatOnePayApi {
+  static String? savedLocalAvatar;
   static String? _authToken;
   static String _activeUserId = ApiConfig.defaultDevUserId;
 
@@ -326,6 +327,10 @@ class BharatOnePayApi {
       await prefs.setString('aiksetra_pin', configuredAppPin);
       await prefs.setDouble('aiksetra_gullak', gullakBalance);
       if (currentUser != null) {
+        if (currentUser!.profilePicture != null && currentUser!.profilePicture!.isNotEmpty) {
+          savedLocalAvatar = currentUser!.profilePicture;
+          await prefs.setString('aiksetra_saved_avatar', currentUser!.profilePicture!);
+        }
         await prefs.setString(
           'aiksetra_user_json',
           jsonEncode({
@@ -337,7 +342,7 @@ class BharatOnePayApi {
             'liteBalance': currentUser!.liteBalance,
             'lrsUsedUsd': currentUser!.lrsUsedUsd,
             'dateOfBirth': currentUser!.dateOfBirth,
-            'profilePicture': currentUser!.profilePicture,
+            'profilePicture': currentUser!.profilePicture ?? savedLocalAvatar,
           }),
         );
       }
@@ -386,9 +391,15 @@ class BharatOnePayApi {
       final accJson = prefs.getString('aiksetra_account_json');
       configuredAppPin = prefs.getString('aiksetra_pin') ?? '1234';
       gullakBalance = prefs.getDouble('aiksetra_gullak') ?? 0.0;
+      savedLocalAvatar = prefs.getString('aiksetra_saved_avatar');
       if (token != null && userJson != null) {
         _authToken = token;
         currentUser = UserModel.fromJson(jsonDecode(userJson));
+        if (currentUser != null && (currentUser!.profilePicture == null || currentUser!.profilePicture!.isEmpty)) {
+          if (savedLocalAvatar != null && savedLocalAvatar!.isNotEmpty) {
+            currentUser = currentUser!.copyWith(profilePicture: savedLocalAvatar);
+          }
+        }
         _activeUserId = currentUser!.id;
         final accListJson = prefs.getString('aiksetra_accounts_list');
         if (accListJson != null) {
@@ -612,7 +623,18 @@ class BharatOnePayApi {
       final response = await _getWithFailover('/auth/me');
       final data = jsonDecode(response.body);
       if (data['success'] == true && data['user'] != null) {
-        currentUser = UserModel.fromJson(data['user']);
+        final serverUser = UserModel.fromJson(data['user']);
+        // Guard against server wiping local avatar
+        String? finalPic = serverUser.profilePicture;
+        if (finalPic == null || finalPic.isEmpty) {
+          finalPic = currentUser?.profilePicture ?? savedLocalAvatar;
+        } else if (finalPic.startsWith('/')) {
+          finalPic = '${ApiConfig.baseUrl}$finalPic';
+        }
+        currentUser = serverUser.copyWith(profilePicture: finalPic);
+        if (finalPic != null && finalPic.isNotEmpty) {
+          savedLocalAvatar = finalPic;
+        }
         if (data['accounts'] != null && (data['accounts'] as List).isNotEmpty) {
           linkedAccounts = (data['accounts'] as List)
               .map((a) => BankAccountModel.fromJson(a as Map<String, dynamic>))
@@ -640,12 +662,19 @@ class BharatOnePayApi {
     final cleanName = fullName.trim().isEmpty ? (currentUser?.fullName ?? 'Soumo Naskar') : fullName.trim();
     final cleanEmail = email.trim().isEmpty ? (currentUser?.email ?? 'soumo@aiksetra.in') : email.trim();
 
+    if (profilePicture != null && profilePicture.isNotEmpty) {
+      savedLocalAvatar = profilePicture;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('aiksetra_saved_avatar', profilePicture);
+      } catch (_) {}
+    }
     if (currentUser != null) {
       currentUser = currentUser!.copyWith(
         fullName: cleanName,
         email: cleanEmail,
         dateOfBirth: dateOfBirth,
-        profilePicture: profilePicture,
+        profilePicture: profilePicture ?? savedLocalAvatar,
       );
     } else {
       currentUser = UserModel(
@@ -693,6 +722,11 @@ class BharatOnePayApi {
         : 'data:image/$cleanExt;base64,$imageBase64';
 
     // 1. Immediately store dataUri locally so display is 100% instantaneous and offline-ready
+    savedLocalAvatar = dataUri;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('aiksetra_saved_avatar', dataUri);
+    } catch (_) {}
     if (currentUser != null) {
       currentUser = currentUser!.copyWith(profilePicture: dataUri);
       await saveSessionToDisk();

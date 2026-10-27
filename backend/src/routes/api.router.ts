@@ -123,7 +123,7 @@ apiRouter.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
   return res.json({ success: true, user: sanitizedUser, accounts });
 });
 
-apiRouter.put('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+apiRouter.put('/auth/profile', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const user = db.get('users').find((u) => u.id === req.userId);
   if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
@@ -141,6 +141,16 @@ apiRouter.put('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) 
     user.profilePicture = profilePicture;
   }
   user.updatedAt = new Date().toISOString();
+
+  try {
+    const pg = (await import('../db/postgres.js')).PostgresDatabase.getInstance();
+    if (pg.isConnected()) {
+      await pg.getPool().query(
+        'UPDATE users SET profile_picture = COALESCE($1, profile_picture), full_name = $2, email = $3, date_of_birth = COALESCE($4, date_of_birth), updated_at = NOW() WHERE id = $5',
+        [profilePicture || null, user.fullName, user.email, user.dateOfBirth || null, req.userId]
+      );
+    }
+  } catch (_) {}
 
   const sanitizedUser = {
     ...user,
@@ -151,7 +161,7 @@ apiRouter.put('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) 
   return res.json({ success: true, message: 'Profile updated successfully.', user: sanitizedUser });
 });
 
-apiRouter.post('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+apiRouter.post('/auth/profile', authMiddleware, async (req: AuthenticatedRequest, res) => {
   const user = db.get('users').find((u) => u.id === req.userId);
   if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
@@ -169,6 +179,16 @@ apiRouter.post('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res)
     user.profilePicture = profilePicture;
   }
   user.updatedAt = new Date().toISOString();
+
+  try {
+    const pg = (await import('../db/postgres.js')).PostgresDatabase.getInstance();
+    if (pg.isConnected()) {
+      await pg.getPool().query(
+        'UPDATE users SET profile_picture = COALESCE($1, profile_picture), full_name = $2, email = $3, date_of_birth = COALESCE($4, date_of_birth), updated_at = NOW() WHERE id = $5',
+        [profilePicture || null, user.fullName, user.email, user.dateOfBirth || null, req.userId]
+      );
+    }
+  } catch (_) {}
 
   const sanitizedUser = {
     ...user,

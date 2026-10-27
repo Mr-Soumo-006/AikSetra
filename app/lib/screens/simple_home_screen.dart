@@ -149,7 +149,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
     Widget _buildHomeTopBarAvatar() {
-    final avatar = BharatOnePayApi.currentUser?.profilePicture;
+    final avatar = BharatOnePayApi.currentUser?.profilePicture ?? BharatOnePayApi.savedLocalAvatar;
     if (avatar != null && avatar.isNotEmpty) {
       Widget? imageWidget;
       if (avatar.startsWith('data:image')) {
@@ -167,6 +167,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
         imageWidget = Image.network(
           avatar,
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+        );
+      } else if (avatar.startsWith('/')) {
+        imageWidget = Image.network(
+          '${ApiConfig.baseUrl}$avatar',
           width: 36,
           height: 36,
           fit: BoxFit.cover,
@@ -881,7 +889,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ),
               const SizedBox(height: 12),
               InkWell(
-                onTap: _showReceiveQrModal,
+                onTap: _showCheckBalanceDialog,
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
                   height: 79,
@@ -893,36 +901,89 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: const Color(0xFFCBD5E1)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.qr_code_2_rounded,
-                        color: Color(0xFF0F172A),
-                        size: 28,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      SizedBox(width: 10),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0F172A), Color(0xFF334155)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'My UPI QR',
-                              style: TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontWeight: FontWeight.w900,
-                                fontSize: 14,
-                              ),
+                            const Row(
+                              children: [
+                                Text(
+                                  'Check Balance',
+                                  style: TextStyle(
+                                    color: Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.lock_outline_rounded,
+                                  color: Color(0xFFFF671F),
+                                  size: 13,
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              'Scannable by GPay/PhonePe',
-                              style: TextStyle(
+                              '$_bankName (${_maskedAcc.isNotEmpty ? _maskedAcc : "••••"})',
+                              style: const TextStyle(
                                 color: Color(0xFF64748B),
                                 fontSize: 10,
+                                fontWeight: FontWeight.w600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFFEDD5)),
+                        ),
+                        child: const Text(
+                          'PIN',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFFF671F),
+                          ),
                         ),
                       ),
                     ],
