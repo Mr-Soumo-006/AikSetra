@@ -36,11 +36,12 @@ class SimpleHomeScreen extends StatefulWidget {
 class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _selectedLang = 'en-IN';
   String _t(String key) => AppTranslations.t(key, _selectedLang);
-  bool _showBalance = true;
   int _bottomNavIndex = 0;
   ServiceCategory? _selectedCategory;
   bool _isBusinessMode = false;
-  bool _isTransactionsExpanded = false;
+  String _historySearchQuery = '';
+  String _historyFilterType = 'ALL';
+  final TextEditingController _historySearchCtrl = TextEditingController();
 
   // BBPS Bill Tab State
   String _selectedBillCategory = 'ELECTRICITY';
@@ -73,6 +74,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   @override
   void dispose() {
     _consumerIdCtrl.dispose();
+    _historySearchCtrl.dispose();
     _fxForeignAmtCtrl.dispose();
     _fxBenNameCtrl.dispose();
     _fxBenIbanCtrl.dispose();
@@ -124,8 +126,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String get _ifsc => BharatOnePayApi.currentAccount?.ifsc ?? 'SBIN0001234';
   double get _bankBalance => BharatOnePayApi.currentAccount?.balance ?? 0.0;
   double get _gullakBalance => BharatOnePayApi.gullakBalance;
-  double get _sipTotalValue =>
-      (BharatOnePayApi.sipPortfolio['currentValue'] as num?)?.toDouble() ?? 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +139,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           _buildBillsTab(),
           _buildSipTab(),
           _buildAbroadTab(),
-          _buildAccountTab(),
+          _buildHistoryTab(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -406,6 +406,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           }
         });
         break;
+      case 'history':
+        setState(() => _bottomNavIndex = 4);
+        break;
       case 'cards':
         Navigator.push(
           context,
@@ -491,7 +494,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildPrimaryBankCard(),
+            _buildAikSetraInvestBanner(),
             const SizedBox(height: 16),
             _buildHeroQrAndActions(),
             const SizedBox(height: 20),
@@ -502,303 +505,139 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             _buildWealthAndSafetyHighlights(),
             const SizedBox(height: 20),
             _buildQuickTransferBar(),
-            const SizedBox(height: 20),
-            _buildRealTransactionsSection(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPrimaryBankCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildAikSetraInvestBanner() {
+    return InkWell(
+      onTap: () => setState(() => _bottomNavIndex = 2),
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF1E40AF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.22),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'ऐ',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'AikSetra Invest',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFACC15),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFACC15).withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Text(
+                'From the house of AikSetra',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildInvestTag('📈 Direct Mutual Funds'),
+                const SizedBox(width: 8),
+                _buildInvestTag('🪙 24K Digital Gold'),
+                const SizedBox(width: 8),
+                _buildInvestTag('⚡ Bank Auto-SIP'),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Investments in securities market are subject to market risks, read all scheme related documents carefully before investing.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 9,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF671F).withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.account_balance,
-                        color: Color(0xFFFF671F),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _bankName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '$_maskedAcc • IFSC: $_ifsc',
-                            style: const TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  InkWell(
-                    onTap: () => _showAddMoneyAndSelfTransferModal(
-                      initialAddMoneyMode: true,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF046A38),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF046A38)
-                                .withValues(alpha: 0.35),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '+ Add Money',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  InkWell(
-                    onTap: _showSelfTransferModal,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF334155)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.swap_horiz,
-                            color: Color(0xFF38BDF8),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _t('self_transfer'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'AVAILABLE BANK BALANCE',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: InkWell(
-                              onTap: _showCheckBalanceDialog,
-                              child: Text(
-                                _showBalance
-                                    ? '₹${_bankBalance.toStringAsFixed(2)}'
-                                    : '₹ •••••• (Check)',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () =>
-                              setState(() => _showBalance = !_showBalance),
-                          child: Icon(
-                            _showBalance
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: const Color(0xFF94A3B8),
-                            size: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: [
-                  InkWell(
-                    onTap: () => setState(() => _bottomNavIndex = 2),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text(
-                            '📈 SIP Wealth',
-                            style: TextStyle(
-                              color: Color(0xFF93C5FD),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '₹${_sipTotalValue.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _showGullakModal,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD97706).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text(
-                            '🏺 Gullak',
-                            style: TextStyle(
-                              color: Color(0xFFFCD34D),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '₹${_gullakBalance.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+    );
+  }
+
+  Widget _buildInvestTag(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -2179,235 +2018,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
-  Widget _buildRealTransactionsSection() {
-    final txns = BharatOnePayApi.recentTransactions;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Your Real Bank Transactions',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-            Row(
-              children: [
-                Text(
-                  _isTransactionsExpanded
-                      ? 'Showing All (${txns.length})'
-                      : 'Recent 7 of ${txns.length}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-                if (txns.length > 7) ...[
-                  const SizedBox(width: 4),
-                  InkWell(
-                    onTap: () => setState(
-                      () => _isTransactionsExpanded = !_isTransactionsExpanded,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Icon(
-                        _isTransactionsExpanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: 18,
-                        color: const Color(0xFFFF671F),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        if (txns.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: const Column(
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 36,
-                  color: Color(0xFF94A3B8),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'No transactions yet on this account',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Color(0xFF334155),
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Scan any real UPI QR code, send money, pay a utility bill, or start a Bank SIP — every transaction is recorded here with an NPCI RRN.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
-          )
-        else ...[
-          ...(_isTransactionsExpanded ? txns : txns.take(7)).map((t) {
-            final name =
-                (t['receiverName'] ?? t['receiverVpa'] ?? 'UPI Payment')
-                    .toString();
-            final remark = (t['remark'] ?? 'NPCI UPI Settlement').toString();
-            final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
-            final rrn = (t['upiRrn'] ?? t['txnRef'] ?? '42910012').toString();
-            final isCredit =
-                (t['metadata'] is Map && t['metadata']['isCredit'] == true) ||
-                remark.toLowerCase().contains('credited') ||
-                remark.toLowerCase().contains('self transfer') ||
-                remark.toLowerCase().contains('deposit');
-            return InkWell(
-              onTap: () => _showTransactionReceiptModal(t),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isCredit
-                            ? const Color(0xFFDCFCE7)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isCredit
-                            ? Icons.south_west_rounded
-                            : Icons.north_east_rounded,
-                        color: isCredit
-                            ? const Color(0xFF046A38)
-                            : const Color(0xFF0F172A),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF0F172A),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '$remark • RRN: $rrn',
-                            style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 11,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${isCredit ? "+" : "-"}₹${amt.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                        color: isCredit
-                            ? const Color(0xFF046A38)
-                            : const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-          if (txns.length > 7)
-            InkWell(
-              onTap: () => setState(
-                () => _isTransactionsExpanded = !_isTransactionsExpanded,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 16,
-                ),
-                margin: const EdgeInsets.only(top: 4, bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _isTransactionsExpanded
-                          ? 'Collapse to Recent 7 Transactions'
-                          : 'View More Transactions (${txns.length - 7} more)',
-                      style: const TextStyle(
-                        color: Color(0xFFFF671F),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      _isTransactionsExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: const Color(0xFFFF671F),
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ],
-    );
-  }
-
-  // ===========================================================================
   // TAB 1: BBPS UTILITY BILLS & RECHARGES (Electricity, Water, Gas, Broadband)
   // ===========================================================================
   Widget _buildBillsTab() {
@@ -4755,14 +4365,636 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   // ===========================================================================
   // TAB 4: BANK ACCOUNTS & PROFILE
   // ===========================================================================
-  Widget _buildAccountTab() {
-    return ProfileScreen(
-      isEmbeddedInTab: true,
-      onRefreshParent: _syncLiveState,
+  // ===========================================================================
+  // TAB 4: COMPREHENSIVE TRANSACTION HISTORY (GROUPED BY DATE & TIME)
+  // ===========================================================================
+  String _formatTxnDateHeader(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final txnDate = DateTime(dt.year, dt.month, dt.day);
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    if (txnDate == today) {
+      return 'Today • ${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    } else if (txnDate == yesterday) {
+      return 'Yesterday • ${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    } else {
+      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    }
+  }
+
+  String _formatTxnTime(DateTime dt) {
+    final hour = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
+    final min = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$min $period';
+  }
+
+  Widget _buildHistoryTab() {
+    final allTxns = BharatOnePayApi.recentTransactions;
+
+    // Filter transactions
+    final filteredTxns = allTxns.where((t) {
+      final name = (t['receiverName'] ?? t['receiverVpa'] ?? '')
+          .toString()
+          .toLowerCase();
+      final remark = (t['remark'] ?? '').toString().toLowerCase();
+      final rrn = (t['upiRrn'] ?? t['txnRef'] ?? '').toString().toLowerCase();
+      final q = _historySearchQuery.toLowerCase().trim();
+
+      if (q.isNotEmpty &&
+          !name.contains(q) &&
+          !remark.contains(q) &&
+          !rrn.contains(q)) {
+        return false;
+      }
+
+      final isCredit =
+          (t['metadata'] is Map && t['metadata']['isCredit'] == true) ||
+          remark.contains('credited') ||
+          remark.contains('self transfer') ||
+          remark.contains('deposit');
+
+      if (_historyFilterType == 'DEBIT' && isCredit) return false;
+      if (_historyFilterType == 'CREDIT' && !isCredit) return false;
+      if (_historyFilterType == 'BILLS' &&
+          !remark.contains('bill') &&
+          !name.contains('limited') &&
+          !name.contains('power'))
+        return false;
+      if (_historyFilterType == 'TRANSFER' &&
+          (remark.contains('bill') || name.contains('limited')))
+        return false;
+
+      return true;
+    }).toList();
+
+    // Calculate spends totals
+    double totalDebits = 0;
+    double totalCredits = 0;
+    for (final t in allTxns) {
+      final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+      final remark = (t['remark'] ?? '').toString().toLowerCase();
+      final isCredit =
+          (t['metadata'] is Map && t['metadata']['isCredit'] == true) ||
+          remark.contains('credited') ||
+          remark.contains('self transfer') ||
+          remark.contains('deposit');
+      if (isCredit) {
+        totalCredits += amt;
+      } else {
+        totalDebits += amt;
+      }
+    }
+
+    // Group filtered transactions by date
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (final t in filteredTxns) {
+      DateTime dt;
+      final raw = t['createdAt'] ?? t['timestamp'] ?? t['date'];
+      if (raw != null) {
+        dt = DateTime.tryParse(raw.toString())?.toLocal() ?? DateTime.now();
+      } else {
+        dt = DateTime.now();
+      }
+      final dateKey = _formatTxnDateHeader(dt);
+      grouped.putIfAbsent(dateKey, () => []).add(t);
+    }
+
+    return RefreshIndicator(
+      onRefresh: _syncLiveState,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Spends Summary Cards
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.north_east_rounded,
+                              color: Color(0xFFEF4444),
+                              size: 16,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Total Debits',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '-₹${totalDebits.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: Color(0xFF0F172A),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.south_west_rounded,
+                              color: Color(0xFF046A38),
+                              size: 16,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Total Credits',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '+₹${totalCredits.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: Color(0xFF046A38),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // 2. Search Box
+            Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: TextField(
+                controller: _historySearchCtrl,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                onChanged: (val) => setState(() => _historySearchQuery = val),
+                decoration: InputDecoration(
+                  hintText: 'Search by name, UPI ID, or RRN...',
+                  hintStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFFFF671F),
+                    size: 18,
+                  ),
+                  suffixIcon: _historySearchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Color(0xFF64748B),
+                          ),
+                          onPressed: () {
+                            _historySearchCtrl.clear();
+                            setState(() => _historySearchQuery = '');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // 3. Category Filter Chips
+            SizedBox(
+              height: 34,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _buildHistoryFilterChip('All (${allTxns.length})', 'ALL'),
+                  const SizedBox(width: 8),
+                  _buildHistoryFilterChip('Debits (-)', 'DEBIT'),
+                  const SizedBox(width: 8),
+                  _buildHistoryFilterChip('Credits (+)', 'CREDIT'),
+                  const SizedBox(width: 8),
+                  _buildHistoryFilterChip('Bills (BBPS)', 'BILLS'),
+                  const SizedBox(width: 8),
+                  _buildHistoryFilterChip('Transfers', 'TRANSFER'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 4. Date & Time Grouped Transaction Sections
+            if (filteredTxns.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 40,
+                  horizontal: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.receipt_long_outlined,
+                      size: 44,
+                      color: Color(0xFF94A3B8),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'No transactions found',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _historySearchQuery.isNotEmpty
+                          ? 'No matches for "$_historySearchQuery"'
+                          : 'No transactions recorded under this category.',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_historySearchQuery.isNotEmpty ||
+                        _historyFilterType != 'ALL') ...[
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () {
+                          _historySearchCtrl.clear();
+                          setState(() {
+                            _historySearchQuery = '';
+                            _historyFilterType = 'ALL';
+                          });
+                        },
+                        child: const Text(
+                          'Reset All Filters',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              )
+            else
+              ...grouped.entries.map((entry) {
+                final dateHeader = entry.key;
+                final dayTxns = entry.value;
+
+                // Calculate day spend
+                double daySpend = 0;
+                for (final t in dayTxns) {
+                  final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+                  final remark = (t['remark'] ?? '').toString().toLowerCase();
+                  final isCredit =
+                      (t['metadata'] is Map &&
+                          t['metadata']['isCredit'] == true) ||
+                      remark.contains('credited') ||
+                      remark.contains('self transfer') ||
+                      remark.contains('deposit');
+                  if (!isCredit) daySpend += amt;
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Day Section Header
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 13,
+                                color: Color(0xFFFF671F),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                dateHeader,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: Color(0xFF334155),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (daySpend > 0)
+                            Text(
+                              'Spent: -₹${daySpend.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // Day Transactions List
+                    ...dayTxns.map((t) {
+                      final name =
+                          (t['receiverName'] ??
+                                  t['receiverVpa'] ??
+                                  'UPI Payment')
+                              .toString();
+                      final remark = (t['remark'] ?? 'NPCI UPI Settlement')
+                          .toString();
+                      final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+                      final rrn = (t['upiRrn'] ?? t['txnRef'] ?? '42910012')
+                          .toString();
+                      final isCredit =
+                          (t['metadata'] is Map &&
+                              t['metadata']['isCredit'] == true) ||
+                          remark.toLowerCase().contains('credited') ||
+                          remark.toLowerCase().contains('self transfer') ||
+                          remark.toLowerCase().contains('deposit');
+
+                      DateTime txnDt;
+                      final rawDt =
+                          t['createdAt'] ?? t['timestamp'] ?? t['date'];
+                      if (rawDt != null) {
+                        txnDt =
+                            DateTime.tryParse(rawDt.toString())?.toLocal() ??
+                            DateTime.now();
+                      } else {
+                        txnDt = DateTime.now();
+                      }
+                      final timeString = _formatTxnTime(txnDt);
+
+                      return InkWell(
+                        onTap: () => _showTransactionReceiptModal(t),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.015),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: isCredit
+                                      ? const Color(0xFFDCFCE7)
+                                      : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  isCredit
+                                      ? Icons.south_west_rounded
+                                      : Icons.north_east_rounded,
+                                  color: isCredit
+                                      ? const Color(0xFF046A38)
+                                      : const Color(0xFF0F172A),
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Color(0xFF0F172A),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(
+                                                Icons.access_time_rounded,
+                                                size: 10,
+                                                color: Color(0xFF64748B),
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                timeString,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: Color(0xFF64748B),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '$remark • SBI (•••• 3038) • RRN: $rrn',
+                                      style: const TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 11,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${isCredit ? "+" : "-"}₹${amt.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15,
+                                      color: isCredit
+                                          ? const Color(0xFF046A38)
+                                          : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'SUCCESS',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF046A38),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }),
+          ],
+        ),
+      ),
     );
   }
 
-  // ===========================================================================
+  Widget _buildHistoryFilterChip(String label, String type) {
+    final isSelected = _historyFilterType == type;
+    return InkWell(
+      onTap: () => setState(() => _historyFilterType = type),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF0F172A)
+                : const Color(0xFFCBD5E1),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
   // BOTTOM NAVIGATION BAR
   // ===========================================================================
   Widget _buildBottomNav() {
@@ -4795,8 +5027,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           label: _t('tab_global'),
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.account_balance_rounded),
-          label: _t('tab_bank'),
+          icon: const Icon(Icons.history_rounded),
+          activeIcon: const Icon(
+            Icons.history_rounded,
+            color: Color(0xFFFF671F),
+          ),
+          label: _t('tab_history'),
         ),
       ],
     );

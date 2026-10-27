@@ -134,6 +134,24 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
       ],
       actionKey: 'cards',
     ),
+    SearchItem(
+      title: 'Transaction History & Spends',
+      subtitle:
+          'View detailed bank spends, UPI transfers with date & time breakdown',
+      category: 'PAYMENTS',
+      icon: Icons.history_rounded,
+      iconColor: const Color(0xFF38BDF8),
+      keywords: [
+        'history',
+        'transactions',
+        'spends',
+        'passbook',
+        'statement',
+        'receipt',
+        'spent',
+      ],
+      actionKey: 'history',
+    ),
 
     // 2. BBPS UTILITIES & RECHARGES
     SearchItem(
