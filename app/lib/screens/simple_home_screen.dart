@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -160,6 +161,26 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
             avatar,
+            width: 36,
+            height: 36,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+          ),
+        ),
+      );
+    } else if (avatar != null && avatar.startsWith('data:image')) {
+      final base64Data = avatar.split(',').last;
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFF671F), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            base64Decode(base64Data),
             width: 36,
             height: 36,
             fit: BoxFit.cover,

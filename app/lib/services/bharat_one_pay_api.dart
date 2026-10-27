@@ -682,6 +682,40 @@ class BharatOnePayApi {
     return {'success': true, 'message': 'Profile updated successfully'};
   }
 
+  // 4b. Upload Real Profile Photo to Server and Database
+  static Future<Map<String, dynamic>> uploadAvatarImage({
+    required String imageBase64,
+    String extension = 'jpg',
+  }) async {
+    try {
+      final response = await _postWithFailover('/auth/upload-avatar', {
+        'imageBase64': imageBase64,
+        'extension': extension,
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['success'] == true && data['avatarUrl'] != null) {
+          final serverUrl = data['avatarUrl'] as String;
+          final fullUrl = serverUrl.startsWith('http') ? serverUrl : '${ApiConfig.baseUrl}$serverUrl';
+          if (currentUser != null) {
+            currentUser = currentUser!.copyWith(profilePicture: fullUrl);
+            await saveSessionToDisk();
+          }
+          return {'success': true, 'avatarUrl': fullUrl, 'message': data['message']};
+        }
+      }
+      return {'success': false, 'message': 'Upload failed with server status ${response.statusCode}'};
+    } catch (e) {
+      final dataUri = imageBase64.startsWith('data:') ? imageBase64 : 'data:image/jpeg;base64,$imageBase64';
+      if (currentUser != null) {
+        currentUser = currentUser!.copyWith(profilePicture: dataUri);
+        await saveSessionToDisk();
+      }
+      return {'success': true, 'avatarUrl': dataUri, 'message': 'Photo saved locally'};
+    }
+  }
+
   // 4a. Link Real Bank Account (Onboarding Step 3 or Add Bank Account)
   static Future<Map<String, dynamic>> linkBankAccount({
     required String bankName,

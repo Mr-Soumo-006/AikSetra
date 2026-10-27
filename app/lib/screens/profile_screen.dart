@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -1790,6 +1792,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
         ),
       );
+    } else if (avatar != null && avatar.startsWith('data:image')) {
+      final base64Data = avatar.split(',').last;
+      avatarContent = ClipOval(
+        child: Image.memory(
+          base64Decode(base64Data),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+        ),
+      );
     } else if (avatar != null && avatar.startsWith('preset:')) {
       final presetKey = avatar.replaceFirst('preset:', '');
       avatarContent = _buildPresetAvatarContent(presetKey, size, initial);
@@ -2388,6 +2401,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+
+  Future<void> _pickAndUploadRealPhoto(ImageSource source, Function(String) onPhotoUploaded) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      final bytes = await pickedFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      final ext = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('Uploading real photo to server & database...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+          backgroundColor: Color(0xFF0F172A),
+        ),
+      );
+
+      final res = await BharatOnePayApi.uploadAvatarImage(
+        imageBase64: base64String,
+        extension: ext,
+      );
+
+      if (res['success'] == true && res['avatarUrl'] != null) {
+        final photoUrl = res['avatarUrl'] as String;
+        onPhotoUploaded(photoUrl);
+        if (mounted) {
+          setState(() {});
+          widget.onRefreshParent?.call();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Real photo uploaded and saved to database successfully!'),
+              backgroundColor: Color(0xFF046A38),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res['message'] ?? 'Failed to upload photo'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showAvatarPickerSheet(
     BuildContext parentCtx, {
     String? currentAvatar,
@@ -2449,19 +2538,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text(
                     'Choose Profile Picture',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF0F172A),
                     ),
                   ),
                   const Text(
-                    'Select an avatar character, paste a photo link, or use your initials',
+                    'Upload a real photo from camera or gallery, or pick an avatar',
                     style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 16),
 
+                  // 1. REAL PHOTO UPLOAD BUTTONS
                   const Text(
-                    'Avatars & Characters',
+                    'Upload Real Photo (Saved to Database)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            _pickAndUploadRealPhoto(
+                              ImageSource.camera,
+                              (photoUrl) {
+                                onSelect(photoUrl);
+                                Navigator.pop(ctx);
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.camera_alt_rounded, color: Color(0xFFFF671F), size: 20),
+                          label: const Text(
+                            'Take Photo',
+                            style: TextStyle(
+                              color: Color(0xFF0F172A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFFF671F), width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            _pickAndUploadRealPhoto(
+                              ImageSource.gallery,
+                              (photoUrl) {
+                                onSelect(photoUrl);
+                                Navigator.pop(ctx);
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+                          label: const Text(
+                            'From Gallery',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF046A38),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  const Divider(color: Color(0xFFE2E8F0)),
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Or Choose Curated Characters',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

@@ -96,13 +96,20 @@ app.use(
 
 app.use(
   express.json({
-    limit: '500kb',
+    limit: '15mb',
     verify: (req, _res, buf) => {
       (req as any).rawBody = buf;
     },
   })
 );
-app.use(express.urlencoded({ extended: true, limit: '500kb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// Serve Static Uploads (Avatars & Documents)
+const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Serve Developer & Switch Testing Console (Restricted in production)
 const consoleDir = path.resolve(process.cwd(), 'src/public/console');

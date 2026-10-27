@@ -92,6 +92,8 @@ export class PostgresDatabase implements IDatabase {
         try {
           await client.query('ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entries_transaction_id_fkey');
           await client.query('ALTER TABLE collect_requests DROP CONSTRAINT IF EXISTS collect_requests_txn_id_fkey');
+          await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture TEXT');
+          await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(32)');
         } catch (_) {}
 
         // 1. Users
@@ -113,6 +115,8 @@ export class PostgresDatabase implements IDatabase {
           primaryVpa: r.primary_vpa,
           liteBalance: parseFloat(r.lite_balance || '0'),
           lrsUsedUsd: parseFloat(r.lrs_used_usd || '0'),
+          profilePicture: r.profile_picture ?? undefined,
+          dateOfBirth: r.date_of_birth ?? undefined,
           createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
           updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
         }));
@@ -295,10 +299,11 @@ export class PostgresDatabase implements IDatabase {
       if (collection === 'users') {
         const u = item as User;
         await this.pool.query(
-          `INSERT INTO users (id, phone, full_name, email, pan_number, kyc_status, device_id, sim_id, mpin_hash, mpin_salt, failed_mpin_attempts, mpin_locked_until, is_admin, primary_vpa, lite_balance, lrs_used_usd, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+          `INSERT INTO users (id, phone, full_name, email, pan_number, kyc_status, device_id, sim_id, mpin_hash, mpin_salt, failed_mpin_attempts, mpin_locked_until, is_admin, primary_vpa, lite_balance, lrs_used_usd, profile_picture, date_of_birth, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
            ON CONFLICT (id) DO UPDATE SET
              full_name = EXCLUDED.full_name,
+             email = EXCLUDED.email,
              kyc_status = EXCLUDED.kyc_status,
              mpin_hash = EXCLUDED.mpin_hash,
              mpin_salt = EXCLUDED.mpin_salt,
@@ -306,6 +311,8 @@ export class PostgresDatabase implements IDatabase {
              mpin_locked_until = EXCLUDED.mpin_locked_until,
              lite_balance = EXCLUDED.lite_balance,
              lrs_used_usd = EXCLUDED.lrs_used_usd,
+             profile_picture = COALESCE(EXCLUDED.profile_picture, users.profile_picture),
+             date_of_birth = COALESCE(EXCLUDED.date_of_birth, users.date_of_birth),
              updated_at = EXCLUDED.updated_at`,
           [
             u.id,
@@ -324,6 +331,8 @@ export class PostgresDatabase implements IDatabase {
             u.primaryVpa,
             u.liteBalance || 0,
             u.lrsUsedUsd || 0,
+            u.profilePicture || null,
+            u.dateOfBirth || null,
             u.createdAt || new Date().toISOString(),
             u.updatedAt || new Date().toISOString(),
           ]

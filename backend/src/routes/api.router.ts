@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { db } from '../db/database.js';
 import { config } from '../config/index.js';
 import { authMiddleware, adminAuthMiddleware, AuthenticatedRequest } from '../middleware/auth.middleware.js';
@@ -140,6 +142,87 @@ apiRouter.put('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) 
   };
 
   return res.json({ success: true, message: 'Profile updated successfully.', user: sanitizedUser });
+});
+
+apiRouter.post('/auth/profile', authMiddleware, (req: AuthenticatedRequest, res) => {
+  const user = db.get('users').find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+  const { fullName, email, dateOfBirth, profilePicture } = req.body;
+  if (fullName && typeof fullName === 'string' && fullName.trim().length > 0) {
+    user.fullName = fullName.trim();
+  }
+  if (email && typeof email === 'string') {
+    user.email = email.trim();
+  }
+  if (dateOfBirth !== undefined) {
+    user.dateOfBirth = dateOfBirth;
+  }
+  if (profilePicture !== undefined) {
+    user.profilePicture = profilePicture;
+  }
+  user.updatedAt = new Date().toISOString();
+
+  const sanitizedUser = {
+    ...user,
+    mpinHash: undefined,
+    mpinSalt: undefined,
+  };
+
+  return res.json({ success: true, message: 'Profile updated successfully.', user: sanitizedUser });
+});
+
+apiRouter.post('/auth/upload-avatar', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { imageBase64, extension } = req.body;
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      return res.status(400).json({ success: false, message: 'Please provide valid image data' });
+    }
+
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Image size exceeds maximum limit of 10MB' });
+    }
+
+    const ext = extension && /^[a-zA-Z0-9]+$/.test(extension) ? extension : 'jpg';
+    const filename = `avatar_${req.userId}_${Date.now()}.${ext}`;
+    const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadsDir, filename);
+    await fs.promises.writeFile(filePath, buffer);
+
+    const avatarUrl = `/uploads/${filename}`;
+
+    const user = db.get('users').find((u) => u.id === req.userId);
+    if (user) {
+      user.profilePicture = avatarUrl;
+      user.updatedAt = new Date().toISOString();
+    }
+
+    try {
+      const pg = (await import('../db/postgres.js')).PostgresDatabase.getInstance();
+      if (pg.isConnected()) {
+        await pg.getPool().query(
+          'UPDATE users SET profile_picture = $1, updated_at = NOW() WHERE id = $2',
+          [avatarUrl, req.userId]
+        );
+      }
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      message: 'Profile photo uploaded and saved to database successfully',
+      avatarUrl,
+      fileName: filename,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: 'Failed to upload photo: ' + err.message });
+  }
 });
 
 // ==========================================
