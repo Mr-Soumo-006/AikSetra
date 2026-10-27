@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -149,95 +150,113 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
     Widget _buildHomeTopBarAvatar() {
     final avatar = BharatOnePayApi.currentUser?.profilePicture;
-    if (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFF671F), width: 1.5),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            avatar,
+    if (avatar != null && avatar.isNotEmpty) {
+      Widget? imageWidget;
+      if (avatar.startsWith('data:image')) {
+        try {
+          final base64Str = avatar.contains(',') ? avatar.split(',').last : avatar;
+          final bytes = base64Decode(base64Str.trim());
+          imageWidget = Image.memory(
+            bytes,
             width: 36,
             height: 36,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
-          ),
-        ),
-      );
-    } else if (avatar != null && avatar.startsWith('data:image')) {
-      final base64Data = avatar.split(',').last;
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFF671F), width: 1.5),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.memory(
-            base64Decode(base64Data),
+          );
+        } catch (_) {}
+      } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+        imageWidget = Image.network(
+          avatar,
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+        );
+      } else if (File(avatar).existsSync()) {
+        imageWidget = Image.file(
+          File(avatar),
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+        );
+      } else if (avatar.length > 100) {
+        try {
+          final bytes = base64Decode(avatar.trim());
+          imageWidget = Image.memory(
+            bytes,
             width: 36,
             height: 36,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => _buildDefaultHomeAvatarIcon(),
+          );
+        } catch (_) {}
+      } else if (avatar.startsWith('preset:')) {
+        final key = avatar.replaceFirst('preset:', '');
+        IconData icon = Icons.person_rounded;
+        List<Color> colors = const [Color(0xFFFF671F), Color(0xFF046A38)];
+        switch (key) {
+          case 'executive':
+            icon = Icons.business_center_rounded;
+            colors = const [Color(0xFF0F172A), Color(0xFF334155)];
+            break;
+          case 'fintech':
+            icon = Icons.account_balance_wallet_rounded;
+            colors = const [Color(0xFF046A38), Color(0xFF059669)];
+            break;
+          case 'techie':
+            icon = Icons.laptop_chromebook_rounded;
+            colors = const [Color(0xFF4338CA), Color(0xFF6366F1)];
+            break;
+          case 'scholar':
+            icon = Icons.school_rounded;
+            colors = const [Color(0xFF6B21A8), Color(0xFF9333EA)];
+            break;
+          case 'investor':
+            icon = Icons.trending_up_rounded;
+            colors = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+            break;
+          case 'explorer':
+            icon = Icons.rocket_launch_rounded;
+            colors = const [Color(0xFFDC2626), Color(0xFFFF671F)];
+            break;
+          case 'wellness':
+            icon = Icons.spa_rounded;
+            colors = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
+            break;
+          default:
+            return _buildDefaultHomeAvatarIcon();
+        }
+        return Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(10),
           ),
-        ),
-      );
-    } else if (avatar != null && avatar.startsWith('preset:')) {
-      final key = avatar.replaceFirst('preset:', '');
-      IconData icon = Icons.person_rounded;
-      List<Color> colors = const [Color(0xFFFF671F), Color(0xFF046A38)];
-      switch (key) {
-        case 'executive':
-          icon = Icons.business_center_rounded;
-          colors = const [Color(0xFF0F172A), Color(0xFF334155)];
-          break;
-        case 'fintech':
-          icon = Icons.account_balance_wallet_rounded;
-          colors = const [Color(0xFF046A38), Color(0xFF059669)];
-          break;
-        case 'techie':
-          icon = Icons.laptop_chromebook_rounded;
-          colors = const [Color(0xFF4338CA), Color(0xFF6366F1)];
-          break;
-        case 'scholar':
-          icon = Icons.school_rounded;
-          colors = const [Color(0xFF6B21A8), Color(0xFF9333EA)];
-          break;
-        case 'investor':
-          icon = Icons.trending_up_rounded;
-          colors = const [Color(0xFFD97706), Color(0xFFF59E0B)];
-          break;
-        case 'explorer':
-          icon = Icons.rocket_launch_rounded;
-          colors = const [Color(0xFFDC2626), Color(0xFFFF671F)];
-          break;
-        case 'wellness':
-          icon = Icons.spa_rounded;
-          colors = const [Color(0xFF0D9488), Color(0xFF14B8A6)];
-          break;
-        default:
-          return _buildDefaultHomeAvatarIcon();
+          alignment: Alignment.center,
+          child: Icon(icon, color: Colors.white, size: 20),
+        );
       }
-      return Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+
+      if (imageWidget != null) {
+        return Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFFF671F), width: 1.5),
           ),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, color: Colors.white, size: 20),
-      );
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: imageWidget,
+          ),
+        );
+      }
     }
     return _buildDefaultHomeAvatarIcon();
   }

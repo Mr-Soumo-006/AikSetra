@@ -38,6 +38,13 @@ import { validatePaymentAmount, validateVpa, validateIfsc, sanitizeRemark } from
 
 export const apiRouter = Router();
 
+const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+apiRouter.use('/uploads', (await import('express')).default.static(uploadsDir));
+
+
 // ==========================================
 // 1. AUTH, OTP & DEVICE BINDING
 // ==========================================

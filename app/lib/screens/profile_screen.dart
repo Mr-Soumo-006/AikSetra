@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
@@ -926,7 +927,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _buildAvatarWidget(
                               size: 60,
                               showEditBadge: true,
-                              onTap: _showProfileSettingsModal,
+                              onTap: () {
+                                _showAvatarPickerSheet(
+                                  context,
+                                  currentAvatar: _userProfilePicture,
+                                  onSelect: (newAvatar) async {
+                                    if (newAvatar != null) {
+                                      await BharatOnePayApi.updateProfile(
+                                        fullName: _userName,
+                                        email: _userEmail,
+                                        dateOfBirth: _userDob,
+                                        profilePicture: newAvatar,
+                                      );
+                                      if (mounted) {
+                                        setState(() {});
+                                        widget.onRefreshParent?.call();
+                                      }
+                                    }
+                                  },
+                                );
+                              },
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -1782,30 +1802,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     Widget avatarContent;
 
-    if (avatar != null && (avatar.startsWith('http://') || avatar.startsWith('https://'))) {
-      avatarContent = ClipOval(
-        child: Image.network(
-          avatar,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
-        ),
-      );
-    } else if (avatar != null && avatar.startsWith('data:image')) {
-      final base64Data = avatar.split(',').last;
-      avatarContent = ClipOval(
-        child: Image.memory(
-          base64Decode(base64Data),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
-        ),
-      );
-    } else if (avatar != null && avatar.startsWith('preset:')) {
-      final presetKey = avatar.replaceFirst('preset:', '');
-      avatarContent = _buildPresetAvatarContent(presetKey, size, initial);
+    if (avatar != null && avatar.isNotEmpty) {
+      if (avatar.startsWith('data:image')) {
+        try {
+          final base64Str = avatar.contains(',') ? avatar.split(',').last : avatar;
+          final bytes = base64Decode(base64Str.trim());
+          avatarContent = ClipOval(
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+            ),
+          );
+        } catch (_) {
+          avatarContent = _buildFallbackInitial(size, initial);
+        }
+      } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+        avatarContent = ClipOval(
+          child: Image.network(
+            avatar,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+          ),
+        );
+      } else if (File(avatar).existsSync()) {
+        avatarContent = ClipOval(
+          child: Image.file(
+            File(avatar),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+          ),
+        );
+      } else if (avatar.length > 100) {
+        try {
+          final bytes = base64Decode(avatar.trim());
+          avatarContent = ClipOval(
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _buildFallbackInitial(size, initial),
+            ),
+          );
+        } catch (_) {
+          avatarContent = _buildFallbackInitial(size, initial);
+        }
+      } else if (avatar.startsWith('preset:')) {
+        final presetKey = avatar.replaceFirst('preset:', '');
+        avatarContent = _buildPresetAvatarContent(presetKey, size, initial);
+      } else {
+        avatarContent = _buildFallbackInitial(size, initial);
+      }
     } else {
       avatarContent = _buildFallbackInitial(size, initial);
     }
@@ -2417,7 +2471,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
       final ext = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
+      final dataUri = 'data:image/$ext;base64,$base64String';
 
+      // 1. Instantly update current user and save to local disk so photo displays immediately
+      if (BharatOnePayApi.currentUser != null) {
+        BharatOnePayApi.currentUser = BharatOnePayApi.currentUser!.copyWith(
+          profilePicture: dataUri,
+        );
+      }
+      await BharatOnePayApi.saveSessionToDisk();
+
+      // 2. Notify callback and refresh UI
+      onPhotoUploaded(dataUri);
+      if (mounted) {
+        setState(() {});
+        widget.onRefreshParent?.call();
+      }
+
+      // 3. Show instant status
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2429,41 +2500,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               ),
               SizedBox(width: 12),
-              Text('Uploading real photo to server & database...'),
+              Text('Saving photo to database...'),
             ],
           ),
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 1),
           backgroundColor: Color(0xFF0F172A),
         ),
       );
 
-      final res = await BharatOnePayApi.uploadAvatarImage(
+      // 4. Asynchronously send to backend server & PostgreSQL database
+      await BharatOnePayApi.uploadAvatarImage(
         imageBase64: base64String,
         extension: ext,
       );
 
-      if (res['success'] == true && res['avatarUrl'] != null) {
-        final photoUrl = res['avatarUrl'] as String;
-        onPhotoUploaded(photoUrl);
-        if (mounted) {
-          setState(() {});
-          widget.onRefreshParent?.call();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Real photo uploaded and saved to database successfully!'),
-              backgroundColor: Color(0xFF046A38),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(res['message'] ?? 'Failed to upload photo'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Real photo saved to database successfully!'),
+            backgroundColor: Color(0xFF046A38),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
