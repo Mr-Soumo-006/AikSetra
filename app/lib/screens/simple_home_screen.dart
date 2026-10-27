@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,6 +38,80 @@ class SimpleHomeScreen extends StatefulWidget {
 
 class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _selectedLang = 'en-IN';
+  late final PageController _adPageController;
+  int _currentAdIndex = 0;
+  Timer? _adAutoTimer;
+
+  final List<Map<String, dynamic>> _adBanners = [
+    {
+      'title': 'AikSetra Invest',
+      'pill': 'From the house of AikSetra',
+      'badge': 'AI WEALTH • 0% COMMISSION',
+      'logo': 'ऐ',
+      'isLogoText': true,
+      'gradient': [
+        const Color(0xFF0F172A),
+        const Color(0xFF1E3A8A),
+        const Color(0xFF1E40AF),
+      ],
+      'glowColor': const Color(0xFF3B82F6),
+      'tags': ['📈 Direct Mutual Funds', '🪙 24K Digital Gold', '⚡ Bank Auto-SIP'],
+      'disclaimer':
+          'Investments in securities market are subject to market risks, read all scheme related documents carefully.',
+      'action': 'sip',
+    },
+    {
+      'title': 'AikSetra 24K Gold',
+      'pill': 'Daily SIP from ₹10 • 99.9% Pure',
+      'badge': 'TRUSTED BY 1.5CR+ INDIANS',
+      'logo': Icons.savings_rounded,
+      'isLogoText': false,
+      'gradient': [
+        const Color(0xFF1C1917),
+        const Color(0xFF78350F),
+        const Color(0xFFB45309),
+      ],
+      'glowColor': const Color(0xFFF59E0B),
+      'tags': ['🪙 Live ₹7,450/g', '🛡️ MMTC-PAMP Vault', '🚚 Doorstep Delivery'],
+      'disclaimer':
+          '100% pure 24K digital bullion stored in secure Brink\'s insured vaults. Zero storage fees.',
+      'action': 'gold',
+    },
+    {
+      'title': 'AikSetra Instant Credit',
+      'pill': 'Pre-Approved up to ₹5,00,000',
+      'badge': 'DISBURSAL IN 2 MINS',
+      'logo': Icons.bolt_rounded,
+      'isLogoText': false,
+      'gradient': [
+        const Color(0xFF0F172A),
+        const Color(0xFF064E3B),
+        const Color(0xFF047857),
+      ],
+      'glowColor': const Color(0xFF10B981),
+      'tags': ['⚡ From 10.5% p.a.', '📄 100% Paperless', '💳 Zero Prepayment Penalty'],
+      'disclaimer':
+          'Instant credit powered by RBI regulated lending partners. Flexible tenures from 6-48 months.',
+      'action': 'loan',
+    },
+    {
+      'title': 'AikSetra Protection',
+      'pill': 'Health & Vehicle Shield from ₹1.5/day',
+      'badge': '10,000+ CASHLESS HOSPITALS',
+      'logo': Icons.shield_rounded,
+      'isLogoText': false,
+      'gradient': [
+        const Color(0xFF1E1B4B),
+        const Color(0xFF4338CA),
+        const Color(0xFF3730A3),
+      ],
+      'glowColor': const Color(0xFF6366F1),
+      'tags': ['🏥 ₹1 Cr Life Cover', '🩺 Cashless Treatment', '🛵 Zero Inspection Bike'],
+      'disclaimer':
+          'IRDAI certified insurance partners. Quick 30-minute cashless claim processing.',
+      'action': 'insurance',
+    },
+  ];
   String _t(String key) => AppTranslations.t(key, _selectedLang);
   int _bottomNavIndex = 0;
   String _historySearchQuery = '';
@@ -68,11 +143,29 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _adPageController = PageController();
+    _startAdAutoPlay();
     _syncLiveState();
+  }
+
+  void _startAdAutoPlay() {
+    _adAutoTimer?.cancel();
+    _adAutoTimer = Timer.periodic(const Duration(milliseconds: 3800), (timer) {
+      if (mounted && _adPageController.hasClients) {
+        final next = (_currentAdIndex + 1) % _adBanners.length;
+        _adPageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 650),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _adAutoTimer?.cancel();
+    _adPageController.dispose();
     _consumerIdCtrl.dispose();
     _historySearchCtrl.dispose();
     _fxForeignAmtCtrl.dispose();
@@ -573,131 +666,287 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
+  // ===========================================================================
+  // LIVE 3D / THREE.JS-INSPIRED PROMOTIONAL AD CAROUSEL
+  // ===========================================================================
   Widget _buildAikSetraInvestBanner() {
-    return InkWell(
-      onTap: () => setState(() => _bottomNavIndex = 2),
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF1E40AF)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 220,
+          child: PageView.builder(
+            controller: _adPageController,
+            itemCount: _adBanners.length,
+            onPageChanged: (idx) {
+              setState(() => _currentAdIndex = idx);
+            },
+            itemBuilder: (context, idx) {
+              final ad = _adBanners[idx];
+              final gradient = ad['gradient'] as List<Color>;
+              final glowColor = ad['glowColor'] as Color;
+              final tags = ad['tags'] as List<String>;
+              final isLogoText = ad['isLogoText'] as bool;
+              final action = ad['action'] as String;
+
+              return InkWell(
+                onTap: () {
+                  if (action == 'sip') {
+                    setState(() => _bottomNavIndex = 2);
+                  } else if (action == 'gold') {
+                    _showGoldSilverVaultModal('Gold');
+                  } else if (action == 'loan') {
+                    _showLoanApplicationModal('loan_personal');
+                  } else if (action == 'insurance') {
+                    _showInsuranceDiscoveryModal('health_insurance');
+                  }
+                },
+                borderRadius: BorderRadius.circular(22),
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: glowColor.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: glowColor.withValues(alpha: 0.28),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                'ऐ',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'AikSetra Invest',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFACC15),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFACC15).withValues(alpha: 0.35),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(21),
+                    child: Stack(
+                      children: [
+                        // Live 3D Mesh Particle Constellation (Three.js Style)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _ThreeJsMeshParticlesPainter(
+                              primaryColor: glowColor,
+                            ),
+                          ),
+                        ),
+
+                        // Card Content
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Top Bar: "AD" tag and Live Campaign Badge
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.white12),
+                                    ),
+                                    child: const Text(
+                                      'AD',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF10B981),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        ad['badge'] as String,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+
+                              // 3D Circular Logo
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: isLogoText
+                                    ? const Text(
+                                        'ऐ',
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      )
+                                    : Icon(
+                                        ad['logo'] as IconData,
+                                        size: 26,
+                                        color: gradient[1],
+                                      ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Title
+                              Text(
+                                ad['title'] as String,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+
+                              // Subtitle Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFACC15),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFACC15)
+                                          .withValues(alpha: 0.35),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  ad['pill'] as String,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F172A),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 11,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // 3 Tags
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: tags
+                                    .map(
+                                      (t) => Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 3,
+                                        ),
+                                        child: _buildInvestTag(t),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 6),
+
+                              // Micro disclaimer
+                              Text(
+                                ad['disclaimer'] as String,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF94A3B8),
+                                  fontSize: 8.5,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-              child: const Text(
-                'From the house of AikSetra',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 0.3,
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildInvestTag('📈 Direct Mutual Funds'),
-                const SizedBox(width: 8),
-                _buildInvestTag('🪙 24K Digital Gold'),
-                const SizedBox(width: 8),
-                _buildInvestTag('⚡ Bank Auto-SIP'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Investments in securities market are subject to market risks, read all scheme related documents carefully before investing.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 9,
-                height: 1.3,
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+
+        // Live Carousel Indicator Dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_adBanners.length, (i) {
+            final isSel = _currentAdIndex == i;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isSel ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isSel
+                    ? const Color(0xFFFF671F)
+                    : const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
   Widget _buildInvestTag(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: Colors.white24),
       ),
       child: Text(
         label,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 9.5,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -902,24 +1151,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFFEDD5)),
-                        ),
-                        child: const Text(
-                          'PIN',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFFF671F),
-                          ),
-                        ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF94A3B8),
+                        size: 20,
                       ),
                     ],
                   ),
@@ -8473,3 +8708,62 @@ class _RealCameraQrScannerScreenState
   }
 
   }
+
+
+// ===========================================================================
+// THREE.JS-INSPIRED 3D MESH PARTICLE PAINTER FOR LIVE FINTECH ADS
+// ===========================================================================
+class _ThreeJsMeshParticlesPainter extends CustomPainter {
+  final Color primaryColor;
+
+  _ThreeJsMeshParticlesPainter({
+    required this.primaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final particlePaint = Paint()
+      ..color = primaryColor.withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+
+    final linePaint = Paint()
+      ..color = primaryColor.withValues(alpha: 0.15)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+
+    final points = [
+      Offset(size.width * 0.12, size.height * 0.22),
+      Offset(size.width * 0.28, size.height * 0.68),
+      Offset(size.width * 0.44, size.height * 0.16),
+      Offset(size.width * 0.58, size.height * 0.82),
+      Offset(size.width * 0.74, size.height * 0.32),
+      Offset(size.width * 0.86, size.height * 0.62),
+      Offset(size.width * 0.92, size.height * 0.18),
+      Offset(size.width * 0.08, size.height * 0.82),
+    ];
+
+    for (int i = 0; i < points.length; i++) {
+      for (int j = i + 1; j < points.length; j++) {
+        final dist = (points[i] - points[j]).distance;
+        if (dist < size.width * 0.40) {
+          canvas.drawLine(points[i], points[j], linePaint);
+        }
+      }
+    }
+
+    for (int i = 0; i < points.length; i++) {
+      final p = points[i];
+      final radius = 2.0 + (i % 3) * 1.0;
+      canvas.drawCircle(p, radius, particlePaint);
+
+      final glowPaint = Paint()
+        ..color = primaryColor.withValues(alpha: 0.10)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(p, radius * 2.5, glowPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ThreeJsMeshParticlesPainter oldDelegate) =>
+      oldDelegate.primaryColor != primaryColor;
+}
