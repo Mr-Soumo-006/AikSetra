@@ -12,7 +12,6 @@ import '../services/biometric_service.dart';
 import '../models/scam_shield_model.dart';
 import '../models/cross_border_model.dart';
 import '../api_config.dart';
-import '../models/service_catalogue.dart';
 import 'all_services_screen.dart';
 import 'autopay_screen.dart';
 import 'cards_screen.dart';
@@ -26,6 +25,7 @@ import 'bank_account_opening_screen.dart';
 import 'statements_screen.dart';
 import 'profile_screen.dart';
 import 'universal_search_screen.dart';
+import 'category_hub_screen.dart';
 import '../widgets/language_location_selector_modal.dart';
 
 class SimpleHomeScreen extends StatefulWidget {
@@ -39,7 +39,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _selectedLang = 'en-IN';
   String _t(String key) => AppTranslations.t(key, _selectedLang);
   int _bottomNavIndex = 0;
-  ServiceCategory? _selectedCategory;
   String _historySearchQuery = '';
   String _historyFilterType = 'ALL';
   final TextEditingController _historySearchCtrl = TextEditingController();
@@ -563,9 +562,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             const SizedBox(height: 16),
             _buildHeroQrAndActions(),
             const SizedBox(height: 20),
-            _buildUniversalServicesCarousel(),
-            const SizedBox(height: 20),
-            _buildBillsAndUtilitiesQuickGrid(),
+            _buildPhonePeCategorizedSections(),
             const SizedBox(height: 20),
             _buildWealthAndSafetyHighlights(),
             const SizedBox(height: 20),
@@ -936,131 +933,299 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   // ===========================================================================
-  // UNIVERSAL FINANCIAL SERVICES CAROUSEL & CENTRAL ROUTER
+  // PHONEPE-STYLE CATEGORIZED FINANCIAL SERVICES SECTIONS
   // ===========================================================================
-  Widget _buildUniversalServicesCarousel() {
-    final categories = [
-      {'label': 'All Services', 'cat': null, 'icon': Icons.apps_rounded},
-      {
-        'label': 'Payments',
-        'cat': ServiceCategory.payments,
-        'icon': Icons.payments_rounded,
-      },
-      {
-        'label': 'Bills & BBPS',
-        'cat': ServiceCategory.bills,
-        'icon': Icons.receipt_long_rounded,
-      },
-      {
-        'label': 'Invest & Save',
-        'cat': ServiceCategory.investments,
-        'icon': Icons.trending_up_rounded,
-      },
-      {
-        'label': 'Insurance',
-        'cat': ServiceCategory.insurance,
-        'icon': Icons.shield_rounded,
-      },
-      {
-        'label': 'Taxes & Govt',
-        'cat': ServiceCategory.taxes,
-        'icon': Icons.account_balance_rounded,
-      },
-      {
-        'label': 'Calculators',
-        'cat': ServiceCategory.tools,
-        'icon': Icons.calculate_rounded,
-      },
-      {
-        'label': 'Other Services',
-        'cat': ServiceCategory.other,
-        'icon': Icons.widgets_rounded,
-      },
-    ];
-    final filtered = _selectedCategory == null
-        ? ServiceCatalogue.allServices
-        : ServiceCatalogue.getByCategory(_selectedCategory!);
+  Widget _buildPhonePeCategorizedSections() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. RECHARGE & BILLS
+        _buildPhonePeSectionCard(
+          categoryKey: 'recharge_bills',
+          title: 'Recharge & Pay Bills',
+          icon: Icons.receipt_long_rounded,
+          iconColor: const Color(0xFF2563EB),
+          offerText: '⚡ Instant Bharat Connect BBPS receipt with 0 fee',
+          items: [
+            {
+              'label': 'Mobile\nRecharge',
+              'icon': Icons.phone_android_rounded,
+              'color': const Color(0xFF2563EB),
+              'routeKey': 'mobile',
+              'badge': 'Popular',
+            },
+            {
+              'label': 'DTH /\nCable TV',
+              'icon': Icons.tv_rounded,
+              'color': const Color(0xFF7C3AED),
+              'routeKey': 'dth',
+              'badge': null,
+            },
+            {
+              'label': 'Electricity\nBill',
+              'icon': Icons.bolt_rounded,
+              'color': const Color(0xFFF59E0B),
+              'routeKey': 'electricity',
+              'badge': 'BBPS',
+            },
+            {
+              'label': 'FASTag\nRecharge',
+              'icon': Icons.directions_car_rounded,
+              'color': const Color(0xFF059669),
+              'routeKey': 'fastag',
+              'badge': null,
+            },
+          ],
+        ),
+        const SizedBox(height: 16),
 
+        // 2. LOANS & CREDIT
+        _buildPhonePeSectionCard(
+          categoryKey: 'loans',
+          title: 'Loans & Credit',
+          icon: Icons.account_balance_rounded,
+          iconColor: const Color(0xFF059669),
+          offerText: '🌟 Pre-approved loan up to ₹5L in 2 mins • 10.5% p.a.',
+          items: [
+            {
+              'label': 'Personal\nLoan',
+              'icon': Icons.monetization_on_rounded,
+              'color': const Color(0xFF2563EB),
+              'routeKey': 'loan_personal',
+              'badge': '₹5L Instant',
+            },
+            {
+              'label': 'Mutual Funds\nLoan',
+              'icon': Icons.trending_up_rounded,
+              'color': const Color(0xFF10B981),
+              'routeKey': 'loan_mf',
+              'badge': '9.5%',
+            },
+            {
+              'label': 'Gold\nLoan',
+              'icon': Icons.shield_moon_rounded,
+              'color': const Color(0xFFD97706),
+              'routeKey': 'loan_gold',
+              'badge': 'Instant',
+            },
+            {
+              'label': 'Credit\nScore',
+              'icon': Icons.speed_rounded,
+              'color': const Color(0xFF8B5CF6),
+              'routeKey': 'credit_score',
+              'badge': 'Free',
+            },
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 3. GOLD, SILVER & PLATINUM
+        _buildPhonePeSectionCard(
+          categoryKey: 'gold_wealth',
+          title: 'Gold, Silver & Platinum',
+          icon: Icons.savings_rounded,
+          iconColor: const Color(0xFFD97706),
+          offerText: '🪙 24K 99.9% Pure • Insured MMTC-PAMP / Augmont vaults',
+          items: [
+            {
+              'label': 'Daily Gold\n₹10 SIP',
+              'icon': Icons.auto_awesome_rounded,
+              'color': const Color(0xFFF59E0B),
+              'routeKey': 'invest_gold',
+              'badge': '24K SIP',
+            },
+            {
+              'label': 'Buy 24K\nGold',
+              'icon': Icons.savings_rounded,
+              'color': const Color(0xFFD97706),
+              'routeKey': 'invest_gold',
+              'badge': '99.9% Pure',
+            },
+            {
+              'label': 'Daily Silver\n₹10 SIP',
+              'icon': Icons.generating_tokens_rounded,
+              'color': const Color(0xFF64748B),
+              'routeKey': 'invest_silver',
+              'badge': '₹10 SIP',
+            },
+            {
+              'label': 'Buy Pure\nSilver',
+              'icon': Icons.workspace_premium_rounded,
+              'color': const Color(0xFF475569),
+              'routeKey': 'invest_silver',
+              'badge': '99.9%',
+            },
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 4. INSURANCE
+        _buildPhonePeSectionCard(
+          categoryKey: 'insurance',
+          title: 'Insurance & Protection',
+          icon: Icons.shield_rounded,
+          iconColor: const Color(0xFF0284C7),
+          offerText: '🏥 Cashless claims across 10,000+ partnered hospitals',
+          items: [
+            {
+              'label': 'Bike\nInsurance',
+              'icon': Icons.two_wheeler_rounded,
+              'color': const Color(0xFF2563EB),
+              'routeKey': 'insurance',
+              'badge': '₹1.5/day',
+            },
+            {
+              'label': 'Car\nInsurance',
+              'icon': Icons.directions_car_rounded,
+              'color': const Color(0xFF0284C7),
+              'routeKey': 'insurance',
+              'badge': 'Instant',
+            },
+            {
+              'label': 'Health\nInsurance',
+              'icon': Icons.health_and_safety_rounded,
+              'color': const Color(0xFFDC2626),
+              'routeKey': 'insurance',
+              'badge': 'Cashless',
+            },
+            {
+              'label': 'Term Life\nInsurance',
+              'icon': Icons.favorite_rounded,
+              'color': const Color(0xFFE11D48),
+              'routeKey': 'insurance',
+              'badge': '₹1 Cr',
+            },
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 5. FINANCIAL TOOLS & CALCULATORS
+        _buildPhonePeSectionCard(
+          categoryKey: 'tools',
+          title: 'Financial Tools & Calculators',
+          icon: Icons.calculate_rounded,
+          iconColor: const Color(0xFF7C3AED),
+          offerText: '📊 Interactive return modeling & real-time tax planning',
+          items: [
+            {
+              'label': 'SIP\nCalculator',
+              'icon': Icons.calculate_rounded,
+              'color': const Color(0xFF059669),
+              'routeKey': 'calc_sip',
+              'badge': 'Wealth',
+            },
+            {
+              'label': 'EMI\nCalculator',
+              'icon': Icons.percent_rounded,
+              'color': const Color(0xFF2563EB),
+              'routeKey': 'calc_emi',
+              'badge': 'Loans',
+            },
+            {
+              'label': 'GST\nCalculator',
+              'icon': Icons.receipt_rounded,
+              'color': const Color(0xFF7C3AED),
+              'routeKey': 'calc_gst',
+              'badge': 'Tax',
+            },
+            {
+              'label': 'Income Tax\nCalculator',
+              'icon': Icons.account_balance_rounded,
+              'color': const Color(0xFFFF671F),
+              'routeKey': 'calc_tax',
+              'badge': 'FY 24-25',
+            },
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhonePeSectionCard({
+    required String categoryKey,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required String offerText,
+    required List<Map<String, dynamic>> items,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // HEADER ROW
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.grid_view_rounded,
-                        size: 16,
-                        color: Color(0xFF0F172A),
-                      ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _openCategoryHub(categoryKey),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: iconColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon, size: 16, color: iconColor),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Financial Services & Tools',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AllServicesScreen(
-                          onSelectService: _handleServiceRoute,
-                        ),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _openCategoryHub(categoryKey),
+                  borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF671F).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'All Services',
+                          'More',
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: Color(0xFFFF671F),
                           ),
                         ),
-                        SizedBox(width: 2),
+                        SizedBox(width: 3),
                         Icon(
                           Icons.arrow_forward_ios_rounded,
                           size: 10,
@@ -1073,110 +1238,149 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
 
-          // Horizontal Category Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+          // 4 ICONS IN A ROW
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
-              children: categories.map((c) {
-                return _buildCategoryPill(
-                  c['label'] as String,
-                  c['cat'] as ServiceCategory?,
-                  c['icon'] as IconData,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items.map((item) {
+                final color = item['color'] as Color;
+                final routeKey = item['routeKey'] as String;
+                final badge = item['badge'] as String?;
+                return Expanded(
+                  child: InkWell(
+                    onTap: () => _handleServiceRoute(routeKey),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.25),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    item['icon'] as IconData,
+                                    color: color,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              if (badge != null)
+                                Positioned(
+                                  top: -5,
+                                  right: -6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDC2626),
+                                      borderRadius: BorderRadius.circular(6),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.15),
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      badge,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            item['label'] as String,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF334155),
+                              height: 1.15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 14),
 
-          // Horizontally swipeable service cards carousel
-          SizedBox(
-            height: 110,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, idx) {
-                final s = filtered[idx];
-                return InkWell(
-                  onTap: () => _handleServiceRoute(s.routeKey),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: 92,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: s.color.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(s.icon, color: s.color, size: 20),
-                            ),
-                            if (s.badge != null)
-                              Positioned(
-                                top: -4,
-                                right: -8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: s.badge == 'HOT'
-                                        ? const Color(0xFFDC2626)
-                                        : (s.badge == 'NEW'
-                                              ? const Color(0xFF046A38)
-                                              : const Color(0xFFFF9100)),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    s.badge!,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.title,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
+          // FOOTER MICRO BANNER WITH "More →"
+          InkWell(
+            onTap: () => _openCategoryHub(categoryKey),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(19),
+                ),
+                border: Border(
+                  top: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      offerText,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                );
-              },
+                  const SizedBox(width: 6),
+                  const Text(
+                    'More',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 14,
+                    color: Color(0xFF0F172A),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1184,45 +1388,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
-  Widget _buildCategoryPill(String label, ServiceCategory? cat, IconData icon) {
-    final isSelected = _selectedCategory == cat;
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: InkWell(
-        onTap: () => setState(() => _selectedCategory = cat),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF0F172A)
-                : const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF0F172A)
-                  : const Color(0xFFE2E8F0),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 12,
-                color: isSelected ? Colors.white : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  color: isSelected ? Colors.white : const Color(0xFF475569),
-                ),
-              ),
-            ],
-          ),
+  void _openCategoryHub(String categoryKey) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryHubScreen(
+          categoryKey: categoryKey,
+          onSelectService: _handleServiceRoute,
         ),
       ),
     );
@@ -1283,59 +1455,32 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
       // Bills & Utilities
       case 'electricity':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'ELECTRICITY';
-        });
+        _selectBillCategoryAndOpen('ELECTRICITY');
         break;
       case 'water':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'WATER';
-        });
+        _selectBillCategoryAndOpen('WATER');
         break;
       case 'gas':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'GAS';
-        });
+        _selectBillCategoryAndOpen('GAS');
         break;
       case 'broadband':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'BROADBAND';
-        });
+        _selectBillCategoryAndOpen('BROADBAND');
         break;
       case 'mobile':
       case 'mobile_recharge':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'MOBILE';
-        });
+        _selectBillCategoryAndOpen('MOBILE');
         break;
       case 'dth':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'DTH';
-        });
+        _selectBillCategoryAndOpen('DTH');
         break;
       case 'fastag':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'FASTAG';
-        });
+        _selectBillCategoryAndOpen('FASTAG');
         break;
       case 'postpaid':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'MOBILE';
-        });
+        _selectBillCategoryAndOpen('MOBILE');
         break;
       case 'landline':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'BROADBAND';
-        });
+        _selectBillCategoryAndOpen('BROADBAND');
         break;
       case 'subscriptions':
         Navigator.push(
@@ -1344,11 +1489,40 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
 
-      // Investments & Savings
+      // Loans & Credit
+      case 'loan_personal':
+      case 'loan_mf':
+      case 'loan_gold':
+      case 'loan_home':
+      case 'loan_auto':
+      case 'loan_bike':
+      case 'loan_business':
+      case 'loan_education':
+      case 'loan_credit_card':
+      case 'loan_repayment':
+        _showLoanApplicationModal(routeKey);
+        break;
+      case 'credit_score':
+        _showCreditScoreModal();
+        break;
+
+      // Investments, Savings & Precious Metals
       case 'sip_mutual_funds':
       case 'investments':
       case 'stocks':
         setState(() => _bottomNavIndex = 2);
+        break;
+      case 'invest_gold':
+      case 'gold_sip':
+      case 'gold':
+        _showGoldSilverVaultModal('Gold');
+        break;
+      case 'invest_silver':
+      case 'silver_sip':
+        _showGoldSilverVaultModal('Silver');
+        break;
+      case 'invest_platinum':
+        _showGoldSilverVaultModal('Platinum');
         break;
       case 'fd':
       case 'fixed_deposits':
@@ -1372,9 +1546,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'savings_products':
         _showGullakModal();
         break;
-      case 'gold':
-        _showGullakModal();
-        break;
 
       // Insurance & Protect
       case 'health_insurance':
@@ -1382,6 +1553,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'vehicle_insurance':
       case 'travel_insurance':
       case 'insurance':
+      case 'bike_insurance':
+      case 'car_insurance':
+      case 'term_life_insurance':
+      case 'personal_accident':
+      case 'cyber_insurance':
         _showInsuranceDiscoveryModal(routeKey);
         break;
 
@@ -1726,167 +1902,718 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
-  Widget _buildBillsAndUtilitiesQuickGrid() {
-    final items = [
-      {
-        'label': 'Electricity',
-        'icon': Icons.bolt_rounded,
-        'color': const Color(0xFFD97706),
-        'cat': 'ELECTRICITY',
-      },
-      {
-        'label': 'Water Bill',
-        'icon': Icons.water_drop_rounded,
-        'color': const Color(0xFF0284C7),
-        'cat': 'WATER',
-      },
-      {
-        'label': 'Gas / LPG',
-        'icon': Icons.local_fire_department_rounded,
-        'color': const Color(0xFFDC2626),
-        'cat': 'GAS',
-      },
-      {
-        'label': 'Broadband',
-        'icon': Icons.router_rounded,
-        'color': const Color(0xFF059669),
-        'cat': 'BROADBAND',
-      },
-      {
-        'label': 'Mobile 5G',
-        'icon': Icons.phone_android_rounded,
-        'color': const Color(0xFF4F46E5),
-        'cat': 'MOBILE',
-      },
-      {
-        'label': 'FASTag',
-        'icon': Icons.directions_car_rounded,
-        'color': const Color(0xFF0F172A),
-        'cat': 'FASTAG',
-      },
-      {
-        'label': 'DTH TV',
-        'icon': Icons.tv_rounded,
-        'color': const Color(0xFF7C3AED),
-        'cat': 'DTH',
-      },
-      {
-        'label': 'Bank SIP',
-        'icon': Icons.trending_up_rounded,
-        'color': const Color(0xFF046A38),
-        'cat': 'SIP',
-      },
-    ];
+  // ===========================================================================
+  // INTERACTIVE LOAN, CREDIT & PRECIOUS METALS MODALS
+  // ===========================================================================
+  void _showLoanApplicationModal(String routeKey) {
+    String loanTitle = 'Personal Loan';
+    int maxAmount = 500000;
+    double rate = 10.5;
+    if (routeKey == 'loan_mf') {
+      loanTitle = 'Loan Against Mutual Funds';
+      maxAmount = 1000000;
+      rate = 9.5;
+    } else if (routeKey == 'loan_gold') {
+      loanTitle = 'Gold Loan (Doorstep)';
+      maxAmount = 1500000;
+      rate = 9.0;
+    } else if (routeKey == 'loan_home') {
+      loanTitle = 'Home Loan';
+      maxAmount = 7500000;
+      rate = 8.4;
+    } else if (routeKey == 'loan_auto' || routeKey == 'loan_bike') {
+      loanTitle = 'Vehicle / Auto Loan';
+      maxAmount = 1200000;
+      rate = 9.25;
+    } else if (routeKey == 'loan_repayment') {
+      _selectBillCategoryAndOpen('LOAN');
+      return;
+    }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Row(
+    int selectedAmount = (maxAmount > 200000) ? 200000 : maxAmount;
+    int selectedTenure = 24;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final monthlyRate = rate / 12 / 100;
+            final emi = (selectedAmount * monthlyRate * (1 + monthlyRate) * selectedTenure) /
+                ((1 + monthlyRate) * selectedTenure - 1);
+            final emiDisplay = emi.isFinite && emi > 0 ? emi.round() : (selectedAmount / selectedTenure).round();
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.receipt_long_rounded,
-                      size: 18,
-                      color: Color(0xFFFF671F),
-                    ),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Bills, Utilities & Recharges',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.monetization_on_rounded, color: Color(0xFF2563EB), size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  loanTitle,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const Text(
+                                  'Pre-Approved • Instant Disbursal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF059669),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Estimated Monthly EMI',
+                                style: TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '₹$emiDisplay / mo',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF671F),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'Rate: $rate% p.a.',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Select Loan Amount',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [50000, 100000, 200000, 300000, 500000].map((amt) {
+                        final isSel = selectedAmount == amt;
+                        return ChoiceChip(
+                          label: Text('₹${amt ~/ 1000}K'),
+                          selected: isSel,
+                          onSelected: (_) => setModalState(() => selectedAmount = amt),
+                          selectedColor: const Color(0xFF0F172A),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Select Tenure (Months)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [6, 12, 24, 36, 48].map((t) {
+                        final isSel = selectedTenure == t;
+                        return ChoiceChip(
+                          label: Text('$t Mo'),
+                          selected: isSel,
+                          onSelected: (_) => setModalState(() => selectedTenure = t),
+                          selectedColor: const Color(0xFFFF671F),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text('100% Digital paperless KYC approval', style: TextStyle(fontSize: 11)),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 16),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text('Zero prepayment penalty after 6 months', style: TextStyle(fontSize: 11)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF671F),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          showDialog(
+                            context: context,
+                            builder: (dCtx) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.task_alt_rounded, color: Color(0xFF059669)),
+                                  SizedBox(width: 8),
+                                  Text('Application Submitted', style: TextStyle(fontSize: 16)),
+                                ],
+                              ),
+                              content: Text(
+                                'Your $loanTitle request for ₹$selectedAmount has been approved in principle! Sanction letter #AK-LN-${DateTime.now().millisecondsSinceEpoch % 100000} has been sent to your registered profile email.',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dCtx),
+                                  child: const Text('OK', style: TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Apply Instantly & Disburse',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => setState(() => _bottomNavIndex = 1),
-                child: const Text(
-                  'All Bills →',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFF671F),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCreditScoreModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.95,
-            ),
-            itemBuilder: (context, idx) {
-              final item = items[idx];
-              final color = item['color'] as Color;
-              return InkWell(
-                onTap: () {
-                  final cat = item['cat'] as String;
-                  if (cat == 'SIP') {
-                    setState(() => _bottomNavIndex = 2);
-                  } else {
-                    _selectBillCategoryAndOpen(cat);
-                  }
-                },
-                borderRadius: BorderRadius.circular(14),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.speed_rounded, color: Color(0xFF2563EB), size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        'Credit Score & Health',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        item['icon'] as IconData,
-                        color: color,
-                        size: 24,
-                      ),
+                    const Text(
+                      'CIBIL CREDIT SCORE',
+                      style: TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      item['label'] as String,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF334155),
+                    const Text(
+                      '785',
+                      style: TextStyle(
+                        color: Color(0xFF10B981),
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
                       ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Excellent • Low Credit Risk',
+                        style: TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            Text('300', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                            Text('Poor', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('650', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                            Text('Good', style: TextStyle(color: Colors.white54, fontSize: 10)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('750+', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                            Text('Excellent', style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('900', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                            Text('Max', style: TextStyle(color: Colors.white38, fontSize: 10)),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Key Score Factors',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 10),
+              _buildCreditFactorRow('Payment History', '100% on-time', Icons.check_circle_rounded, const Color(0xFF059669)),
+              _buildCreditFactorRow('Credit Card Utilization', '14% (Ideal < 30%)', Icons.pie_chart_rounded, const Color(0xFF059669)),
+              _buildCreditFactorRow('Credit Age', '4 Yrs 2 Mos', Icons.history_rounded, const Color(0xFF2563EB)),
+              _buildCreditFactorRow('Hard Enquiries', '0 in last 6 months', Icons.search_rounded, const Color(0xFF059669)),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF0F172A)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Downloading official CIBIL report PDF...')),
+                        );
+                      },
+                      child: const Text('Download PDF', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF671F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Credit score refreshed! Score remains healthy at 785.')),
+                        );
+                      },
+                      child: const Text('Refresh Free', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCreditFactorRow(String factor, String status, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(factor, style: const TextStyle(fontSize: 12, color: Color(0xFF334155))),
+          ),
+          Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
+    );
+  }
+
+  void _showGoldSilverVaultModal(String metal) {
+    final isGold = metal.toLowerCase().contains('gold');
+    final isSilver = metal.toLowerCase().contains('silver');
+    final ratePerGram = isGold ? 7450.0 : (isSilver ? 94.5 : 3120.0);
+    final unit = isGold ? '24K 99.9% Pure Gold' : (isSilver ? '99.9% Fine Silver' : '95% Pure Platinum');
+    int selectedAmt = 500;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final grams = (selectedAmt / ratePerGram).toStringAsFixed(4);
+
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: (isGold ? const Color(0xFFD97706) : const Color(0xFF64748B)).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                isGold ? Icons.savings_rounded : Icons.generating_tokens_rounded,
+                                color: isGold ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$metal Vault & SIP',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                Text(
+                                  unit,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isGold ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Live Buy Price', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '₹$ratePerGram / g',
+                                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF046A38),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Insured Vault',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Select Investment Amount', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [10, 50, 100, 500, 1000, 5000].map((amt) {
+                        final isSel = selectedAmt == amt;
+                        return ChoiceChip(
+                          label: Text('₹$amt'),
+                          selected: isSel,
+                          onSelected: (_) => setModalState(() => selectedAmt = amt),
+                          selectedColor: const Color(0xFFFF671F),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Equivalent Weight:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          Text(
+                            '$grams grams',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: Color(0xFF0F172A)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Starting Daily ₹10 SIP in $metal...')),
+                              );
+                            },
+                            child: const Text('Start Daily SIP', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF671F),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              showDialog(
+                                context: context,
+                                builder: (dCtx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  title: const Row(
+                                    children: [
+                                      Icon(Icons.check_circle_rounded, color: Color(0xFF059669)),
+                                      SizedBox(width: 8),
+                                      Text('Purchase Confirmed', style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                  content: Text(
+                                    'Successfully added $grams grams of $unit (₹$selectedAmt) into your AikSetra Bullion Vault. Certificate ID #AK-BL-${DateTime.now().millisecondsSinceEpoch % 100000}.',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dCtx),
+                                      child: const Text('OK', style: TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Text('Buy Once', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
