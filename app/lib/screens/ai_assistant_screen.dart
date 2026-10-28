@@ -23,9 +23,10 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   String? _activeConversationId;
 
   final List<String> _quickPrompts = [
+    '💡 Which stocks should I invest in right now?',
     '💳 What is my total bank balance?',
     '📊 Calculate SIP of ₹5,000 at 12% for 10 years',
-    '📈 Show Reliance stock quote',
+    '📈 Top breakout stocks today',
     '🔄 How do I switch primary bank account?',
     '🧾 Show my recent transactions',
     '💼 How do I set up a Business Account?',
@@ -171,6 +172,15 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const StatementsScreen()),
+        );
+        break;
+      case 'open_stock_market':
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📈 Viewing Live Stock Market & Investment Screener'),
+            backgroundColor: Color(0xFF0D1B2A),
+          ),
         );
         break;
       default:

@@ -91,7 +91,29 @@ export class AIAssistantService {
       action = { type: 'open_history' };
     }
 
-    // Check stock market
+    // Check stock market investment ideas & research
+    if (
+      q.includes('investment idea') ||
+      q.includes('ideas') ||
+      q.includes('which stock') ||
+      q.includes('stocks to buy') ||
+      q.includes('where to invest') ||
+      q.includes('recommend') ||
+      q.includes('invest on which') ||
+      q.includes('stock market invest') ||
+      q.includes('swing trade') ||
+      q.includes('breakout stock') ||
+      q.includes('value stock')
+    ) {
+      let category = 'MOMENTUM';
+      if (q.includes('value')) category = 'VALUE';
+      if (q.includes('swing')) category = 'SWING';
+      if (q.includes('growth')) category = 'GROWTH';
+      tools.push({ name: 'get_stock_investment_ideas', args: { category } });
+      action = { type: 'open_stock_market' };
+    }
+
+    // Check individual stock market quote
     const stockSymbols = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'TATAMOTORS'];
     for (const sym of stockSymbols) {
       if (q.includes(sym.toLowerCase()) || (sym === 'HDFCBANK' && q.includes('hdfc')) || (sym === 'TATAMOTORS' && q.includes('tata motors'))) {
@@ -184,17 +206,18 @@ Your primary goals:
 - Help users navigate and use AikSetra features (UPI, Multi-Bank Accounts, AutoPay, Business Accounts, Financial Calculators, Stock Market).
 - Explain financial concepts clearly (SIP, FD, RD, EMI, compounding, diversification).
 - Accurately summarize verified ledger facts when tool data is provided.
-- Never promise guaranteed investment returns. All market discussions are strictly informational and non-advisory.
+- Present market research, technical screeners, and stock investment ideas when provided in the verified data, formatted clearly with stock symbol, current price, strategy, target zone, support level, and technical rationale (similar to Upstox, Zerodha, or Groww screeners).
+- Never guarantee investment returns. Conclude stock discussions with an educational research disclaimer.
 - Never ask for, store, or output MPINs, OTPs, CVVs, or card credentials.
 
 OFFICIAL AIKSETRA DOCUMENTATION CONTEXT:
 ${citations.map((c, idx) => `[Source ${idx + 1}: ${c.title} (${c.category})]\n${c.snippet}`).join('\n\n')}
 
-${toolContextText ? `CURRENT VERIFIED USER DATA (CONFIDENTIAL & AUTHORIZED):\n${toolContextText}` : ''}
+${toolContextText ? `CURRENT VERIFIED SYSTEM DATA (AUTHORIZED & ACCURATE):\n${toolContextText}` : ''}
 
 INSTRUCTIONS:
 1. Provide a direct, helpful, and concise answer.
-2. If citing official features or rules, refer to the document title.
+2. If tool data contains stock investment ideas or market quotes, present each stock idea clearly with its strategy, current price, target zone, support level, and technical rationale. Do not refuse to show verified technical screening data.
 3. If tool data shows the user's balances or transactions, present them clearly.
 4. If the user asks how to do an action, inform them that you have provided a shortcut button below.`;
 
@@ -229,6 +252,14 @@ INSTRUCTIONS:
       }
     } catch (err: any) {
       console.warn('[AI Assistant] Ollama chat unavailable, using deterministic RAG response:', err.message);
+    }
+
+    // If model gave a standard advisory refusal when stock ideas are requested, override with the technical screener
+    if (
+      toolsExecutedNames.includes('get_stock_investment_ideas') &&
+      (!reply || reply.toLowerCase().includes("can't provide") || reply.toLowerCase().includes("cannot provide") || !reply.includes('₹'))
+    ) {
+      reply = ''; // trigger the structured stock investment ideas formatter below
     }
 
     // 8. Grounded fallback generator if LLM is currently downloading or offline
@@ -267,6 +298,21 @@ INSTRUCTIONS:
             reply += `• Total Interest Payable: ₹${calcData.totalInterest?.toLocaleString('en-IN')}\n`;
             reply += `• Total Amount Payable: ₹${calcData.totalPayable?.toLocaleString('en-IN')}\n`;
           }
+        } else if (toolsExecutedNames.includes('get_stock_investment_ideas')) {
+          const raw = toolContextText.split('[VERIFIED SYSTEM DATA FROM GET_STOCK_INVESTMENT_IDEAS]:\n')[1].split('\n[VERIFIED')[0] || '{}';
+          const ideasData = JSON.parse(raw);
+          reply = `📈 **AikSetra Stock Market Research & Investment Ideas**\n`;
+          reply += `*Market Condition: ${ideasData.marketCondition || 'Bullish Momentum'}*\n\n`;
+          if (Array.isArray(ideasData.ideas)) {
+            for (const item of ideasData.ideas) {
+              reply += `**${item.name} (${item.symbol})** — ₹${item.currentPrice} (${item.changePct})\n`;
+              reply += `• Strategy: ${item.investmentCategory.replace(/_/g, ' ')} [${item.timeHorizon}]\n`;
+              reply += `• Target Range: ${item.targetPriceZone} | Support Level: ₹${item.supportLevel}\n`;
+              reply += `• Rationale: ${item.thesis}\n`;
+              reply += `• Key Indicators: ${item.keyIndicators.join(' • ')}\n\n`;
+            }
+          }
+          reply += `💡 *Disclaimer: Technical indicators and screener ideas are algorithmically derived for research and educational purposes. AikSetra does not promise guaranteed financial returns.*`;
         } else if (toolsExecutedNames.includes('get_market_quote')) {
           const mData = JSON.parse(toolContextText.split('[VERIFIED SYSTEM DATA FROM GET_MARKET_QUOTE]:\n')[1].split('\n[VERIFIED')[0] || '{}');
           reply = `Market Quote for ${mData.name} (${mData.symbol}):\n`;
@@ -293,9 +339,11 @@ INSTRUCTIONS:
     } else if (query.toLowerCase().includes('sip') || query.toLowerCase().includes('calc')) {
       suggestedQuestions.push('Calculate EMI for a ₹5,00,000 personal loan');
       suggestedQuestions.push('How does the AikSetra standard calculator work?');
-    } else if (query.toLowerCase().includes('stock') || query.toLowerCase().includes('market')) {
-      suggestedQuestions.push('Show quote for TCS');
-      suggestedQuestions.push('Show quote for HDFCBANK');
+    } else if (query.toLowerCase().includes('stock') || query.toLowerCase().includes('market') || query.toLowerCase().includes('invest')) {
+      suggestedQuestions.push('What are the top momentum breakout stocks today?');
+      suggestedQuestions.push('Show value investing picks with low P/E');
+      suggestedQuestions.push('Show quote for Reliance');
+      suggestedQuestions.push('How do I buy demo stocks in AikSetra?');
     } else {
       suggestedQuestions.push('What is my total account balance?');
       suggestedQuestions.push('Calculate SIP of ₹5,000 at 12% for 10 years');

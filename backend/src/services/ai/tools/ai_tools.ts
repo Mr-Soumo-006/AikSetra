@@ -1,8 +1,24 @@
 import { db } from '../../../db/database.js';
 import { FinancialToolsService } from '../../financialTools.service.js';
 import { AIToolResult } from '../ai.types.js';
+import { MarketResearchService } from './market_research.service.js';
 
 export const AI_AVAILABLE_TOOLS = [
+  {
+    name: 'get_stock_investment_ideas',
+    description: 'Generates evidence-based stock market investment ideas, technical breakout signals, value picks, and entry/support zones based on live metrics like P/E, RSI, and volume momentum (like Upstox / Zerodha research).',
+    parameters: {
+      category: {
+        type: 'string',
+        enum: ['MOMENTUM', 'VALUE', 'GROWTH', 'SWING'],
+        description: 'Investment style filter',
+      },
+      sector: {
+        type: 'string',
+        description: 'Specific industry sector filter (e.g. Banking, IT, Energy, Auto)',
+      },
+    },
+  },
   {
     name: 'get_user_financial_summary',
     description: 'Retrieves the authenticated user bank accounts summary, masked numbers, default account, and balances.',
@@ -163,6 +179,15 @@ export async function executeAITool(
             source: 'NSE/BSE Reference Quotes (Informational, Non-Advisory)',
             timestamp: new Date().toISOString(),
           },
+        };
+      }
+
+      case 'get_stock_investment_ideas': {
+        const ideas = MarketResearchService.getInvestmentIdeas(args.category, args.sector);
+        return {
+          name,
+          success: true,
+          data: ideas,
         };
       }
 

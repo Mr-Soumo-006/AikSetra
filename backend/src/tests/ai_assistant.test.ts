@@ -85,4 +85,17 @@ describe('AI Financial Assistant Test Suite', async () => {
     const fb = await aiAssistantService.submitFeedback(response.messageId, 'usr_simo_01', 'helpful', 'Very clear!');
     assert.strictEqual(fb.success, true);
   });
+
+  it('7. AI Tools & RAG: get_stock_investment_ideas returns technical research ideas with entry/support levels', async () => {
+    const ideasRes = await executeAITool('get_stock_investment_ideas', { category: 'MOMENTUM' }, 'usr_simo_01');
+    assert.strictEqual(ideasRes.success, true);
+    assert.ok(Array.isArray(ideasRes.data.ideas), 'Should return ideas list');
+    assert.ok(ideasRes.data.ideas.length > 0, 'Should have stock ideas');
+    assert.ok(ideasRes.data.ideas[0].targetPriceZone, 'Must include target price zone');
+    assert.ok(ideasRes.data.ideas[0].supportLevel > 0, 'Must include support level');
+
+    const chatRes = await aiAssistantService.chat('usr_simo_01', 'Which stocks can I invest in right now?');
+    assert.ok(chatRes.toolsExecuted?.includes('get_stock_investment_ideas'), 'Should execute investment ideas tool');
+    assert.ok(chatRes.reply.includes('Stock') || chatRes.reply.includes('₹') || chatRes.reply.includes('RELIANCE'), 'Reply must contain stock recommendations');
+  });
 });
