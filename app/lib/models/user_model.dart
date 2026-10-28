@@ -1,4 +1,3 @@
-import '../api_config.dart';
 class UserModel {
   final String id;
   final String phone;
@@ -7,7 +6,7 @@ class UserModel {
   final String primaryVpa;
   final double liteBalance;
   final double lrsUsedUsd;
-  final String? dateOfBirth;
+  final String dateOfBirth;
   final String? profilePicture;
 
   UserModel({
@@ -18,25 +17,21 @@ class UserModel {
     required this.primaryVpa,
     required this.liteBalance,
     required this.lrsUsedUsd,
-    this.dateOfBirth,
+    required this.dateOfBirth,
     this.profilePicture,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    String? rawPic = json['profilePicture'] ?? json['profile_picture'];
-    if (rawPic != null && rawPic.isNotEmpty && rawPic.startsWith('/')) {
-      rawPic = '${ApiConfig.baseUrl}$rawPic';
-    }
     return UserModel(
       id: json['id'] ?? '',
       phone: json['phone'] ?? '',
-      fullName: json['fullName'] ?? json['full_name'] ?? '',
+      fullName: json['fullName'] ?? '',
       email: json['email'] ?? '',
-      primaryVpa: json['primaryVpa'] ?? json['primary_vpa'] ?? '',
-      liteBalance: (json['liteBalance'] ?? json['lite_balance'] as num?)?.toDouble() ?? 0.0,
-      lrsUsedUsd: (json['lrsUsedUsd'] ?? json['lrs_used_usd'] as num?)?.toDouble() ?? 0.0,
-      dateOfBirth: json['dateOfBirth'] ?? json['date_of_birth'],
-      profilePicture: rawPic,
+      primaryVpa: json['primaryVpa'] ?? '',
+      liteBalance: (json['liteBalance'] as num?)?.toDouble() ?? 0.0,
+      lrsUsedUsd: (json['lrsUsedUsd'] as num?)?.toDouble() ?? 0.0,
+      dateOfBirth: json['dateOfBirth'] ?? '',
+      profilePicture: json['profilePicture'],
     );
   }
 
@@ -87,6 +82,9 @@ class BankAccountModel {
   final String maskedAccountNumber;
   final double balance;
   final bool isPrimary;
+  final String accountType; // 'SAVINGS', 'CURRENT', 'OVERDRAFT'
+  final String branch;
+  final bool isBusiness;
 
   BankAccountModel({
     required this.id,
@@ -96,9 +94,39 @@ class BankAccountModel {
     required this.maskedAccountNumber,
     required this.balance,
     required this.isPrimary,
+    this.accountType = 'SAVINGS',
+    this.branch = 'Main Branch',
+    this.isBusiness = false,
   });
 
+  BankAccountModel copyWith({
+    String? id,
+    String? bankName,
+    String? bankCode,
+    String? ifsc,
+    String? maskedAccountNumber,
+    double? balance,
+    bool? isPrimary,
+    String? accountType,
+    String? branch,
+    bool? isBusiness,
+  }) {
+    return BankAccountModel(
+      id: id ?? this.id,
+      bankName: bankName ?? this.bankName,
+      bankCode: bankCode ?? this.bankCode,
+      ifsc: ifsc ?? this.ifsc,
+      maskedAccountNumber: maskedAccountNumber ?? this.maskedAccountNumber,
+      balance: balance ?? this.balance,
+      isPrimary: isPrimary ?? this.isPrimary,
+      accountType: accountType ?? this.accountType,
+      branch: branch ?? this.branch,
+      isBusiness: isBusiness ?? this.isBusiness,
+    );
+  }
+
   factory BankAccountModel.fromJson(Map<String, dynamic> json) {
+    final type = (json['accountType'] ?? 'SAVINGS').toString().toUpperCase();
     return BankAccountModel(
       id: json['id'] ?? '',
       bankName: json['bankName'] ?? '',
@@ -107,6 +135,9 @@ class BankAccountModel {
       maskedAccountNumber: json['maskedAccountNumber'] ?? '',
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       isPrimary: json['isPrimary'] ?? false,
+      accountType: type,
+      branch: json['branch'] ?? 'Main Branch',
+      isBusiness: json['isBusiness'] ?? (type == 'CURRENT'),
     );
   }
 
@@ -119,6 +150,9 @@ class BankAccountModel {
       'maskedAccountNumber': maskedAccountNumber,
       'balance': balance,
       'isPrimary': isPrimary,
+      'accountType': accountType,
+      'branch': branch,
+      'isBusiness': isBusiness,
     };
   }
 }

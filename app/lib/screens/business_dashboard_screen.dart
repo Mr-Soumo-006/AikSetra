@@ -4,6 +4,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../services/bharat_one_pay_api.dart';
 import '../services/theme_manager.dart';
 import 'business_registration_screen.dart';
+import '../models/user_model.dart';
+import '../widgets/bank_account_switcher_modal.dart';
 
 class BusinessDashboardScreen extends StatefulWidget {
   const BusinessDashboardScreen({super.key});
@@ -196,99 +198,175 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
   void _showInstantSettlementModal() {
     final currentBal = (BharatOnePayApi.businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
     final settleCtrl = TextEditingController(text: currentBal.toStringAsFixed(0));
-    final bankName = BharatOnePayApi.businessProfile['bankName'] ?? 'HDFC Bank';
-    final accNo = BharatOnePayApi.businessProfile['bankAccountNo'] ?? '•••• 4589';
+    BankAccountModel destinationAcc = BharatOnePayApi.currentBusinessAccount ??
+        (BharatOnePayApi.linkedAccounts.isNotEmpty
+            ? BharatOnePayApi.linkedAccounts.first
+            : BankAccountModel(
+                id: 'acc_def',
+                bankName: BharatOnePayApi.businessProfile['bankName'] ?? 'HDFC Bank',
+                bankCode: 'HDFC',
+                ifsc: BharatOnePayApi.businessProfile['ifsc'] ?? 'HDFC0001234',
+                maskedAccountNumber: BharatOnePayApi.businessProfile['bankAccountNo'] ?? '•••• 4589',
+                balance: 48250.0,
+                isPrimary: false,
+                accountType: 'CURRENT',
+              ));
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          top: 24,
-          left: 20,
-          right: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Instant Bank Settlement', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.account_balance, color: Color(0xFF046A38), size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('$bankName Account', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('Account No: $accNo (Default Settlement)', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      ],
-                    ),
-                  ),
+                  const Text('Instant Bank Settlement', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Text('Available to Settle: ₹${currentBal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF046A38))),
-            const SizedBox(height: 8),
-            TextField(
-              controller: settleCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                prefixText: '₹ ',
-                hintText: 'Enter settlement amount',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D1B2A),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 10),
+
+              // Destination Bank Card with 1-Tap Switch
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                icon: const Icon(Icons.bolt, color: Color(0xFFFF9100)),
-                label: const Text('Transfer Instantly via IMPS (0% MDR)', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {
-                  final amt = double.tryParse(settleCtrl.text.trim()) ?? 0.0;
-                  if (amt <= 0 || amt > currentBal) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Invalid settlement amount'), backgroundColor: Colors.redAccent),
-                    );
-                    return;
-                  }
-                  BharatOnePayApi.recordBusinessSettlement(amount: amt);
-                  Navigator.pop(ctx);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('₹${amt.toStringAsFixed(2)} transferred to $bankName $accNo via IMPS! Ref: IMP${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}'),
-                      backgroundColor: const Color(0xFF046A38),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: destinationAcc.accountType == 'CURRENT' ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        destinationAcc.accountType == 'CURRENT' ? Icons.business_center : Icons.account_balance,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                  );
-                },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(destinationAcc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: destinationAcc.accountType == 'CURRENT' ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  destinationAcc.accountType,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    color: destinationAcc.accountType == 'CURRENT' ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${destinationAcc.maskedAccountNumber} • IFSC: ${destinationAcc.ifsc}',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        backgroundColor: const Color(0xFFE2E8F0),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () {
+                        BankAccountSwitcherModal.show(
+                          context,
+                          isBusinessContext: true,
+                          onAccountSelected: (acc) {
+                            setModalState(() {
+                              destinationAcc = acc;
+                            });
+                            setState(() {
+                              BharatOnePayApi.switchBusinessAccount(acc.id);
+                            });
+                          },
+                        );
+                      },
+                      child: const Text('Change ▾', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text('Available to Settle: ₹${currentBal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF046A38))),
+              const SizedBox(height: 8),
+              TextField(
+                controller: settleCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  prefixText: '₹ ',
+                  hintText: 'Enter settlement amount',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D1B2A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.bolt, color: Color(0xFFFF9100)),
+                  label: const Text('Transfer Instantly via IMPS (0% MDR)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    final amt = double.tryParse(settleCtrl.text.trim()) ?? 0.0;
+                    if (amt <= 0 || amt > currentBal) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invalid settlement amount'), backgroundColor: Colors.redAccent),
+                      );
+                      return;
+                    }
+                    BharatOnePayApi.recordBusinessSettlement(
+                      amount: amt,
+                      destinationAccount: destinationAcc,
+                    );
+                    Navigator.pop(ctx);
+                    setState(() {});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('₹${amt.toStringAsFixed(2)} settled into ${destinationAcc.bankName} (${destinationAcc.accountType} • ${destinationAcc.maskedAccountNumber}) via IMPS! Ref: IMP${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}'),
+                        backgroundColor: const Color(0xFF046A38),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -836,6 +914,57 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                       onPressed: _showInstantSettlementModal,
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                // Active Settlement Account Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.account_balance, color: Color(0xFF00E676), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Settles to: ${BharatOnePayApi.currentBusinessAccount?.bankName ?? BharatOnePayApi.businessProfile['bankName'] ?? "HDFC Bank"} (${BharatOnePayApi.currentBusinessAccount?.accountType ?? "CURRENT"} • ${BharatOnePayApi.currentBusinessAccount?.maskedAccountNumber ?? BharatOnePayApi.businessProfile['bankAccountNo'] ?? "•••• 4589"})',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () {
+                          BankAccountSwitcherModal.show(
+                            context,
+                            isBusinessContext: true,
+                            onAccountSelected: (acc) {
+                              setState(() {
+                                BharatOnePayApi.switchBusinessAccount(acc.id);
+                              });
+                            },
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF671F),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Switch', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              Icon(Icons.arrow_drop_down, color: Colors.white, size: 14),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1438,10 +1567,33 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Settlement Bank Account', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
-                      child: const Text('AUTO-SETTLE', style: TextStyle(color: Color(0xFF046A38), fontSize: 10, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
+                          child: const Text('AUTO-SETTLE', style: TextStyle(color: Color(0xFF046A38), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () {
+                            BankAccountSwitcherModal.show(
+                              context,
+                              isBusinessContext: true,
+                              onAccountSelected: (acc) {
+                                setState(() {
+                                  BharatOnePayApi.switchBusinessAccount(acc.id);
+                                });
+                              },
+                            );
+                          },
+                          child: const Text('Switch ▾', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1493,6 +1645,116 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                   ],
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Linked Bank Accounts (Savings & Current)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('All Linked Bank Accounts', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary)),
+                  Text('Savings & Current accounts across banks', style: TextStyle(fontSize: 11, color: textSecondary)),
+                ],
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add_circle_outline, size: 16, color: Color(0xFF046A38)),
+                label: const Text('Link Bank', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                onPressed: () {
+                  BankAccountSwitcherModal.showAddAccountDialog(context).then((_) {
+                    setState(() {});
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cardBorder),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: BharatOnePayApi.linkedAccounts.length,
+              separatorBuilder: (context, index) => Divider(height: 1, color: cardBorder),
+              itemBuilder: (context, idx) {
+                final acc = BharatOnePayApi.linkedAccounts[idx];
+                final isCurrent = acc.accountType == 'CURRENT';
+                final isSettlement = BharatOnePayApi.currentBusinessAccount?.id == acc.id ||
+                    (BharatOnePayApi.currentBusinessAccount == null && acc.maskedAccountNumber.endsWith(accNo.replaceAll(RegExp(r'[^0-9]'), '')));
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: isCurrent ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                    child: Icon(
+                      isCurrent ? Icons.business_center : Icons.account_balance,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  title: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          acc.bankName,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isCurrent ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          acc.accountType,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: isCurrent ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    '${acc.maskedAccountNumber} • IFSC: ${acc.ifsc}\n₹${acc.balance.toStringAsFixed(2)} available',
+                    style: TextStyle(fontSize: 11, color: textSecondary),
+                  ),
+                  trailing: isSettlement
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
+                          child: const Text('DEFAULT SETTLE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                        )
+                      : TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              BharatOnePayApi.switchBusinessAccount(acc.id);
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Set ${acc.bankName} (${acc.accountType}) as settlement destination!'),
+                                backgroundColor: const Color(0xFF046A38),
+                              ),
+                            );
+                          },
+                          child: const Text('Set Settle', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 20),

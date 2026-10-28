@@ -16,7 +16,58 @@ class BharatOnePayApi {
   // Cached state for active user session
   static UserModel? currentUser;
   static BankAccountModel? currentAccount;
-  static List<BankAccountModel> linkedAccounts = [];
+  static BankAccountModel? currentBusinessAccount;
+  static BankAccountModel? get primaryAccount => currentAccount ?? (linkedAccounts.where((a) => a.isPrimary).isNotEmpty ? linkedAccounts.firstWhere((a) => a.isPrimary) : (linkedAccounts.isNotEmpty ? linkedAccounts.first : null));
+  static List<BankAccountModel> linkedAccounts = [
+    BankAccountModel(
+      id: 'acc_sbi_01',
+      bankName: 'State Bank of India',
+      bankCode: 'SBIN',
+      ifsc: 'SBIN0001234',
+      maskedAccountNumber: '•••• •••• 4519',
+      balance: 84500.50,
+      isPrimary: true,
+      accountType: 'SAVINGS',
+      branch: 'Kolkata Main Branch',
+      isBusiness: false,
+    ),
+    BankAccountModel(
+      id: 'acc_hdfc_02',
+      bankName: 'HDFC Bank',
+      bankCode: 'HDFC',
+      ifsc: 'HDFC0001234',
+      maskedAccountNumber: '•••• •••• 4589',
+      balance: 128450.00,
+      isPrimary: false,
+      accountType: 'CURRENT',
+      branch: 'Tech Park Sector V, Kolkata',
+      isBusiness: true,
+    ),
+    BankAccountModel(
+      id: 'acc_icici_03',
+      bankName: 'ICICI Bank',
+      bankCode: 'ICIC',
+      ifsc: 'ICIC0003456',
+      maskedAccountNumber: '•••• •••• 3341',
+      balance: 51200.75,
+      isPrimary: false,
+      accountType: 'SAVINGS',
+      branch: 'Park Street Branch',
+      isBusiness: false,
+    ),
+    BankAccountModel(
+      id: 'acc_axis_04',
+      bankName: 'Axis Bank',
+      bankCode: 'UTIB',
+      ifsc: 'UTIB0001234',
+      maskedAccountNumber: '•••• •••• 7812',
+      balance: 65000.00,
+      isPrimary: false,
+      accountType: 'CURRENT',
+      branch: 'Salt Lake City Branch',
+      isBusiness: true,
+    ),
+  ];
   static List<Map<String, dynamic>> linkedCards = [
     {
       'id': 'card_hdfc_rupay_01',
@@ -1133,6 +1184,7 @@ class BharatOnePayApi {
     required String bankAccountNo,
     required String ifsc,
     required String merchantVpa,
+    String accountType = 'CURRENT',
   }) async {
     hasBusinessAccount = true;
     isBusinessMode = true;
@@ -1145,6 +1197,7 @@ class BharatOnePayApi {
       'merchantVpa': merchantVpa,
       'bankName': bankName,
       'bankAccountNo': bankAccountNo,
+      'accountType': accountType,
       'ifsc': ifsc,
       'ownerName': ownerName,
       'ownerEmail': ownerEmail,
@@ -1155,6 +1208,31 @@ class BharatOnePayApi {
       'balance': 48250.0,
       'openedAt': DateTime.now().toIso8601String().split('T')[0],
     };
+
+    final last4 = bankAccountNo.length > 4 ? bankAccountNo.substring(bankAccountNo.length - 4) : bankAccountNo;
+    final existingIdx = linkedAccounts.indexWhere((a) => a.maskedAccountNumber.endsWith(last4));
+    if (existingIdx != -1) {
+      linkedAccounts[existingIdx] = linkedAccounts[existingIdx].copyWith(
+        isBusiness: true,
+        accountType: accountType,
+      );
+      currentBusinessAccount = linkedAccounts[existingIdx];
+    } else {
+      final newAcc = BankAccountModel(
+        id: 'acc_biz_${DateTime.now().millisecondsSinceEpoch}',
+        bankName: bankName,
+        bankCode: bankName.split(' ').first.toUpperCase(),
+        ifsc: ifsc,
+        maskedAccountNumber: '•••• $last4',
+        balance: 48250.0,
+        isPrimary: false,
+        accountType: accountType,
+        branch: 'Business Commercial Branch',
+        isBusiness: true,
+      );
+      linkedAccounts.add(newAcc);
+      currentBusinessAccount = newAcc;
+    }
     businessOwners[0] = {
       'id': 'own_01',
       'name': ownerName,
@@ -1212,21 +1290,37 @@ class BharatOnePayApi {
     saveSessionToDisk();
   }
 
-  static bool recordBusinessSettlement({required double amount}) {
+  static bool recordBusinessSettlement({
+    required double amount,
+    BankAccountModel? destinationAccount,
+  }) {
     final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
     if (amount <= 0 || amount > currentBal) return false;
     final newBal = currentBal - amount;
     businessProfile['balance'] = newBal;
 
-    final bank = businessProfile['bankName'] ?? 'Bank Account';
-    final acc = businessProfile['bankAccountNo'] ?? '•••• 4589';
+    final dest = destinationAccount ?? currentBusinessAccount ?? primaryAccount;
+    final bank = dest?.bankName ?? businessProfile['bankName'] ?? 'Bank Account';
+    final acc = dest?.maskedAccountNumber ?? businessProfile['bankAccountNo'] ?? '•••• 4589';
+    final accType = dest?.accountType ?? businessProfile['accountType'] ?? 'CURRENT';
+
+    if (dest != null) {
+      final idx = linkedAccounts.indexWhere((a) => a.id == dest.id);
+      if (idx != -1) {
+        final updated = linkedAccounts[idx].copyWith(balance: linkedAccounts[idx].balance + amount);
+        linkedAccounts[idx] = updated;
+        if (currentAccount?.id == dest.id) {
+          currentAccount = updated;
+        }
+      }
+    }
 
     businessLedger.insert(0, {
       'id': 'LED-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
       'date': 'Just now',
-      'party': 'Settlement to $bank',
+      'party': 'Settlement to $bank ($accType)',
       'vpa': '$bank $acc',
-      'particulars': 'Instant Merchant Settlement',
+      'particulars': 'Instant Merchant Settlement ($accType)',
       'method': 'IMPS Instant',
       'type': 'DEBIT',
       'amount': amount,
@@ -1629,7 +1723,7 @@ class BharatOnePayApi {
         primaryVpa: 'soumonaska3038@aiksetra',
         liteBalance: 2000.0,
         lrsUsedUsd: 0.0,
-        dateOfBirth: dateOfBirth,
+        dateOfBirth: dateOfBirth ?? '1998-05-12',
         profilePicture: profilePicture,
       );
     }
@@ -1797,6 +1891,73 @@ class BharatOnePayApi {
       return true;
     }
     return false;
+  }
+
+  static Future<bool> switchPrimaryAccount(String accountId) async {
+    final ok = await setPrimaryAccount(accountId);
+    if (ok) return true;
+    final idx = linkedAccounts.indexWhere((a) => a.id == accountId);
+    if (idx != -1) {
+      for (int i = 0; i < linkedAccounts.length; i++) {
+        linkedAccounts[i] = linkedAccounts[i].copyWith(isPrimary: linkedAccounts[i].id == accountId);
+      }
+      currentAccount = linkedAccounts[idx];
+      await saveSessionToDisk();
+      return true;
+    }
+    return false;
+  }
+
+  static Future<bool> switchBusinessAccount(String accountId) async {
+    final idx = linkedAccounts.indexWhere((a) => a.id == accountId);
+    if (idx != -1) {
+      currentBusinessAccount = linkedAccounts[idx];
+      businessProfile['bankName'] = linkedAccounts[idx].bankName;
+      businessProfile['bankAccountNo'] = linkedAccounts[idx].maskedAccountNumber;
+      businessProfile['ifsc'] = linkedAccounts[idx].ifsc;
+      await saveSessionToDisk();
+      return true;
+    }
+    return false;
+  }
+
+  static Future<Map<String, dynamic>> linkNewBankAccount({
+    required String bankName,
+    required String accountType,
+    required String accountNumber,
+    required String ifsc,
+    String? branch,
+    bool isBusiness = false,
+  }) async {
+    final masked = accountNumber.length > 4
+        ? '•••• •••• ' + accountNumber.substring(accountNumber.length - 4)
+        : accountNumber;
+    final newId = 'acc_' + DateTime.now().millisecondsSinceEpoch.toString();
+    final code = bankName.toUpperCase().replaceAll(' ', '');
+    final acc = BankAccountModel(
+      id: newId,
+      bankName: bankName,
+      bankCode: code.substring(0, code.length >= 4 ? 4 : code.length),
+      ifsc: ifsc.toUpperCase(),
+      maskedAccountNumber: masked,
+      balance: accountType.toUpperCase() == 'CURRENT' ? 100000.0 : 25000.0,
+      isPrimary: linkedAccounts.isEmpty,
+      accountType: accountType.toUpperCase(),
+      branch: branch ?? 'Main Branch',
+      isBusiness: isBusiness || accountType.toUpperCase() == 'CURRENT',
+    );
+    linkedAccounts.add(acc);
+    if (isBusiness || currentBusinessAccount == null) {
+      currentBusinessAccount = acc;
+      businessProfile['bankName'] = acc.bankName;
+      businessProfile['bankAccountNo'] = acc.maskedAccountNumber;
+      businessProfile['ifsc'] = acc.ifsc;
+    }
+    if (currentAccount == null) {
+      currentAccount = acc;
+    }
+    await saveSessionToDisk();
+    return {'success': true, 'account': acc};
   }
 
   // 4c. Deposit / Add Money to Bank Account
@@ -1982,16 +2143,19 @@ class BharatOnePayApi {
         final txn = res['transaction'] as Map<String, dynamic>? ?? {};
         final newBal = (res['updatedBalance'] as num?)?.toDouble() ??
             ((currentAccount?.balance ?? 50000.0) - amount);
-        if (currentAccount != null) {
-          currentAccount = BankAccountModel(
-            id: currentAccount!.id,
-            bankName: currentAccount!.bankName,
-            bankCode: currentAccount!.bankCode,
-            ifsc: currentAccount!.ifsc,
-            maskedAccountNumber: currentAccount!.maskedAccountNumber,
-            balance: newBal > 0 ? newBal : 0,
-            isPrimary: currentAccount!.isPrimary,
-          );
+        final effId = senderAccountId ?? currentAccount?.id ?? (linkedAccounts.isNotEmpty ? linkedAccounts.first.id : null);
+        if (effId != null) {
+          final aIdx = linkedAccounts.indexWhere((a) => a.id == effId);
+          if (aIdx != -1) {
+            final acc = linkedAccounts[aIdx];
+            final updated = acc.copyWith(balance: newBal > 0 ? newBal : 0);
+            linkedAccounts[aIdx] = updated;
+            if (currentAccount?.id == effId) {
+              currentAccount = updated;
+            }
+          }
+        } else if (currentAccount != null) {
+          currentAccount = currentAccount!.copyWith(balance: newBal > 0 ? newBal : 0);
         }
         final roundUp = (res['roundedUpAmount'] as num?)?.toDouble() ?? 0.0;
         if (roundUp > 0) {

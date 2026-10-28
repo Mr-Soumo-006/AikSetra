@@ -32,6 +32,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
   final _upiCtrl = TextEditingController(text: 'aiksetra.merchant@okhdfcbank');
 
   String _selectedCategory = 'Information Technology & Software';
+  String _selectedAccountType = 'CURRENT';
   String _selectedEntity = 'Private Limited Company';
   bool _agreedToTerms = true;
   bool _isSubmitting = false;
@@ -125,6 +126,7 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
       bankAccountNo: _accountNoCtrl.text.trim(),
       ifsc: _ifscCtrl.text.trim().toUpperCase(),
       merchantVpa: _upiCtrl.text.trim().toLowerCase(),
+      accountType: _selectedAccountType,
     );
 
     if (!mounted) return;
@@ -582,6 +584,102 @@ class _BusinessRegistrationScreenState extends State<BusinessRegistrationScreen>
                               style: TextStyle(fontSize: 11, color: textSecondary),
                             ),
                             const SizedBox(height: 12),
+
+                            // Account Type Selector (Current vs Savings)
+                            _buildFieldLabel('Account Type', textSecondary),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ChoiceChip(
+                                    label: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.business_center, size: 14),
+                                        SizedBox(width: 4),
+                                        Text('Current Account'),
+                                      ],
+                                    ),
+                                    selected: _selectedAccountType == 'CURRENT',
+                                    selectedColor: const Color(0xFF046A38),
+                                    labelStyle: TextStyle(
+                                      color: _selectedAccountType == 'CURRENT' ? Colors.white : textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    onSelected: (val) {
+                                      if (val) setState(() => _selectedAccountType = 'CURRENT');
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ChoiceChip(
+                                    label: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.savings_outlined, size: 14),
+                                        SizedBox(width: 4),
+                                        Text('Savings Account'),
+                                      ],
+                                    ),
+                                    selected: _selectedAccountType == 'SAVINGS',
+                                    selectedColor: const Color(0xFF1D4ED8),
+                                    labelStyle: TextStyle(
+                                      color: _selectedAccountType == 'SAVINGS' ? Colors.white : textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    onSelected: (val) {
+                                      if (val) setState(() => _selectedAccountType = 'SAVINGS');
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Use existing linked account quick-picker
+                            if (BharatOnePayApi.linkedAccounts.isNotEmpty) ...[
+                              _buildFieldLabel('Or Select From Linked Accounts', textSecondary),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: BharatOnePayApi.linkedAccounts.map((acc) {
+                                    final isSelected = _bankCtrl.text == acc.bankName && _accountNoCtrl.text.endsWith(acc.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), ''));
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: ActionChip(
+                                        avatar: Icon(
+                                          acc.accountType == 'CURRENT' ? Icons.business : Icons.account_balance,
+                                          size: 14,
+                                          color: isSelected ? Colors.white : const Color(0xFF046A38),
+                                        ),
+                                        label: Text(
+                                          '${acc.bankName} (${acc.accountType})',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: isSelected ? Colors.white : textPrimary,
+                                          ),
+                                        ),
+                                        backgroundColor: isSelected ? const Color(0xFF046A38) : (ThemeManager.isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                        onPressed: () {
+                                          setState(() {
+                                            _bankCtrl.text = acc.bankName;
+                                            _ifscCtrl.text = acc.ifsc;
+                                            final rawDigits = acc.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '');
+                                            _accountNoCtrl.text = '50100$rawDigits';
+                                            _selectedAccountType = acc.accountType;
+                                            _upiCtrl.text = 'aiksetra.merchant@ok${acc.bankCode.toLowerCase()}';
+                                          });
+                                        },
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
 
                             Row(
                               children: [

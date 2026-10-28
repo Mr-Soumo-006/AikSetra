@@ -28,6 +28,8 @@ import 'bank_account_opening_screen.dart';
 import 'statements_screen.dart';
 import 'profile_screen.dart';
 import 'universal_search_screen.dart';
+import '../models/user_model.dart';
+import '../widgets/bank_account_switcher_modal.dart';
 import 'category_hub_screen.dart';
 import '../widgets/language_location_selector_modal.dart';
 
@@ -1199,15 +1201,48 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '$_bankName (${_maskedAcc.isNotEmpty ? _maskedAcc : "••••"})',
-                              style: const TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    '$_bankName (${_maskedAcc.isNotEmpty ? _maskedAcc : "••••"})',
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () {
+                                    BankAccountSwitcherModal.show(
+                                      context,
+                                      onAccountSelected: (acc) async {
+                                        await _syncLiveState();
+                                        if (mounted) setState(() {});
+                                      },
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text('Switch', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                                        Icon(Icons.arrow_drop_down, size: 12, color: Color(0xFF046A38)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -6743,7 +6778,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           prefillNote ?? (prefillName != null ? 'Payment to $prefillName' : ''),
     );
     bool useEscrow = false;
-    String? selectedCardId; // null = pay from Primary Bank Account, non-null = pay from Linked Debit/Credit Card
+    String? selectedBankAccountId = BharatOnePayApi.primaryAccount?.id ??
+        (BharatOnePayApi.linkedAccounts.isNotEmpty ? BharatOnePayApi.linkedAccounts.first.id : null);
+    String? selectedCardId; // null = pay from selected Bank Account, non-null = pay from Linked Debit/Credit Card
 
     showModalBottomSheet(
       context: context,
@@ -6790,21 +6827,54 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      ChoiceChip(
-                        label: Text(
-                          '🏦 $_bankName (₹${_bankBalance.toStringAsFixed(0)})',
+                      ...BharatOnePayApi.linkedAccounts.map((acc) {
+                        final isSel = selectedCardId == null && selectedBankAccountId == acc.id;
+                        final isCurrent = acc.accountType == 'CURRENT';
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            avatar: Icon(
+                              isCurrent ? Icons.business_center : Icons.account_balance,
+                              size: 14,
+                              color: isSel ? Colors.white : (isCurrent ? const Color(0xFF1D4ED8) : const Color(0xFF046A38)),
+                            ),
+                            label: Text(
+                              '${acc.bankName} (${acc.accountType} • ${acc.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')}) ₹${acc.balance.toStringAsFixed(0)}',
+                            ),
+                            selected: isSel,
+                            selectedColor: isCurrent ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                            labelStyle: TextStyle(
+                              color: isSel ? Colors.white : const Color(0xFF0F172A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (_) => setSheetState(() {
+                              selectedBankAccountId = acc.id;
+                              selectedCardId = null;
+                            }),
+                          ),
+                        );
+                      }),
+                      ActionChip(
+                        avatar: const Icon(Icons.add, size: 14, color: Color(0xFF046A38)),
+                        label: const Text(
+                          '+ Add Bank',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF046A38),
+                          ),
                         ),
-                        selected: selectedCardId == null,
-                        selectedColor: const Color(0xFF046A38),
-                        labelStyle: TextStyle(
-                          color: selectedCardId == null
-                              ? Colors.white
-                              : const Color(0xFF0F172A),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        onSelected: (_) =>
-                            setSheetState(() => selectedCardId = null),
+                        onPressed: () {
+                          BankAccountSwitcherModal.showAddAccountDialog(context).then((newAcc) {
+                            if (newAcc != null) {
+                              setSheetState(() {
+                                selectedBankAccountId = newAcc.id;
+                                selectedCardId = null;
+                              });
+                            }
+                          });
+                        },
                       ),
                       const SizedBox(width: 8),
                       ...BharatOnePayApi.linkedCards.map((c) {
@@ -6825,8 +6895,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
-                            onSelected: (_) =>
-                                setSheetState(() => selectedCardId = cid),
+                            onSelected: (_) => setSheetState(() {
+                              selectedCardId = cid;
+                              selectedBankAccountId = null;
+                            }),
                           ),
                         );
                       }),
@@ -6987,10 +7059,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         if (proceed != true) return;
                       }
 
+                      final chosenAcc = BharatOnePayApi.linkedAccounts.firstWhere(
+                        (a) => a.id == selectedBankAccountId,
+                        orElse: () => BharatOnePayApi.primaryAccount ?? BharatOnePayApi.linkedAccounts.first,
+                      );
                       final mpin = await _promptForMpin(
                         title: selectedCardId != null
                             ? 'Authorize Card / RuPay UPI Payment'
-                            : 'Authorize UPI Payment',
+                            : 'Authorize UPI Payment (${chosenAcc.bankName} ${chosenAcc.accountType})',
                         subtitle: 'Pay ₹${amt.toStringAsFixed(2)} to $rawVpa',
                       );
                       if (mpin == null || mpin.length < 4) return;
@@ -7000,6 +7076,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         receiverName: prefillName ?? rawVpa.split('@').first,
                         amount: amt,
                         mpin: mpin,
+                        senderAccountId: selectedCardId == null ? selectedBankAccountId : null,
                         cardId: selectedCardId,
                         remark: noteCtrl.text.trim().isEmpty
                             ? 'UPI Transfer'
@@ -7844,9 +7921,95 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   Future<void> _showCheckBalanceDialog() async {
+    BankAccountModel targetAccount = BharatOnePayApi.primaryAccount ??
+        (BharatOnePayApi.linkedAccounts.isNotEmpty
+            ? BharatOnePayApi.linkedAccounts.first
+            : BankAccountModel(
+                id: 'acc_def',
+                bankName: _bankName,
+                bankCode: 'SBIN',
+                ifsc: _ifsc,
+                maskedAccountNumber: _maskedAcc,
+                balance: _bankBalance,
+                isPrimary: true,
+                accountType: 'SAVINGS',
+              ));
+
+    if (BharatOnePayApi.linkedAccounts.length > 1) {
+      final selected = await showModalBottomSheet<BankAccountModel>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          decoration: BoxDecoration(
+            color: ThemeManager.isDarkMode ? const Color(0xFF131B2E) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Check Account Balance', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text('Select bank account to check available balance via UPI', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              const SizedBox(height: 14),
+              ...BharatOnePayApi.linkedAccounts.map((acc) {
+                final isCurrent = acc.accountType == 'CURRENT';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: isCurrent ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                      child: Icon(isCurrent ? Icons.business_center : Icons.account_balance, color: Colors.white, size: 20),
+                    ),
+                    title: Row(
+                      children: [
+                        Flexible(child: Text(acc.bankName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis)),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isCurrent ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            acc.accountType,
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isCurrent ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    subtitle: Text('${acc.maskedAccountNumber} • IFSC: ${acc.ifsc}'),
+                    trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                    onTap: () => Navigator.pop(ctx, acc),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      );
+      if (selected == null) return;
+      targetAccount = selected;
+    }
+
     final pin = await _promptForMpin(
       title: 'Check Bank Balance',
-      subtitle: 'Enter 4-digit UPI MPIN for $_bankName ($_maskedAcc)',
+      subtitle: 'Enter 4-digit UPI MPIN for ${targetAccount.bankName} (${targetAccount.maskedAccountNumber})',
     );
     if (pin == null || pin.isEmpty) return;
 
@@ -7866,6 +8029,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
     await _syncLiveState();
     if (!mounted) return;
+
+    // Refresh balance from linked accounts in case it changed
+    final refreshedAcc = BharatOnePayApi.linkedAccounts.firstWhere(
+      (a) => a.id == targetAccount.id,
+      orElse: () => targetAccount,
+    );
 
     showDialog(
       context: context,
@@ -7890,13 +8059,36 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '$_bankName ($_maskedAcc)',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    '${refreshedAcc.bankName} (${refreshedAcc.maskedAccountNumber})',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: refreshedAcc.accountType == 'CURRENT' ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    refreshedAcc.accountType,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: refreshedAcc.accountType == 'CURRENT' ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
-              '₹${_bankBalance.toStringAsFixed(2)}',
+              '₹${refreshedAcc.balance.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
