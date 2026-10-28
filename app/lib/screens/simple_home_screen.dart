@@ -181,6 +181,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     await BharatOnePayApi.getBillers();
     await BharatOnePayApi.getSipPlansAndPortfolio();
     await BharatOnePayApi.getMyEscrows();
+    await BharatOnePayApi.fetchLiveStockQuotes();
     if (!mounted) return;
     setState(() {
       final elecBillers = BharatOnePayApi.bbpsBillers
@@ -4141,6 +4142,77 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           // ===================================================================
           // INDIAN STOCK MARKET WATCHLIST & INSTANT BUY / STOCK SIP (NSE / BSE)
           // ===================================================================
+          // Live Benchmark Indices (NIFTY 50 & SENSEX)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: BharatOnePayApi.marketIndices.map((idx) {
+                final isPositive = (idx['change'] as num) >= 0;
+                return Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              idx['name'],
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₹${(idx['price'] as num).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${isPositive ? '+' : ''}${(idx['change'] as num).toStringAsFixed(2)} (${isPositive ? '+' : ''}${(idx['changePct'] as num).toStringAsFixed(2)}%)',
+                          style: TextStyle(
+                            color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -8684,20 +8756,33 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     final isUp = (stock['change'] as num) >= 0;
     final color = isUp ? const Color(0xFF046A38) : const Color(0xFFDC2626);
 
-    final symbol = (stock['symbol'] as String);
-    final bars = List.generate(8, (i) {
-      final h = 6.0 + ((symbol.codeUnitAt(i % symbol.length) * (i + 1) * 7) % 18).toDouble();
-      return h;
-    });
+    final miniBars = stock['miniBars'] as List?;
+    List<double> heights;
+    if (miniBars != null && miniBars.length >= 2) {
+      final values = miniBars.map((v) => (v as num).toDouble()).toList();
+      double min = values.reduce((a, b) => a < b ? a : b);
+      double max = values.reduce((a, b) => a > b ? a : b);
+      final range = (max - min).abs();
+      heights = values.map((val) {
+        if (range <= 0.001) return 14.0;
+        final norm = (val - min) / range;
+        return (6.0 + norm * 18.0).clamp(4.0, 24.0);
+      }).toList();
+    } else {
+      final symbol = (stock['symbol'] as String);
+      heights = List.generate(8, (i) {
+        return 6.0 + ((symbol.codeUnitAt(i % symbol.length) * (i + 1) * 7) % 18).toDouble();
+      });
+    }
 
     return Container(
-      width: 42,
+      width: 44,
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: bars.map((h) {
+        children: heights.map((h) {
           return Container(
             width: 3.5,
             height: h,
@@ -8712,395 +8797,465 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _showStockChartModal(Map<String, dynamic> stock) {
-    final symbol = stock['symbol'] as String;
-    final name = stock['name'] as String;
-    final sector = stock['sector'] ?? 'BSE / NSE Equity';
-    final basePrice = (stock['price'] as num).toDouble();
-    final isUp = (stock['change'] as num) >= 0;
-    final changeVal = (stock['change'] as num).toDouble();
-    final changePct = ((stock['changePct'] as num?) ?? (changeVal / basePrice * 100)).toDouble();
-
-    String selectedTf = '1D';
-    bool isCandleMode = true;
-    int? activeCandleIdx;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setChartState) {
-            final candleCount = 20;
-            final candles = <Map<String, dynamic>>[];
-            double walkPrice = basePrice * (1.0 - (isUp ? 0.015 : -0.015));
+      builder: (ctx) => _RealStockChartModalSheet(
+        stock: stock,
+        onBuyStock: _handleBuyStock,
+        onStockSip: _handleStockSip,
+      ),
+    );
+  }
+}
 
-            for (int i = 0; i < candleCount; i++) {
-              final step = ((symbol.codeUnitAt(i % symbol.length) * 13 + i * 17) % 21) - 10.0;
-              final open = walkPrice;
-              final close = open + (step * (basePrice * 0.0012));
-              final high = (open > close ? open : close) + (((i * 7) % 10) * basePrice * 0.0006);
-              final low = (open < close ? open : close) - (((i * 5) % 10) * basePrice * 0.0006);
-              final vol = 50000 + ((symbol.codeUnitAt(i % symbol.length) * 450 + i * 1200) % 150000);
+// =============================================================================
+// REAL LIVE STOCK MARKET CANDLESTICK & CHART MODAL SHEET (NSE / BSE LIVE)
+// =============================================================================
+class _RealStockChartModalSheet extends StatefulWidget {
+  final Map<String, dynamic> stock;
+  final Function(Map<String, dynamic>) onBuyStock;
+  final Function(Map<String, dynamic>) onStockSip;
 
-              candles.add({
-                'time': selectedTf == '1D'
-                    ? '${9 + (i * 18 ~/ 60)}:${(15 + (i * 18 % 60)).toString().padLeft(2, '0')}'
-                    : (selectedTf == '1W'
-                        ? 'Day ${i % 5 + 1}'
-                        : (selectedTf == '1M' ? 'Wk ${(i ~/ 5) + 1}' : 'Mo ${(i % 12) + 1}')),
-                'open': open,
-                'high': high,
-                'low': low,
-                'close': close,
-                'volume': vol,
-              });
-              walkPrice = close;
-            }
+  const _RealStockChartModalSheet({
+    required this.stock,
+    required this.onBuyStock,
+    required this.onStockSip,
+  });
 
-            candles.last['close'] = basePrice;
-            if (basePrice > (candles.last['high'] as double)) {
-              candles.last['high'] = basePrice;
-            }
+  @override
+  State<_RealStockChartModalSheet> createState() => _RealStockChartModalSheetState();
+}
 
-            final activeCandle = activeCandleIdx != null && activeCandleIdx! < candles.length
-                ? candles[activeCandleIdx!]
-                : candles.last;
+class _RealStockChartModalSheetState extends State<_RealStockChartModalSheet> {
+  String _selectedTf = '1D';
+  bool _isCandleMode = true;
+  int? _activeCandleIdx;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _candles = [];
 
-            final dayHigh = (stock['high52'] as num?)?.toDouble() ?? (basePrice * 1.025);
-            final dayLow = (stock['low52'] as num?)?.toDouble() ?? (basePrice * 0.975);
+  @override
+  void initState() {
+    super.initState();
+    _fetchCandles();
+  }
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.88,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+  Future<void> _fetchCandles() async {
+    setState(() => _isLoading = true);
+    final symbol = widget.stock['symbol'] as String;
+    final res = await BharatOnePayApi.fetchRealStockCandles(
+      symbol: symbol,
+      timeframe: _selectedTf,
+    );
+    if (mounted) {
+      setState(() {
+        _candles = res;
+        _isLoading = false;
+        _activeCandleIdx = null;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stock = widget.stock;
+    final symbol = stock['symbol'] as String;
+    final name = stock['name'] as String;
+    final sector = stock['sector'] ?? 'NSE / BSE Equity';
+    final livePrice = (stock['price'] as num).toDouble();
+    final isUp = (stock['change'] as num) >= 0;
+    final changeVal = (stock['change'] as num).toDouble();
+    final changePct = ((stock['changePct'] as num?) ?? 0.0).toDouble();
+
+    final activeCandle = _activeCandleIdx != null && _activeCandleIdx! < _candles.length
+        ? _candles[_activeCandleIdx!]
+        : (_candles.isNotEmpty ? _candles.last : {
+            'time': 'Live',
+            'open': livePrice,
+            'high': (stock['dayHigh'] as num?)?.toDouble() ?? livePrice,
+            'low': (stock['dayLow'] as num?)?.toDouble() ?? livePrice,
+            'close': livePrice,
+            'volume': stock['volume'] ?? 50000,
+          });
+
+    final dayHigh = (stock['high52'] as num?)?.toDouble() ?? (livePrice * 1.05);
+    final dayLow = (stock['low52'] as num?)?.toDouble() ?? (livePrice * 0.95);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10),
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 10),
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                      child: Column(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        symbol,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          sector,
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF64748B),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(name, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                                ],
+                              Text(
+                                symbol,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () => Navigator.pop(ctx),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.fiber_manual_record, size: 7, color: Color(0xFF046A38)),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'REAL NSE LIVE',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF046A38),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 2),
+                          Text(name, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          Text(sector, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '₹${(activeCandle['close'] as num).toDouble().toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '₹${(activeCandle['close'] as double).toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF0F172A),
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        '${isUp ? '+' : ''}₹${changeVal.toStringAsFixed(2)} (${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%)',
-                                        style: TextStyle(
-                                          color: isUp ? const Color(0xFF046A38) : const Color(0xFFDC2626),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Time: ${activeCandle['time']}',
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              Text(
+                                '${isUp ? '+' : ''}₹${changeVal.toStringAsFixed(2)} (${isUp ? '+' : ''}${changePct.toStringAsFixed(2)}%)',
+                                style: TextStyle(
+                                  color: isUp ? const Color(0xFF046A38) : const Color(0xFFDC2626),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                              InkWell(
-                                onTap: () => setChartState(() => isCandleMode = !isCandleMode),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Time: ${activeCandle['time']}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF0F172A)),
+                            tooltip: 'Refresh Live Quotes',
+                            onPressed: _fetchCandles,
+                          ),
+                          InkWell(
+                            onTap: () => setState(() => _isCandleMode = !_isCandleMode),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isCandleMode ? Icons.candlestick_chart_rounded : Icons.show_chart_rounded,
-                                        size: 16,
-                                        color: const Color(0xFF0F172A),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isCandleMode ? 'Candles' : 'Line',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: ['1D', '1W', '1M', '1Y', '5Y', 'ALL'].map((tf) {
-                                final isSel = selectedTf == tf;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: InkWell(
-                                    onTap: () => setChartState(() => selectedTf = tf),
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: isSel ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSel ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        tf,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-                                          color: isSel ? Colors.white : const Color(0xFF475569),
-                                        ),
-                                      ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _isCandleMode ? Icons.candlestick_chart_rounded : Icons.show_chart_rounded,
+                                    size: 16,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _isCandleMode ? 'Candles' : 'Line',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
                                     ),
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            height: 240,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A),
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: GestureDetector(
-                                onHorizontalDragUpdate: (details) {
-                                  final box = context.findRenderObject() as RenderBox?;
-                                  final width = box?.size.width ?? 320.0;
-                                  final pos = details.localPosition.dx.clamp(0.0, width);
-                                  final idx = ((pos / width) * candleCount).floor().clamp(0, candleCount - 1);
-                                  setChartState(() => activeCandleIdx = idx);
-                                },
-                                onHorizontalDragEnd: (_) {
-                                  setChartState(() => activeCandleIdx = null);
-                                },
-                                onTapDown: (details) {
-                                  final box = context.findRenderObject() as RenderBox?;
-                                  final width = box?.size.width ?? 320.0;
-                                  final pos = details.localPosition.dx.clamp(0.0, width);
-                                  final idx = ((pos / width) * candleCount).floor().clamp(0, candleCount - 1);
-                                  setChartState(() => activeCandleIdx = idx);
-                                },
-                                child: CustomPaint(
-                                  painter: _StockCandleChartPainter(
-                                    candles: candles,
-                                    isCandleMode: isCandleMode,
-                                    activeIdx: activeCandleIdx,
-                                  ),
-                                ),
+                                ],
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildOhlcTag('Open', (activeCandle['open'] as double).toStringAsFixed(1)),
-                                _buildOhlcTag('High', (activeCandle['high'] as double).toStringAsFixed(1)),
-                                _buildOhlcTag('Low', (activeCandle['low'] as double).toStringAsFixed(1)),
-                                _buildOhlcTag('Close', (activeCandle['close'] as double).toStringAsFixed(1)),
-                                _buildOhlcTag('Vol', '${(activeCandle['volume'] as int) ~/ 1000}K'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text('52-Week Range', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('₹${dayLow.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  child: LinearProgressIndicator(
-                                    value: ((basePrice - dayLow) / (dayHigh - dayLow)).clamp(0.05, 0.95),
-                                    backgroundColor: const Color(0xFFE2E8F0),
-                                    color: const Color(0xFF046A38),
-                                    minHeight: 6,
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                ),
-                              ),
-                              Text('₹${dayHigh.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          const Text('Fundamentals & Key Metrics', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Column(
-                              children: [
-                                _buildMetricRow('Market Capitalization', stock['marketCap'] ?? '₹10.5 Lakh Cr'),
-                                const Divider(height: 14),
-                                _buildMetricRow('Price to Earnings (P/E)', '${stock['pe'] ?? 24.5}x'),
-                                const Divider(height: 14),
-                                _buildMetricRow('Exchange', 'NSE & BSE (Equities)'),
-                                const Divider(height: 14),
-                                _buildMetricRow('Settlement Cycle', 'T+1 Rolling Settlement'),
-                              ],
                             ),
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['1D', '1W', '1M', '1Y', '5Y', 'ALL'].map((tf) {
+                        final isSel = _selectedTf == tf;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: InkWell(
+                            onTap: () {
+                              if (_selectedTf != tf) {
+                                setState(() => _selectedTf = tf);
+                                _fetchCandles();
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: isSel ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSel ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                              child: Text(
+                                tf,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                                  color: isSel ? Colors.white : const Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
+                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    height: 240,
+                    width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: _isLoading
+                          ? const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(
+                                    color: Color(0xFFFF671F),
+                                    strokeWidth: 2.5,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Loading real NSE market candles...',
+                                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : GestureDetector(
+                              onHorizontalDragUpdate: (details) {
+                                final box = context.findRenderObject() as RenderBox?;
+                                final width = box?.size.width ?? 320.0;
+                                final pos = details.localPosition.dx.clamp(0.0, width);
+                                final count = _candles.length;
+                                if (count > 0) {
+                                  final idx = ((pos / width) * count).floor().clamp(0, count - 1);
+                                  setState(() => _activeCandleIdx = idx);
+                                }
+                              },
+                              onHorizontalDragEnd: (_) {
+                                setState(() => _activeCandleIdx = null);
+                              },
+                              onTapDown: (details) {
+                                final box = context.findRenderObject() as RenderBox?;
+                                final width = box?.size.width ?? 320.0;
+                                final pos = details.localPosition.dx.clamp(0.0, width);
+                                final count = _candles.length;
+                                if (count > 0) {
+                                  final idx = ((pos / width) * count).floor().clamp(0, count - 1);
+                                  setState(() => _activeCandleIdx = idx);
+                                }
+                              },
+                              child: CustomPaint(
+                                painter: _StockCandleChartPainter(
+                                  candles: _candles,
+                                  isCandleMode: _isCandleMode,
+                                  activeIdx: _activeCandleIdx,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _handleStockSip(stock);
-                            },
-                            child: const Text('Start Stock SIP', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                        _buildOhlcTag('Open', (activeCandle['open'] as num).toDouble().toStringAsFixed(1)),
+                        _buildOhlcTag('High', (activeCandle['high'] as num).toDouble().toStringAsFixed(1)),
+                        _buildOhlcTag('Low', (activeCandle['low'] as num).toDouble().toStringAsFixed(1)),
+                        _buildOhlcTag('Close', (activeCandle['close'] as num).toDouble().toStringAsFixed(1)),
+                        _buildOhlcTag('Vol', '${((activeCandle['volume'] as num).toInt() / 1000).toStringAsFixed(0)}K'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('52-Week Range', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('₹${dayLow.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: LinearProgressIndicator(
+                            value: ((livePrice - dayLow) / (dayHigh - dayLow)).clamp(0.05, 0.95),
+                            backgroundColor: const Color(0xFFE2E8F0),
+                            color: const Color(0xFF046A38),
+                            minHeight: 6,
+                            borderRadius: BorderRadius.circular(3),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF046A38),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              _handleBuyStock(stock);
-                            },
-                            child: const Text('Buy Share', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          ),
-                        ),
+                      ),
+                      Text('₹${dayHigh.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Fundamentals & Real NSE Market Data', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildMetricRow('Exchange', 'National Stock Exchange (NSE) & BSE'),
+                        const Divider(height: 14),
+                        _buildMetricRow('Market Capitalization', stock['marketCap'] ?? '₹10.5 Lakh Cr'),
+                        const Divider(height: 14),
+                        _buildMetricRow('Price to Earnings (P/E)', '${stock['pe'] ?? 24.5}x'),
+                        const Divider(height: 14),
+                        _buildMetricRow('Day High / Low', '₹${(stock['dayHigh'] ?? livePrice * 1.01).toStringAsFixed(1)} / ₹${(stock['dayLow'] ?? livePrice * 0.99).toStringAsFixed(1)}'),
+                        const Divider(height: 14),
+                        _buildMetricRow('Settlement Cycle', 'T+1 Instant Rolling Settlement'),
                       ],
                     ),
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey.shade200)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onStockSip(stock);
+                    },
+                    child: const Text('Start Stock SIP', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF046A38),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onBuyStock(stock);
+                    },
+                    child: const Text('Buy Share', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -9124,6 +9279,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 }
+
 
 // =============================================================================
 // REAL HARDWARE CAMERA QR SCANNER SCREEN (MobileScanner)
