@@ -32,6 +32,7 @@ import '../models/user_model.dart';
 import '../widgets/bank_account_switcher_modal.dart';
 import 'category_hub_screen.dart';
 import '../widgets/language_location_selector_modal.dart';
+import 'ai_assistant_screen.dart';
 
 class SimpleHomeScreen extends StatefulWidget {
   const SimpleHomeScreen({super.key});
@@ -481,6 +482,25 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       actions: [
         IconButton(
           onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AIAssistantScreen()),
+            );
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFFFF671F), Color(0xFF046A38)],
+              ),
+            ),
+            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+          ),
+          tooltip: 'AI Financial Assistant',
+        ),
+        IconButton(
+          onPressed: () {
             _syncLiveState();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -717,6 +737,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             _buildAikSetraInvestBanner(),
             const SizedBox(height: 16),
             _buildHeroQrAndActions(),
+            const SizedBox(height: 16),
+            _buildAIAssistantBanner(),
             const SizedBox(height: 20),
             _buildPhonePeCategorizedSections(),
             const SizedBox(height: 20),
@@ -724,6 +746,171 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             const SizedBox(height: 20),
             _buildQuickTransferBar(),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // AI FINANCIAL ASSISTANT BANNER
+  // ===========================================================================
+  Widget _buildAIAssistantBanner() {
+    final isDark = _isDark;
+    const saffron = Color(0xFFFF671F);
+    const emerald = Color(0xFF046A38);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? const [Color(0xFF0D1B2A), Color(0xFF1E293B)]
+              : const [Color(0xFF0D1B2A), Color(0xFF1B2A4A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: saffron.withOpacity(0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AIAssistantScreen()),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [saffron, emerald],
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: saffron.withOpacity(0.4),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'AikSetra AI Assistant',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: emerald.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: emerald, width: 0.8),
+                                ),
+                                child: const Text(
+                                  'ON-DEVICE AI',
+                                  style: TextStyle(
+                                    color: Color(0xFF34D399),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Financial insights, calculators & stock analysis',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildAIPill('💳 Total Balance', 'What is my total bank balance?'),
+                      const SizedBox(width: 8),
+                      _buildAIPill('📊 SIP of ₹5k', 'Calculate SIP of ₹5,000 at 12% for 10 years'),
+                      const SizedBox(width: 8),
+                      _buildAIPill('📈 Reliance Stock', 'Show Reliance stock quote'),
+                      const SizedBox(width: 8),
+                      _buildAIPill('🔄 Switch Accounts', 'How do I switch my primary bank account?'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAIPill(String label, String prompt) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AIAssistantScreen(initialPrompt: prompt),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24, width: 0.8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -1916,6 +2103,16 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         : 'Income Tax'),
             ),
           ),
+        );
+        break;
+
+      // AI Financial Assistant
+      case 'ai_assistant':
+      case 'ai':
+      case 'assistant':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AIAssistantScreen()),
         );
         break;
 

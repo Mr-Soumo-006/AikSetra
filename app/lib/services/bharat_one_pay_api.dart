@@ -11,6 +11,7 @@ import '../models/protected_pay_model.dart';
 class BharatOnePayApi {
   static String? savedLocalAvatar;
   static String? _authToken;
+  static String? get authToken => _authToken;
   static String _activeUserId = ApiConfig.defaultDevUserId;
 
   // Cached state for active user session

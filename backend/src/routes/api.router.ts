@@ -34,9 +34,12 @@ import { AutoPayService } from '../services/autopay.service.js';
 import { RewardsService } from '../services/rewards.service.js';
 import { BusinessService } from '../services/business.service.js';
 import { FinancialToolsService } from '../services/financialTools.service.js';
+import { aiRouter } from './ai.router.js';
 import { validatePaymentAmount, validateVpa, validateIfsc, sanitizeRemark } from '../utils/validation.js';
 
 export const apiRouter = Router();
+
+apiRouter.use('/ai', aiRouter);
 
 const uploadsDir = path.resolve(process.cwd(), 'public/uploads');
 if (!fs.existsSync(uploadsDir)) {
