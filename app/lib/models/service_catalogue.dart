@@ -326,6 +326,16 @@ class ServiceCatalogue {
     // FINANCIAL TOOLS & CALCULATORS
     // ----------------------------------------------------
     ServiceItem(
+      id: 'tool_normal_calc',
+      title: 'Normal Calculator',
+      subtitle: 'Standard daily arithmetic calculator with quick tax & financial tools',
+      icon: Icons.calculate_rounded,
+      color: Color(0xFF0F172A),
+      category: ServiceCategory.tools,
+      badge: 'STANDARD',
+      routeKey: 'calculator',
+    ),
+    ServiceItem(
       id: 'tool_hub',
       title: 'Calculator Centre',
       subtitle: 'All 10+ financial & tax calculators',

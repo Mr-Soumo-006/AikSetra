@@ -1436,11 +1436,18 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           title: 'Financial Tools & Calculators',
           icon: Icons.calculate_rounded,
           iconColor: const Color(0xFF7C3AED),
-          offerText: '📊 Interactive return modeling & real-time tax planning',
+          offerText: '🧮 Normal calculation & comprehensive financial return modeling',
           items: [
             {
-              'label': 'SIP\nCalculator',
+              'label': 'Normal\nCalculator',
               'icon': Icons.calculate_rounded,
+              'color': const Color(0xFF0F172A),
+              'routeKey': 'calculator',
+              'badge': 'Standard',
+            },
+            {
+              'label': 'SIP\nCalculator',
+              'icon': Icons.trending_up_rounded,
               'color': const Color(0xFF059669),
               'routeKey': 'calc_sip',
               'badge': 'Wealth',
@@ -1913,11 +1920,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         break;
 
       // Financial Calculators
+      case 'calculator':
+      case 'calc_standard':
+      case 'normal_calculator':
       case 'calculators':
       case 'calculator_centre':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const CalculatorsScreen()),
+          MaterialPageRoute(builder: (_) => const CalculatorsScreen(initialTool: 'Standard')),
         );
         break;
       case 'calc_emi':
@@ -7361,6 +7371,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     final amtCtrl = TextEditingController(
       text: initialAddMoneyMode ? '5000' : '',
     );
+    BankAccountModel selectedTargetAcc = BharatOnePayApi.primaryAccount ??
+        (BharatOnePayApi.linkedAccounts.isNotEmpty
+            ? BharatOnePayApi.linkedAccounts.first
+            : BankAccountModel(
+                id: 'acc_def',
+                bankName: _bankName,
+                bankCode: 'SBIN',
+                ifsc: _ifsc,
+                maskedAccountNumber: _maskedAcc,
+                balance: _bankBalance,
+                isPrimary: true,
+                accountType: 'SAVINGS',
+              ));
     String fromBank = _bankName;
     String toBank =
         BharatOnePayApi.allIndianBanks.firstWhere(
@@ -7514,6 +7537,49 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 const SizedBox(height: 14),
 
                 if (isAddMoney) ...[
+                  const Text(
+                    'Deposit Into Bank Account:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: BharatOnePayApi.linkedAccounts.map((acc) {
+                        final isSel = acc.id == selectedTargetAcc.id;
+                        final isCurrent = acc.accountType == 'CURRENT';
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            avatar: Icon(
+                              isCurrent ? Icons.business_center : Icons.account_balance,
+                              size: 14,
+                              color: isSel ? Colors.white : (isCurrent ? const Color(0xFF1D4ED8) : const Color(0xFF046A38)),
+                            ),
+                            label: Text(
+                              '${acc.bankName} (${acc.accountType} • ${acc.maskedAccountNumber.replaceAll(RegExp(r'[^0-9]'), '')})',
+                            ),
+                            selected: isSel,
+                            selectedColor: isCurrent ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                            labelStyle: TextStyle(
+                              color: isSel ? Colors.white : const Color(0xFF0F172A),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (val) {
+                              if (val) setSheetState(() => selectedTargetAcc = acc);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
                   // Target Account Badge
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -7524,26 +7590,56 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.account_balance,
-                          color: Color(0xFF046A38),
-                          size: 22,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: selectedTargetAcc.accountType == 'CURRENT' ? const Color(0xFF1E3A8A) : const Color(0xFF046A38),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            selectedTargetAcc.accountType == 'CURRENT' ? Icons.business_center : Icons.account_balance,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Crediting to $_bankName',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Color(0xFF065F46),
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'Crediting to ${selectedTargetAcc.bankName}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: Color(0xFF065F46),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: selectedTargetAcc.accountType == 'CURRENT' ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      selectedTargetAcc.accountType,
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedTargetAcc.accountType == 'CURRENT' ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               Text(
-                                'Acc: $_maskedAcc • IFSC: $_ifsc',
+                                'Acc: ${selectedTargetAcc.maskedAccountNumber} • IFSC: ${selectedTargetAcc.ifsc}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Color(0xFF047857),
@@ -7562,7 +7658,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Bal: ₹${_bankBalance.toStringAsFixed(0)}',
+                            'Bal: ₹${selectedTargetAcc.balance.toStringAsFixed(0)}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 11,
@@ -7704,18 +7800,23 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         Navigator.pop(ctx);
                         final res = await BharatOnePayApi.addMoneyToAccount(
                           amount: amt,
+                          accountId: selectedTargetAcc.id,
                           sourceNote: 'Self Deposit from $fundingSource',
                         );
                         await _syncLiveState();
                         if (!mounted) return;
                         setState(() {});
                         if (res['success'] == true) {
+                          final currentTargetBal = BharatOnePayApi.linkedAccounts.firstWhere(
+                            (a) => a.id == selectedTargetAcc.id,
+                            orElse: () => selectedTargetAcc,
+                          ).balance;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: const Color(0xFF046A38),
                               duration: const Duration(seconds: 4),
                               content: Text(
-                                '✅ ₹${amt.toStringAsFixed(2)} added to $_bankName successfully! Current Balance: ₹${_bankBalance.toStringAsFixed(2)}',
+                                '✅ ₹${amt.toStringAsFixed(2)} added to ${selectedTargetAcc.bankName} (${selectedTargetAcc.accountType} • ${selectedTargetAcc.maskedAccountNumber}) successfully! Balance: ₹${currentTargetBal.toStringAsFixed(2)}',
                               ),
                             ),
                           );
@@ -7735,7 +7836,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         size: 20,
                       ),
                       label: Text(
-                        'Deposit ₹${amtCtrl.text.isEmpty ? "0" : amtCtrl.text} to $_bankName',
+                        'Deposit ₹${amtCtrl.text.isEmpty ? "0" : amtCtrl.text} to ${selectedTargetAcc.bankName}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,

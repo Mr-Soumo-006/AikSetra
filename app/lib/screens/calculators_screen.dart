@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/bharat_one_pay_api.dart';
@@ -14,6 +15,7 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
   late TabController _tabController;
 
   final List<String> _tools = [
+    'Calculator',
     'EMI Loan',
     'SIP Return',
     'GST Tax',
@@ -65,17 +67,22 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          EmiCalculatorView(),
-          SipCalculatorView(),
-          GstCalculatorView(),
-          IncomeTaxCalculatorView(),
-          FxCalculatorView(),
-          FdCalculatorView(),
-          RdCalculatorView(),
-          CompoundInterestCalculatorView(),
-          InflationCalculatorView(),
-          SavingsGoalCalculatorView(),
+        children: [
+          NormalCalculatorView(
+            onSwitchTool: (index) {
+              _tabController.animateTo(index);
+            },
+          ),
+          const EmiCalculatorView(),
+          const SipCalculatorView(),
+          const GstCalculatorView(),
+          const IncomeTaxCalculatorView(),
+          const FxCalculatorView(),
+          const FdCalculatorView(),
+          const RdCalculatorView(),
+          const CompoundInterestCalculatorView(),
+          const InflationCalculatorView(),
+          const SavingsGoalCalculatorView(),
         ],
       ),
     );
@@ -933,4 +940,649 @@ Widget _buildSliderField({
       ],
     ),
   );
+}
+
+
+// ============================================================================
+// 0. NORMAL / STANDARD CALCULATOR WITH INTEGRATED FINANCIAL SHORTCUTS
+// ============================================================================
+class NormalCalculatorView extends StatefulWidget {
+  final ValueChanged<int> onSwitchTool;
+  const NormalCalculatorView({super.key, required this.onSwitchTool});
+
+  @override
+  State<NormalCalculatorView> createState() => _NormalCalculatorViewState();
+}
+
+class _NormalCalculatorViewState extends State<NormalCalculatorView> {
+  String _expression = '';
+  String _display = '0';
+  String? _gstBreakdown;
+  bool _shouldResetOnNextDigit = false;
+  final List<String> _history = [];
+  bool _showHistory = false;
+
+  void _onDigit(String d) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _gstBreakdown = null;
+      if (_display == '0' || _shouldResetOnNextDigit) {
+        _display = d;
+        _shouldResetOnNextDigit = false;
+      } else {
+        _display += d;
+      }
+    });
+  }
+
+  void _onDecimal() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _gstBreakdown = null;
+      if (_shouldResetOnNextDigit) {
+        _display = '0.';
+        _shouldResetOnNextDigit = false;
+      } else if (!_display.contains('.')) {
+        _display += '.';
+      }
+    });
+  }
+
+  void _onOperator(String op) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _gstBreakdown = null;
+      if (_expression.endsWith('=') || _shouldResetOnNextDigit) {
+        _expression = '$_display $op ';
+        _shouldResetOnNextDigit = false;
+      } else if (_expression.isNotEmpty && '+−×÷'.contains(_expression.trim().split(' ').last) && _display == '0') {
+        // Replace last operator
+        final parts = _expression.trim().split(' ');
+        parts[parts.length - 1] = op;
+        _expression = '${parts.join(' ')} ';
+      } else {
+        _expression += '$_display $op ';
+      }
+      _display = '0';
+    });
+  }
+
+  void _onParenthesis() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _gstBreakdown = null;
+      int openCount = '('.allMatches(_expression).length - ')'.allMatches(_expression).length;
+      if (openCount > 0 && _display != '0') {
+        _expression += '$_display) ';
+        _display = '0';
+      } else {
+        _expression += '( ';
+      }
+    });
+  }
+
+  void _onNegate() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _gstBreakdown = null;
+      if (_display == '0') return;
+      if (_display.startsWith('-')) {
+        _display = _display.substring(1);
+      } else {
+        _display = '-$_display';
+      }
+    });
+  }
+
+  void _onPercent() {
+    HapticFeedback.lightImpact();
+    final val = double.tryParse(_display) ?? 0.0;
+    setState(() {
+      _gstBreakdown = null;
+      final pct = val / 100.0;
+      _display = _formatNumber(pct);
+    });
+  }
+
+  void _onClear() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _expression = '';
+      _display = '0';
+      _gstBreakdown = null;
+      _shouldResetOnNextDigit = false;
+    });
+  }
+
+  void _onBackspace() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _gstBreakdown = null;
+      if (_display.length > 1) {
+        _display = _display.substring(0, _display.length - 1);
+      } else {
+        _display = '0';
+      }
+    });
+  }
+
+  void _onEquals() {
+    HapticFeedback.heavyImpact();
+    if (_expression.isEmpty) return;
+    final fullExpr = '$_expression$_display';
+    try {
+      final res = MathEvaluator.evaluate(fullExpr);
+      final formatted = _formatNumber(res);
+      setState(() {
+        _history.insert(0, '$fullExpr = $formatted');
+        if (_history.length > 20) _history.removeLast();
+        _expression = '$fullExpr =';
+        _display = formatted;
+        _shouldResetOnNextDigit = true;
+      });
+    } catch (_) {
+      setState(() {
+        _display = 'Error';
+        _shouldResetOnNextDigit = true;
+      });
+    }
+  }
+
+  void _applyGstRate(double percent) {
+    HapticFeedback.lightImpact();
+    final base = double.tryParse(_display) ?? 0.0;
+    if (base <= 0) return;
+    final gstAmt = base * (percent / 100.0);
+    final total = base + gstAmt;
+    final cgst = gstAmt / 2.0;
+    final sgst = gstAmt / 2.0;
+
+    setState(() {
+      _expression = '₹${_formatNumber(base)} + ${percent.toStringAsFixed(0)}% GST =';
+      _display = _formatNumber(total);
+      _shouldResetOnNextDigit = true;
+      _gstBreakdown = 'Net: ₹${_formatNumber(base)} | CGST (${(percent/2).toStringAsFixed(1)}%): ₹${_formatNumber(cgst)} | SGST (${(percent/2).toStringAsFixed(1)}%): ₹${_formatNumber(sgst)} | Total: ₹${_formatNumber(total)}';
+      _history.insert(0, '₹${_formatNumber(base)} + ${percent.toStringAsFixed(0)}% GST = ₹${_formatNumber(total)}');
+    });
+  }
+
+  void _applyDiscount(double percent) {
+    HapticFeedback.lightImpact();
+    final base = double.tryParse(_display) ?? 0.0;
+    if (base <= 0) return;
+    final discAmt = base * (percent / 100.0);
+    final total = base - discAmt;
+
+    setState(() {
+      _expression = '₹${_formatNumber(base)} - ${percent.toStringAsFixed(0)}% OFF =';
+      _display = _formatNumber(total);
+      _shouldResetOnNextDigit = true;
+      _gstBreakdown = 'Orig: ₹${_formatNumber(base)} | Savings: -₹${_formatNumber(discAmt)} | Final Payable: ₹${_formatNumber(total)}';
+      _history.insert(0, '₹${_formatNumber(base)} - ${percent.toStringAsFixed(0)}% Disc = ₹${_formatNumber(total)}');
+    });
+  }
+
+  String _formatNumber(double n) {
+    if (n.isNaN || n.isInfinite) return 'Error';
+    if (n == n.roundToDouble()) {
+      return n.toInt().toString();
+    }
+    // Up to 4 decimal places, trimming trailing zeros
+    String s = n.toStringAsFixed(4);
+    while (s.contains('.') && (s.endsWith('0') || s.endsWith('.'))) {
+      s = s.substring(0, s.length - 1);
+    }
+    return s;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // 1. TOP FINANCIAL SHORTCUTS STRIP (Quick access to other financial tools)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          color: const Color(0xFF0F172A),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                child: Text(
+                  'FINANCIAL CALCULATOR SHORTCUTS',
+                  style: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    _buildFinancialNavChip('📊 EMI Loan', 1, const Color(0xFF2563EB)),
+                    _buildFinancialNavChip('📈 SIP Returns', 2, const Color(0xFF046A38)),
+                    _buildFinancialNavChip('🧾 GST Tax', 3, const Color(0xFF7C3AED)),
+                    _buildFinancialNavChip('🏛️ Income Tax', 4, const Color(0xFFFF671F)),
+                    _buildFinancialNavChip('💱 Currency FX', 5, const Color(0xFF0D9488)),
+                    _buildFinancialNavChip('🏦 FD Maturity', 6, const Color(0xFF4338CA)),
+                    _buildFinancialNavChip('🔁 RD Return', 7, const Color(0xFF059669)),
+                    _buildFinancialNavChip('🎯 Goal Plan', 10, const Color(0xFFDB2777)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 2. QUICK FINANCIAL ACTIONS STRIP (+GST & Discount right on normal calc)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          color: const Color(0xFF1E293B),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const Text('Quick Tax & Disc: ', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                _buildQuickActionPill('+5% GST', () => _applyGstRate(5)),
+                _buildQuickActionPill('+12% GST', () => _applyGstRate(12)),
+                _buildQuickActionPill('+18% GST', () => _applyGstRate(18)),
+                _buildQuickActionPill('+28% GST', () => _applyGstRate(28)),
+                _buildQuickActionPill('-10% OFF', () => _applyDiscount(10), color: const Color(0xFFDC2626)),
+                _buildQuickActionPill('-20% OFF', () => _applyDiscount(20), color: const Color(0xFFDC2626)),
+              ],
+            ),
+          ),
+        ),
+
+        // 3. DISPLAY AREA
+        Expanded(
+          flex: 4,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Top control row (History toggle & Copy)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () => setState(() => _showHistory = !_showHistory),
+                      icon: Icon(_showHistory ? Icons.keyboard_hide : Icons.history, size: 16, color: const Color(0xFF64748B)),
+                      label: Text(_showHistory ? 'Hide Tape' : 'History (${_history.length})', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 18, color: Color(0xFF64748B)),
+                      tooltip: 'Copy Result',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: _display));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Copied $_display to clipboard'),
+                            duration: const Duration(seconds: 1),
+                            backgroundColor: const Color(0xFF046A38),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                if (_showHistory && _history.isNotEmpty)
+                  Container(
+                    height: 80,
+                    margin: const EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: ListView.builder(
+                      itemCount: _history.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      itemBuilder: (ctx, i) => InkWell(
+                        onTap: () {
+                          final parts = _history[i].split('=');
+                          if (parts.length > 1) {
+                            setState(() {
+                              _display = parts.last.trim().replaceAll('₹', '');
+                              _shouldResetOnNextDigit = true;
+                            });
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            _history[i],
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF475569), fontFamily: 'monospace'),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Expression line
+                Text(
+                  _expression.isEmpty ? ' ' : _expression,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+
+                // Main Operand / Result Display
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    _display,
+                    style: const TextStyle(
+                      fontSize: 44,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: -1,
+                    ),
+                  ),
+                ),
+
+                // Live GST / Discount Breakdown Toast
+                if (_gstBreakdown != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF86EFAC)),
+                    ),
+                    child: Text(
+                      _gstBreakdown!,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF046A38)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+
+        // 4. KEYPAD GRID
+        Expanded(
+          flex: 6,
+          child: Container(
+            color: const Color(0xFFF8FAFC),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('AC', const Color(0xFFEF4444), isAccent: true, onTap: _onClear),
+                      _buildCalcBtn('( )', const Color(0xFF334155), onTap: _onParenthesis),
+                      _buildCalcBtn('%', const Color(0xFF334155), onTap: _onPercent),
+                      _buildCalcBtn('÷', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('÷')),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('7', const Color(0xFF0F172A), onTap: () => _onDigit('7')),
+                      _buildCalcBtn('8', const Color(0xFF0F172A), onTap: () => _onDigit('8')),
+                      _buildCalcBtn('9', const Color(0xFF0F172A), onTap: () => _onDigit('9')),
+                      _buildCalcBtn('×', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('×')),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('4', const Color(0xFF0F172A), onTap: () => _onDigit('4')),
+                      _buildCalcBtn('5', const Color(0xFF0F172A), onTap: () => _onDigit('5')),
+                      _buildCalcBtn('6', const Color(0xFF0F172A), onTap: () => _onDigit('6')),
+                      _buildCalcBtn('−', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('−')),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('1', const Color(0xFF0F172A), onTap: () => _onDigit('1')),
+                      _buildCalcBtn('2', const Color(0xFF0F172A), onTap: () => _onDigit('2')),
+                      _buildCalcBtn('3', const Color(0xFF0F172A), onTap: () => _onDigit('3')),
+                      _buildCalcBtn('+', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('+')),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('±', const Color(0xFF334155), onTap: _onNegate),
+                      _buildCalcBtn('0', const Color(0xFF0F172A), onTap: () => _onDigit('0')),
+                      _buildCalcBtn('.', const Color(0xFF0F172A), onTap: _onDecimal),
+                      _buildCalcBtn('⌫', const Color(0xFF64748B), onTap: _onBackspace),
+                      _buildCalcBtn('=', const Color(0xFF046A38), isEquals: true, onTap: _onEquals),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinancialNavChip(String label, int targetIndex, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: ActionChip(
+        avatar: CircleAvatar(
+          backgroundColor: Colors.white24,
+          child: Text(label.substring(0, 1), style: const TextStyle(fontSize: 10, color: Colors.white)),
+        ),
+        label: Text(label.substring(2), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+        backgroundColor: color.withValues(alpha: 0.3),
+        side: BorderSide(color: color.withValues(alpha: 0.6)),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+        onPressed: () => widget.onSwitchTool(targetIndex),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionPill(String label, VoidCallback onTap, {Color color = const Color(0xFF059669)}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalcBtn(String label, Color color, {bool isAccent = false, bool isEquals = false, required VoidCallback onTap}) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isEquals
+                ? const Color(0xFF046A38)
+                : (isAccent ? color.withValues(alpha: 0.12) : Colors.white),
+            foregroundColor: isEquals ? Colors.white : color,
+            elevation: isEquals ? 3 : 1,
+            shadowColor: Colors.black12,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: isEquals
+                    ? const Color(0xFF046A38)
+                    : (isAccent ? color.withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
+                width: 1.2,
+              ),
+            ),
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: onTap,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: label.length > 2 ? 14 : 22,
+                fontWeight: FontWeight.bold,
+                color: isEquals ? Colors.white : color,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Math Evaluation Engine (Recursive Descent)
+class MathEvaluator {
+  static double evaluate(String expression) {
+    String clean = expression
+        .replaceAll('×', '*')
+        .replaceAll('÷', '/')
+        .replaceAll('−', '-')
+        .replaceAll(' ', '')
+        .replaceAll(',', '')
+        .replaceAll('₹', '');
+
+    clean = _preprocessPercentages(clean);
+    final tokens = _tokenize(clean);
+    final parser = _Parser(tokens);
+    return parser.parse();
+  }
+
+  static String _preprocessPercentages(String expr) {
+    final regex = RegExp(r'(\d+(\.\d+)?)%');
+    return expr.replaceAllMapped(regex, (m) => '(${m.group(1)}/100)');
+  }
+
+  static List<String> _tokenize(String expr) {
+    final List<String> tokens = [];
+    int i = 0;
+    while (i < expr.length) {
+      final c = expr[i];
+      if ('+-*/()'.contains(c)) {
+        if (c == '-' && (tokens.isEmpty || '+-*/('.contains(tokens.last))) {
+          int start = i;
+          i++;
+          while (i < expr.length && (expr[i].contains(RegExp(r'[0-9.]')))) {
+            i++;
+          }
+          tokens.add(expr.substring(start, i));
+          continue;
+        }
+        tokens.add(c);
+        i++;
+      } else if (c.contains(RegExp(r'[0-9.]'))) {
+        int start = i;
+        while (i < expr.length && expr[i].contains(RegExp(r'[0-9.]'))) {
+          i++;
+        }
+        tokens.add(expr.substring(start, i));
+      } else {
+        i++;
+      }
+    }
+    return tokens;
+  }
+}
+
+class _Parser {
+  final List<String> tokens;
+  int pos = 0;
+
+  _Parser(this.tokens);
+
+  double parse() {
+    return parseAddSub();
+  }
+
+  double parsePrimary() {
+    if (pos >= tokens.length) return 0.0;
+    final t = tokens[pos];
+    if (t == '(') {
+      pos++;
+      final res = parseAddSub();
+      if (pos < tokens.length && tokens[pos] == ')') pos++;
+      return res;
+    }
+    pos++;
+    return double.tryParse(t) ?? 0.0;
+  }
+
+  double parseMulDiv() {
+    double left = parsePrimary();
+    while (pos < tokens.length) {
+      final op = tokens[pos];
+      if (op == '*') {
+        pos++;
+        left *= parsePrimary();
+      } else if (op == '/') {
+        pos++;
+        final denom = parsePrimary();
+        left = denom != 0 ? left / denom : 0.0;
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+
+  double parseAddSub() {
+    double left = parseMulDiv();
+    while (pos < tokens.length) {
+      final op = tokens[pos];
+      if (op == '+') {
+        pos++;
+        left += parseMulDiv();
+      } else if (op == '-') {
+        pos++;
+        left -= parseMulDiv();
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
 }
