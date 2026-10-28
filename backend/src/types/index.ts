@@ -339,6 +339,14 @@ export interface BusinessProfile {
   monthlyVolume: number;
   settlementAccountId: string;
   memberSince: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  ownerDesignation?: string;
+  businessAddress?: string;
+  bankName?: string;
+  bankAccountNo?: string;
+  ifsc?: string;
 }
 
 export interface InvoiceItem {

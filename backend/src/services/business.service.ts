@@ -57,6 +57,64 @@ export class BusinessService {
     return { profile, todayStats, monthlyStats, staff };
   }
 
+  public static registerOrUpdateBusiness(
+    userId: string,
+    data: {
+      businessName: string;
+      category?: string;
+      gstin?: string;
+      pan?: string;
+      ownerName?: string;
+      ownerEmail?: string;
+      ownerPhone?: string;
+      ownerDesignation?: string;
+      businessAddress?: string;
+      bankName?: string;
+      bankAccountNo?: string;
+      ifsc?: string;
+      merchantVpa?: string;
+    }
+  ): BusinessProfile {
+    let profiles = db.get('businessProfiles') || [];
+    let existingIndex = profiles.findIndex((p) => p.userId === userId);
+    const user = db.get('users').find((u) => u.id === userId);
+    const accounts = db.get('accounts').filter((a) => a.userId === userId);
+    const accId = accounts.length > 0 ? accounts[0].id : 'acc_business_primary';
+
+    const merchantVpa = data.merchantVpa || (user?.primaryVpa ? user.primaryVpa.replace('@', '.biz@') : 'merchant.store@aiksetra');
+    const profile: BusinessProfile = {
+      id: `biz_${userId.replace('usr_', '')}`,
+      userId,
+      businessName: data.businessName || (user ? `${user.fullName} Digital Enterprise` : 'AikSetra Business Store'),
+      gstin: data.gstin || '19AAECN1234F1Z5',
+      pan: data.pan || 'AAECN1234F',
+      category: data.category || 'Retail & Electronics',
+      merchantVpa,
+      qrCodeUrl: `upi://pay?pa=${merchantVpa}&pn=${encodeURIComponent(data.businessName || user?.fullName || 'Merchant')}&mc=5411&cu=INR`,
+      verified: true,
+      todayVolume: 18450.0,
+      todayTxnCount: 24,
+      monthlyVolume: 485200.0,
+      settlementAccountId: accId,
+      memberSince: new Date().toISOString().split('T')[0],
+      ownerName: data.ownerName || user?.fullName,
+      ownerEmail: data.ownerEmail || user?.email,
+      ownerPhone: data.ownerPhone || user?.phone,
+      ownerDesignation: data.ownerDesignation || 'Proprietor / Director',
+      businessAddress: data.businessAddress || 'Plot 42, Tech Park, Sector V, Kolkata, WB',
+      bankName: data.bankName || (accounts.length > 0 ? accounts[0].bankName : 'HDFC Bank'),
+      bankAccountNo: data.bankAccountNo || (accounts.length > 0 ? accounts[0].maskedAccountNumber : '•••• 4589'),
+      ifsc: data.ifsc || (accounts.length > 0 ? accounts[0].ifsc : 'HDFC0001234'),
+    };
+
+    if (existingIndex >= 0) {
+      profiles[existingIndex] = profile;
+    } else {
+      db.insert('businessProfiles', profile);
+    }
+    return profile;
+  }
+
   public static getInvoices(userId: string): BusinessInvoice[] {
     let invoices = db.get('businessInvoices').filter((inv) => inv.userId === userId);
     if (invoices.length === 0) {

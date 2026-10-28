@@ -16,6 +16,7 @@ import 'autopay_screen.dart';
 import 'statements_screen.dart';
 import 'rewards_screen.dart';
 import 'business_dashboard_screen.dart';
+import 'business_registration_screen.dart';
 import 'bank_account_opening_screen.dart';
 import 'calculators_screen.dart';
 import '../utils/app_translations.dart';
@@ -1570,9 +1571,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const BusinessDashboardScreen(),
+                        builder: (_) => BharatOnePayApi.hasBusinessAccount
+                            ? const BusinessDashboardScreen()
+                            : const BusinessRegistrationScreen(),
                       ),
-                    ),
+                    ).then((_) {
+                      if (mounted) setState(() {});
+                    }),
                   ),
                   _buildNavigationTile(
                     icon: Icons.account_balance_wallet_rounded,
@@ -2881,7 +2886,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // BUSINESS ACCOUNT SWITCH WIDGET (Positioned below Profile Info Card)
   // ===========================================================================
   Widget _buildBusinessAccountSwitchCard() {
+    final hasBiz = BharatOnePayApi.hasBusinessAccount;
     final isBiz = BharatOnePayApi.isBusinessMode;
+    final companyName = BharatOnePayApi.businessProfile['companyName'] ?? 'AikSetra Business';
+    final ownerName = BharatOnePayApi.businessProfile['ownerName'] ?? 'Soumo Naskar';
+
+    if (!hasBiz) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: const Color(0xFFFF671F).withValues(alpha: 0.4),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF671F).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.storefront_rounded,
+                color: Color(0xFFFF671F),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Open Business Account',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFF671F),
+                          borderRadius: BorderRadius.all(Radius.circular(5)),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          child: Text(
+                            'SETUP',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Accept QR payments, Double-Entry Ledger & Balance Sheet',
+                    style: TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 10.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BusinessRegistrationScreen()),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                  widget.onRefreshParent?.call();
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF671F),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Open Now',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(width: 3),
+                  Icon(Icons.arrow_forward_rounded, size: 13),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -2896,7 +3032,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border.all(
           color: isBiz
               ? const Color(0xFF34D399)
-              : const Color(0xFFFF671F).withValues(alpha: 0.35),
+              : const Color(0xFF046A38).withValues(alpha: 0.5),
           width: 1.2,
         ),
         boxShadow: [
@@ -2909,76 +3045,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: isBiz
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : const Color(0xFFFF671F).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              isBiz ? Icons.storefront_rounded : Icons.business_center_rounded,
-              color: isBiz ? Colors.white : const Color(0xFFFF671F),
-              size: 22,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+              ).then((_) {
+                if (mounted) setState(() {});
+                widget.onRefreshParent?.call();
+              });
+            },
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isBiz
+                    ? Colors.white.withValues(alpha: 0.15)
+                    : const Color(0xFF046A38).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                isBiz ? Icons.storefront_rounded : Icons.business_center_rounded,
+                color: isBiz ? Colors.white : const Color(0xFF00E676),
+                size: 22,
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      isBiz ? 'AikSetra Business Mode' : 'Switch to Business Account',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: isBiz ? const Color(0xFF10B981) : const Color(0xFF046A38),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Text(
-                        isBiz ? 'LIVE' : 'VERIFIED',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isBiz
-                      ? 'Managing Merchant QR, Soundbox & GST Invoicing'
-                      : 'Accept merchant payments, Standee QR & GST invoices',
-                  style: const TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 10.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              if (!isBiz) {
-                setState(() => BharatOnePayApi.isBusinessMode = true);
+            child: GestureDetector(
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
@@ -2986,44 +3083,115 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (mounted) setState(() {});
                   widget.onRefreshParent?.call();
                 });
-              } else {
-                setState(() => BharatOnePayApi.isBusinessMode = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Switched back to Personal Account mode'),
-                    backgroundColor: Color(0xFF0F172A),
-                    duration: Duration(seconds: 1),
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          companyName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: isBiz ? const Color(0xFF10B981) : const Color(0xFF046A38),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          isBiz ? 'LIVE' : 'VERIFIED',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                );
-                widget.onRefreshParent?.call();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isBiz ? Colors.white : const Color(0xFFFF671F),
-              foregroundColor: isBiz ? const Color(0xFF046A38) : Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Owner: $ownerName • Tap for Ledger, Sheet & QR',
+                    style: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 10.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              elevation: 0,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
+          ),
+          const SizedBox(width: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.dashboard_rounded, color: Colors.white70, size: 20),
+                tooltip: 'Business Dashboard',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                  ).then((_) {
+                    if (mounted) setState(() {});
+                    widget.onRefreshParent?.call();
+                  });
+                },
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (!isBiz) {
+                    setState(() => BharatOnePayApi.isBusinessMode = true);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                    ).then((_) {
+                      if (mounted) setState(() {});
+                      widget.onRefreshParent?.call();
+                    });
+                  } else {
+                    setState(() => BharatOnePayApi.isBusinessMode = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Switched back to Personal Account mode'),
+                        backgroundColor: Color(0xFF0F172A),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    widget.onRefreshParent?.call();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isBiz ? Colors.white : const Color(0xFF046A38),
+                  foregroundColor: isBiz ? const Color(0xFF046A38) : Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
                   isBiz ? 'Personal' : 'Switch',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(width: 3),
-                Icon(
-                  isBiz ? Icons.person_rounded : Icons.arrow_forward_rounded,
-                  size: 13,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

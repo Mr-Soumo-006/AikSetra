@@ -1226,6 +1226,15 @@ apiRouter.get('/business/profile', authMiddleware, (req: AuthenticatedRequest, r
   }
 });
 
+apiRouter.post('/business/register', authMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const profile = BusinessService.registerOrUpdateBusiness(req.userId!, req.body);
+    return res.json({ success: true, profile });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 apiRouter.get('/business/invoices', authMiddleware, (req: AuthenticatedRequest, res) => {
   try {
     const invoices = BusinessService.getInvoices(req.userId!);

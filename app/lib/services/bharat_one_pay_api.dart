@@ -992,6 +992,249 @@ class BharatOnePayApi {
   ];
   static List<ProtectedPayEscrowModel> activeEscrows = [];
   static bool isBusinessMode = false;
+  static bool hasBusinessAccount = false;
+
+  static Map<String, dynamic> businessProfile = {
+    'companyName': 'AikSetra Digital Store',
+    'businessType': 'Retail & Technology',
+    'gstin': '19AAECN1234F1Z5',
+    'pan': 'AAECN1234F',
+    'businessAddress': 'Plot 42, Tech Park, Sector V, Kolkata, WB',
+    'merchantVpa': 'aiksetra.merchant@okhdfcbank',
+    'bankName': 'HDFC Bank',
+    'bankAccountNo': '•••• 4589',
+    'ifsc': 'HDFC0001234',
+    'ownerName': 'Soumo Naskar',
+    'ownerEmail': 'soumo@gmail.com',
+    'ownerPhone': '+91 9830113038',
+    'ownerDesignation': 'Founder & Managing Director',
+    'ownerPan': 'AAECN1234F',
+    'verified': true,
+    'balance': 48250.0,
+    'openedAt': '2026-10-25',
+  };
+
+  static List<Map<String, dynamic>> businessLedger = [
+    {
+      'id': 'LED-1001',
+      'date': 'Today, 02:45 PM',
+      'party': 'Aditya Sen',
+      'vpa': 'aditya@oksbi',
+      'particulars': 'Store POS Standee QR Scan',
+      'method': 'Standee QR',
+      'type': 'CREDIT',
+      'amount': 1450.0,
+      'balance': 48250.0,
+    },
+    {
+      'id': 'LED-1002',
+      'date': 'Today, 01:15 PM',
+      'party': 'Priya Das',
+      'vpa': 'priyadas@paytm',
+      'particulars': 'Invoice #INV-2026-0891 (4K TV Accessory)',
+      'method': 'Payment Link',
+      'type': 'CREDIT',
+      'amount': 3200.0,
+      'balance': 46800.0,
+    },
+    {
+      'id': 'LED-1003',
+      'date': 'Today, 11:30 AM',
+      'party': 'Daily Bank Settlement Payout',
+      'vpa': 'HDFC Bank •••• 4589',
+      'particulars': 'Automated Merchant Settlement',
+      'method': 'IMPS / RTGS',
+      'type': 'DEBIT',
+      'amount': 15000.0,
+      'balance': 43600.0,
+    },
+    {
+      'id': 'LED-1004',
+      'date': 'Today, 10:05 AM',
+      'party': 'Kunal Ghosh',
+      'vpa': 'kunal@icici',
+      'particulars': 'Counter Payment via Bharat QR',
+      'method': 'Standee QR',
+      'type': 'CREDIT',
+      'amount': 2800.0,
+      'balance': 58600.0,
+    },
+    {
+      'id': 'LED-1005',
+      'date': 'Yesterday, 06:40 PM',
+      'party': 'Sneha Paul',
+      'vpa': 'sneha@axl',
+      'particulars': 'RuPay Credit Card on UPI Scan',
+      'method': 'RuPay UPI',
+      'type': 'CREDIT',
+      'amount': 4500.0,
+      'balance': 55800.0,
+    },
+    {
+      'id': 'LED-1006',
+      'date': 'Yesterday, 03:15 PM',
+      'party': 'Supreme Wholesale Distributors',
+      'vpa': 'distributor@icici',
+      'particulars': 'Stock Restock Payout',
+      'method': 'Vendor Payout',
+      'type': 'DEBIT',
+      'amount': 8500.0,
+      'balance': 51300.0,
+    },
+  ];
+
+  static List<Map<String, dynamic>> businessOwners = [
+    {
+      'id': 'own_01',
+      'name': 'Soumo Naskar',
+      'role': 'Founder & Managing Director',
+      'email': 'soumo@gmail.com',
+      'phone': '+91 9830113038',
+      'pan': 'AAECN1234F',
+      'stake': '100% Voting Rights',
+      'status': 'AUTHORIZED SIGNATORY',
+      'isPrimary': true,
+    },
+    {
+      'id': 'own_02',
+      'name': 'Rahul Sen',
+      'role': 'Store Manager & Head Cashier',
+      'email': 'rahul.store@aiksetra.com',
+      'phone': '+91 9830998877',
+      'pan': '••••9988H',
+      'stake': 'Operational Staff',
+      'status': 'AUTHORIZED',
+      'isPrimary': false,
+    },
+    {
+      'id': 'own_03',
+      'name': 'Amit Ghosh, CA',
+      'role': 'Chief Statutory Auditor & CA',
+      'email': 'amit.ca@ghoshassociates.in',
+      'phone': '+91 9831223344',
+      'pan': '••••2233K',
+      'stake': 'Financial Controller',
+      'status': 'AUDITOR',
+      'isPrimary': false,
+    },
+  ];
+
+  static Future<void> registerBusinessAccount({
+    required String ownerName,
+    required String ownerEmail,
+    required String ownerPhone,
+    required String ownerPan,
+    required String ownerDesignation,
+    required String companyName,
+    required String businessType,
+    required String gstin,
+    required String businessAddress,
+    required String bankName,
+    required String bankAccountNo,
+    required String ifsc,
+    required String merchantVpa,
+  }) async {
+    hasBusinessAccount = true;
+    isBusinessMode = true;
+    businessProfile = {
+      'companyName': companyName,
+      'businessType': businessType,
+      'gstin': gstin.isEmpty ? '19AAECN1234F1Z5' : gstin,
+      'pan': ownerPan,
+      'businessAddress': businessAddress,
+      'merchantVpa': merchantVpa,
+      'bankName': bankName,
+      'bankAccountNo': bankAccountNo,
+      'ifsc': ifsc,
+      'ownerName': ownerName,
+      'ownerEmail': ownerEmail,
+      'ownerPhone': ownerPhone,
+      'ownerDesignation': ownerDesignation,
+      'ownerPan': ownerPan,
+      'verified': true,
+      'balance': 48250.0,
+      'openedAt': DateTime.now().toIso8601String().split('T')[0],
+    };
+    businessOwners[0] = {
+      'id': 'own_01',
+      'name': ownerName,
+      'role': ownerDesignation,
+      'email': ownerEmail,
+      'phone': ownerPhone,
+      'pan': ownerPan,
+      'stake': '100% Voting Rights',
+      'status': 'AUTHORIZED SIGNATORY',
+      'isPrimary': true,
+    };
+    await saveSessionToDisk();
+
+    try {
+      await _postWithFailover('/business/register', {
+        'businessName': companyName,
+        'category': businessType,
+        'gstin': gstin,
+        'pan': ownerPan,
+        'ownerName': ownerName,
+        'ownerEmail': ownerEmail,
+        'ownerPhone': ownerPhone,
+        'ownerDesignation': ownerDesignation,
+        'businessAddress': businessAddress,
+        'bankName': bankName,
+        'bankAccountNo': bankAccountNo,
+        'ifsc': ifsc,
+        'merchantVpa': merchantVpa,
+      });
+    } catch (_) {}
+  }
+
+  static void recordBusinessCollection({
+    required String customerName,
+    required String customerVpa,
+    required double amount,
+    required String method,
+    String? particulars,
+  }) {
+    final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    final newBal = currentBal + amount;
+    businessProfile['balance'] = newBal;
+
+    businessLedger.insert(0, {
+      'id': 'LED-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      'date': 'Just now',
+      'party': customerName,
+      'vpa': customerVpa,
+      'particulars': particulars ?? 'Standee Merchant QR Scan',
+      'method': method,
+      'type': 'CREDIT',
+      'amount': amount,
+      'balance': newBal,
+    });
+    saveSessionToDisk();
+  }
+
+  static bool recordBusinessSettlement({required double amount}) {
+    final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    if (amount <= 0 || amount > currentBal) return false;
+    final newBal = currentBal - amount;
+    businessProfile['balance'] = newBal;
+
+    final bank = businessProfile['bankName'] ?? 'Bank Account';
+    final acc = businessProfile['bankAccountNo'] ?? '•••• 4589';
+
+    businessLedger.insert(0, {
+      'id': 'LED-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      'date': 'Just now',
+      'party': 'Settlement to $bank',
+      'vpa': '$bank $acc',
+      'particulars': 'Instant Merchant Settlement',
+      'method': 'IMPS Instant',
+      'type': 'DEBIT',
+      'amount': amount,
+      'balance': newBal,
+    });
+    saveSessionToDisk();
+    return true;
+  }
 
   static bool get isLoggedIn => currentUser != null && _authToken != null;
 
@@ -1064,6 +1307,10 @@ class BharatOnePayApi {
       await prefs.setString('aiksetra_txns_list', jsonEncode(recentTransactions.take(40).toList()));
       await prefs.setString('aiksetra_sips_list', jsonEncode(mySips));
       await prefs.setString('aiksetra_sip_portfolio', jsonEncode(sipPortfolio));
+      await prefs.setBool('aiksetra_has_business_account', hasBusinessAccount);
+      await prefs.setString('aiksetra_business_profile', jsonEncode(businessProfile));
+      await prefs.setString('aiksetra_business_ledger', jsonEncode(businessLedger.take(40).toList()));
+      await prefs.setString('aiksetra_business_owners', jsonEncode(businessOwners));
     } catch (_) {}
   }
 
@@ -1109,6 +1356,19 @@ class BharatOnePayApi {
         final portJson = prefs.getString('aiksetra_sip_portfolio');
         if (portJson != null) {
           sipPortfolio = Map<String, dynamic>.from(jsonDecode(portJson));
+        }
+        hasBusinessAccount = prefs.getBool('aiksetra_has_business_account') ?? false;
+        final bizProfJson = prefs.getString('aiksetra_business_profile');
+        if (bizProfJson != null) {
+          businessProfile = Map<String, dynamic>.from(jsonDecode(bizProfJson));
+        }
+        final bizLedgJson = prefs.getString('aiksetra_business_ledger');
+        if (bizLedgJson != null) {
+          businessLedger = List<Map<String, dynamic>>.from(jsonDecode(bizLedgJson));
+        }
+        final bizOwnJson = prefs.getString('aiksetra_business_owners');
+        if (bizOwnJson != null) {
+          businessOwners = List<Map<String, dynamic>>.from(jsonDecode(bizOwnJson));
         }
         return true;
       }

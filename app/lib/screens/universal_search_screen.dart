@@ -8,6 +8,8 @@ import 'travel_screen.dart';
 import 'beneficiaries_screen.dart';
 import 'rewards_screen.dart';
 import 'business_dashboard_screen.dart';
+import 'business_registration_screen.dart';
+import '../services/bharat_one_pay_api.dart';
 import 'tax_payments_screen.dart';
 import 'bank_account_opening_screen.dart';
 import 'statements_screen.dart';
@@ -606,7 +608,11 @@ class _UniversalSearchScreenState extends State<UniversalSearchScreen> {
       case 'business':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => BharatOnePayApi.hasBusinessAccount
+                ? const BusinessDashboardScreen()
+                : const BusinessRegistrationScreen(),
+          ),
         );
         break;
       case 'tax':

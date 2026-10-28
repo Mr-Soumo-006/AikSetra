@@ -22,6 +22,7 @@ import 'travel_screen.dart';
 import 'beneficiaries_screen.dart';
 import 'rewards_screen.dart';
 import 'business_dashboard_screen.dart';
+import 'business_registration_screen.dart';
 import 'tax_payments_screen.dart';
 import 'bank_account_opening_screen.dart';
 import 'statements_screen.dart';
@@ -655,7 +656,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'business':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => BharatOnePayApi.hasBusinessAccount
+                ? const BusinessDashboardScreen()
+                : const BusinessRegistrationScreen(),
+          ),
         );
         break;
       case 'tax':
@@ -2003,7 +2008,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'business':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => BharatOnePayApi.hasBusinessAccount
+                ? const BusinessDashboardScreen()
+                : const BusinessRegistrationScreen(),
+          ),
         );
         break;
       case 'expense_tracking':
