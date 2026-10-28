@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class BeneficiariesScreen extends StatefulWidget {
   final Function(String upiId, String name)? onSelectPayee;
@@ -317,6 +318,46 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
     );
   }
 
+  Future<void> _pickNativeDeviceContact() async {
+    try {
+      const channel = MethodChannel('in.bharatonepay/contacts');
+      final res = await channel.invokeMethod<Map>('pickContact');
+      if (res != null) {
+        final name = (res['name'] ?? '').toString().trim();
+        final phone = (res['phone'] ?? '').toString().trim();
+        if (phone.isNotEmpty) {
+          final upi = phone.length == 10 ? '$phone@aiksetra' : '$phone@upi';
+          if (widget.onSelectPayee != null) {
+            widget.onSelectPayee!(upi, name.isNotEmpty ? name : 'Contact ($phone)');
+            Navigator.pop(context);
+          } else {
+            setState(() {
+              _beneficiaries.insert(0, {
+                'id': 'ben_contact_${DateTime.now().millisecondsSinceEpoch}',
+                'name': name.isNotEmpty ? name : 'Contact ($phone)',
+                'upiId': upi,
+                'type': 'UPI ID',
+                'bank': 'Phone Contact',
+                'accountNo': null,
+                'isVerified': true,
+                'avatarColor': 0xFF046A38,
+                'initials': name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'C',
+                'lastPaid': 'Just now',
+              });
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Contact $name ($upi) added!'), backgroundColor: const Color(0xFF046A38)),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contact picker not available on this device')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _beneficiaries.where((b) {
@@ -353,18 +394,49 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
           Container(
             color: const Color(0xFF0D1B2A),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.12),
-                hintText: 'Search by name, UPI ID or account number...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-              ),
+            child: Column(
+              children: [
+                TextField(
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.12),
+                    hintText: 'Search by name, UPI ID or account number...',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: _pickNativeDeviceContact,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF671F),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.contacts_rounded, color: Colors.white, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          '📱 Choose from Real Device Contacts',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
 
@@ -51,6 +52,10 @@
             android:value="2" />
     </application>
     <queries>
+        <intent>
+            <action android:name="android.intent.action.PICK"/>
+            <data android:mimeType="vnd.android.cursor.dir/phone_v2"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
