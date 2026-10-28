@@ -1,3 +1,4 @@
+import '../services/theme_manager.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
@@ -37,6 +38,22 @@ class SimpleHomeScreen extends StatefulWidget {
 }
 
 class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
+  // ===========================================================================
+  // THEME & DARK MODE SUPPORT
+  // ===========================================================================
+  bool get _isDark => ThemeManager.isDarkMode;
+  Color get _bgScaffold => _isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC);
+  Color get _cardBg => _isDark ? const Color(0xFF131B2E) : Colors.white;
+  Color get _cardBorder => _isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
+  Color get _textSecondary => _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+  // Stock search & live ticker state
+  final TextEditingController _stockSearchCtrl = TextEditingController();
+  String _stockSearchQuery = '';
+  String _selectedStockSector = 'All';
+  Timer? _stockTickerTimer;
+
   String _selectedLang = 'en-IN';
   late final PageController _adPageController;
   int _currentAdIndex = 0;
@@ -146,6 +163,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     _adPageController = PageController();
     _startAdAutoPlay();
     _syncLiveState();
+    ThemeManager.themeModeNotifier.addListener(_onThemeChanged);
+    _startStockTickerTimer();
   }
 
   void _startAdAutoPlay() {
@@ -162,8 +181,26 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     });
   }
 
+  void _onThemeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _startStockTickerTimer() {
+    _stockTickerTimer?.cancel();
+    _stockTickerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!mounted) return;
+      BharatOnePayApi.tickLivePrices();
+      if (_bottomNavIndex == 2) {
+        setState(() {});
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _stockTickerTimer?.cancel();
+    ThemeManager.themeModeNotifier.removeListener(_onThemeChanged);
+    _stockSearchCtrl.dispose();
     _adAutoTimer?.cancel();
     _adPageController.dispose();
     _consumerIdCtrl.dispose();
@@ -224,7 +261,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: _bgScaffold,
       appBar: _buildTopAppBar(),
       body: IndexedStack(
         index: _bottomNavIndex,
@@ -453,6 +490,24 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           },
           icon: const Icon(Icons.sync, color: Color(0xFF38BDF8), size: 20),
           tooltip: 'Sync with Bank Switch',
+        ),
+        IconButton(
+          onPressed: () {
+            ThemeManager.toggleTheme();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_isDark ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated'),
+                duration: const Duration(milliseconds: 900),
+                backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
+              ),
+            );
+          },
+          icon: Icon(
+            _isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            color: _isDark ? const Color(0xFFFBBF24) : Colors.white,
+            size: 22,
+          ),
+          tooltip: _isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
         ),
         IconButton(
           onPressed: _openUniversalSearch,
@@ -4213,15 +4268,154 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               }).toList(),
             ),
           ),
+          // Live Real-Time Ticker Stream Banner
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: _isDark ? const Color(0xFF131B2E) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'LIVE STREAMING (NSE & BSE)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: _isDark ? const Color(0xFF38BDF8) : const Color(0xFF0369A1),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    '⚡ Real-Time Ticks',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF046A38),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Stock Search & Filter Bar
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: _isDark ? const Color(0xFF131B2E) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.search_rounded, color: Color(0xFFFF671F), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _stockSearchCtrl,
+                    style: TextStyle(fontSize: 13, color: _textPrimary),
+                    onChanged: (val) => setState(() => _stockSearchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Search 24+ stocks (e.g. Reliance, Tata, SBI...)',
+                      hintStyle: TextStyle(fontSize: 12, color: _textSecondary),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+                if (_stockSearchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    color: _textSecondary,
+                    onPressed: () {
+                      _stockSearchCtrl.clear();
+                      setState(() => _stockSearchQuery = '');
+                    },
+                  ),
+              ],
+            ),
+          ),
+
+          // Sector Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: ['All', 'Banking', 'IT & Tech', 'Energy', 'Auto', 'FMCG', 'Infra'].map((sec) {
+                final isSel = _selectedStockSector == sec;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6, bottom: 12),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedStockSector = sec),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isSel
+                            ? const Color(0xFFFF671F)
+                            : (_isDark ? const Color(0xFF131B2E) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSel
+                              ? const Color(0xFFFF671F)
+                              : (_isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+                        ),
+                      ),
+                      child: Text(
+                        sec,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
+                          color: isSel ? Colors.white : _textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _t('stocks_watchlist'),
-                style: const TextStyle(
+                'Stocks Watchlist (${BharatOnePayApi.indianStocks.where((s) {
+                  final q = _stockSearchQuery.toLowerCase().trim();
+                  final symbol = (s['symbol'] as String).toLowerCase();
+                  final name = (s['name'] as String).toLowerCase();
+                  final sector = (s['sector'] ?? '').toString().toLowerCase();
+                  final matchesQ = q.isEmpty || symbol.contains(q) || name.contains(q) || sector.contains(q);
+                  final matchesS = _selectedStockSector == 'All' || sector.toLowerCase().contains(_selectedStockSector.toLowerCase());
+                  return matchesQ && matchesS;
+                }).length})',
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
-                  color: Color(0xFF0F172A),
+                  color: _textPrimary,
                 ),
               ),
               Container(
@@ -4252,7 +4446,15 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          ...BharatOnePayApi.indianStocks.map((stock) {
+          ...BharatOnePayApi.indianStocks.where((stock) {
+            final q = _stockSearchQuery.toLowerCase().trim();
+            final symbol = (stock['symbol'] as String).toLowerCase();
+            final name = (stock['name'] as String).toLowerCase();
+            final sector = (stock['sector'] ?? '').toString().toLowerCase();
+            final matchesQ = q.isEmpty || symbol.contains(q) || name.contains(q) || sector.contains(q);
+            final matchesS = _selectedStockSector == 'All' || sector.toLowerCase().contains(_selectedStockSector.toLowerCase());
+            return matchesQ && matchesS;
+          }).map((stock) {
             final isPositive = (stock['change'] as num) >= 0;
             return InkWell(
               onTap: () => _showStockChartModal(stock),
@@ -4261,12 +4463,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _cardBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: _cardBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Colors.black.withValues(alpha: _isDark ? 0.2 : 0.02),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -4295,10 +4497,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             children: [
                               Text(
                                 stock['symbol'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 13,
-                                  color: Color(0xFF0F172A),
+                                  color: _textPrimary,
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -4335,13 +4537,25 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            '₹${(stock['price'] as num).toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14,
-                              color: Color(0xFF0F172A),
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (stock['tickDirection'] != null && stock['tickDirection'] != 0) ...[
+                                Icon(
+                                  stock['tickDirection'] == 1 ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                                  color: stock['tickDirection'] == 1 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                  size: 16,
+                                ),
+                              ],
+                              Text(
+                                '₹${(stock['price'] as num).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14,
+                                  color: _textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -7837,11 +8051,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             'Authorize ₹${total.toStringAsFixed(2)} for $qty shares of ${stock['symbol']}',
                       );
                       if (pin == null || pin.isEmpty) return;
-                      final res = await BharatOnePayApi.payUpi(
-                        receiverVpa: 'nse.clearing@upi',
-                        amount: total,
+                      final res = await BharatOnePayApi.executeDemoStockBuy(
+                        stock: stock,
+                        qty: qty,
                         mpin: pin,
-                        remark: 'Buy $qty shares of ${stock['symbol']}',
                       );
                       await _syncLiveState();
                       if (!mounted) return;
@@ -7849,8 +8062,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF046A38),
+                            duration: const Duration(seconds: 3),
                             content: Text(
-                              '✅ Bought $qty shares of ${stock['symbol']}! Order executed on NSE.',
+                              '🎉 Demo Order Executed! Bought $qty shares of ${stock['symbol']} @ ₹${price.toStringAsFixed(2)}. Added to your Portfolio!',
                             ),
                           ),
                         );
