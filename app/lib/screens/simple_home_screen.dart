@@ -1537,14 +1537,44 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
         const SizedBox(height: 16),
 
-        // 3. GOLD, SILVER & PLATINUM
+        // 3. SAVINGS AND INVESTMENT
         _buildPhonePeSectionCard(
-          categoryKey: 'gold_wealth',
-          title: 'Gold, Silver & Platinum',
+          categoryKey: 'savings_investments',
+          title: 'Savings and Investment',
           icon: Icons.savings_rounded,
           iconColor: const Color(0xFFD97706),
-          offerText: '🪙 24K 99.9% Pure • Insured MMTC-PAMP / Augmont vaults',
+          offerText: '🪙 High return FDs up to 7.8% • 24K 99.9% Pure Gold & SIPs',
           items: [
+            // In Front: Fixed Deposit, SIP, Mutual Funds, RD
+            {
+              'label': 'Fixed\nDeposit',
+              'icon': Icons.lock_clock_rounded,
+              'color': const Color(0xFF2563EB),
+              'routeKey': 'fd',
+              'badge': '7.8% p.a.',
+            },
+            {
+              'label': 'SIP\nInvest',
+              'icon': Icons.trending_up_rounded,
+              'color': const Color(0xFF10B981),
+              'routeKey': 'sip',
+              'badge': '₹500/mo',
+            },
+            {
+              'label': 'Mutual\nFunds',
+              'icon': Icons.pie_chart_rounded,
+              'color': const Color(0xFF7C3AED),
+              'routeKey': 'mutual_funds',
+              'badge': 'Direct',
+            },
+            {
+              'label': 'Recurring\nDeposit (RD)',
+              'icon': Icons.account_balance_wallet_rounded,
+              'color': const Color(0xFF0284C7),
+              'routeKey': 'rd',
+              'badge': '7.1% p.a.',
+            },
+            // Down there: The Gold ones
             {
               'label': 'Daily Gold\n₹10 SIP',
               'icon': Icons.auto_awesome_rounded,
@@ -1575,6 +1605,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             },
           ],
         ),
+
         const SizedBox(height: 16),
 
         // 4. INSURANCE
@@ -1764,155 +1795,150 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ),
           ),
 
-          // 4 ICONS IN A ROW
+          // ICONS IN ROWS OF 4
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: items.map((item) {
-                final color = item['color'] as Color;
-                final routeKey = item['routeKey'] as String;
-                final badge = item['badge'] as String?;
-                return Expanded(
-                  child: InkWell(
-                    onTap: () => _handleServiceRoute(routeKey),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: color.withValues(alpha: 0.25),
-                                    width: 1.2,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    item['icon'] as IconData,
-                                    color: color,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                              if (badge != null)
-                                Positioned(
-                                  top: -5,
-                                  right: -6,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 1.5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFDC2626),
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.15),
-                                          blurRadius: 3,
-                                          offset: const Offset(0, 1),
+            child: Column(
+              children: [
+                for (int rowIndex = 0; rowIndex < items.length; rowIndex += 4) ...[
+                  if (rowIndex > 0) const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: items
+                        .skip(rowIndex)
+                        .take(4)
+                        .map((item) {
+                          final color = item['color'] as Color;
+                          final routeKey = item['routeKey'] as String;
+                          final badge = item['badge'] as String?;
+                          return Expanded(
+                            child: InkWell(
+                              onTap: () => _handleServiceRoute(routeKey),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            color: color.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: color.withValues(alpha: 0.25),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Icon(
+                                              item['icon'] as IconData,
+                                              color: color,
+                                              size: 24,
+                                            ),
+                                          ),
                                         ),
+                                        if (badge != null)
+                                          Positioned(
+                                            top: -5,
+                                            right: -6,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 5,
+                                                vertical: 1.5,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFDC2626),
+                                                borderRadius: BorderRadius.circular(6),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.15),
+                                                    blurRadius: 3,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Text(
+                                                badge,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
-                                    child: Text(
-                                      badge,
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      item['label'] as String,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8.5,
-                                        fontWeight: FontWeight.w900,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF334155),
+                                        height: 1.15,
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            item['label'] as String,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF334155),
-                              height: 1.15,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // FOOTER MICRO BANNER WITH "More →"
-          InkWell(
-            onTap: () => _openCategoryHub(categoryKey),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(19),
-                ),
-                border: Border(
-                  top: BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      offerText,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'More',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 14,
-                    color: Color(0xFF0F172A),
+                          );
+                        }).toList(),
                   ),
                 ],
+              ],
+            ),
+          ),
+          // FOOTER MICRO BANNER (Arrow only, no 'More' text, no click action)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(19),
               ),
+              border: Border(
+                top: BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    offerText,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: Color(0xFF94A3B8),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-
   void _openCategoryHub(String categoryKey) {
     Navigator.push(
       context,

@@ -31,10 +31,11 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
       case 'loans':
       case 'credit':
         return 'Loans & Credit';
+      case 'savings_investments':
       case 'gold_wealth':
       case 'gold':
       case 'wealth':
-        return 'Gold, Silver & Platinum';
+        return 'Savings and Investment';
       case 'insurance':
         return 'Insurance & Protection';
       case 'tools':
