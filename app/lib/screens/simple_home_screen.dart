@@ -139,6 +139,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _historyFilterType = 'ALL';
   final TextEditingController _historySearchCtrl = TextEditingController();
 
+  String _selectedNotificationFilter = 'ALL';
+  final Set<String> _dismissedAlertIds = {};
+  void Function(void Function())? _billsModalSetter;
+
+  void _setBillState(VoidCallback fn) {
+    if (mounted) {
+      setState(fn);
+    } else {
+      fn();
+    }
+    _billsModalSetter?.call(() {});
+  }
+
   // BBPS Bill Tab State
   String _selectedBillCategory = 'ELECTRICITY';
   Map<String, dynamic>? _selectedBiller;
@@ -271,9 +284,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         index: _bottomNavIndex,
         children: [
           _buildHomeTab(),
-          _buildBillsTab(),
-          _buildSipTab(),
           _buildAbroadTab(),
+          _buildSipTab(),
+          _buildNotificationsTab(),
           _buildHistoryTab(),
         ],
       ),
@@ -578,46 +591,25 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         _showCheckBalanceDialog();
         break;
       case 'bill_electricity':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'ELECTRICITY';
-        });
+        _openBillsModal(category: 'ELECTRICITY');
         break;
       case 'bill_water':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'WATER';
-        });
+        _openBillsModal(category: 'WATER');
         break;
       case 'bill_gas':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'GAS';
-        });
+        _openBillsModal(category: 'GAS');
         break;
       case 'bill_broadband':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'BROADBAND';
-        });
+        _openBillsModal(category: 'BROADBAND');
         break;
       case 'bill_mobile':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'MOBILE';
-        });
+        _openBillsModal(category: 'MOBILE');
         break;
       case 'bill_fastag':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'FASTAG';
-        });
+        _openBillsModal(category: 'FASTAG');
         break;
       case 'bill_dth':
-        setState(() {
-          _bottomNavIndex = 1;
-          _selectedBillCategory = 'DTH';
-        });
+        _openBillsModal(category: 'DTH');
         break;
       case 'wealth_sip':
         setState(() => _bottomNavIndex = 2);
@@ -1574,35 +1566,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               'routeKey': 'rd',
               'badge': '7.1% p.a.',
             },
-            // Down there: The Gold ones
-            {
-              'label': 'Daily Gold\n₹10 SIP',
-              'icon': Icons.auto_awesome_rounded,
-              'color': const Color(0xFFF59E0B),
-              'routeKey': 'invest_gold',
-              'badge': '24K SIP',
-            },
-            {
-              'label': 'Buy 24K\nGold',
-              'icon': Icons.savings_rounded,
-              'color': const Color(0xFFD97706),
-              'routeKey': 'invest_gold',
-              'badge': '99.9% Pure',
-            },
-            {
-              'label': 'Daily Silver\n₹10 SIP',
-              'icon': Icons.generating_tokens_rounded,
-              'color': const Color(0xFF64748B),
-              'routeKey': 'invest_silver',
-              'badge': '₹10 SIP',
-            },
-            {
-              'label': 'Buy Pure\nSilver',
-              'icon': Icons.workspace_premium_rounded,
-              'color': const Color(0xFF475569),
-              'routeKey': 'invest_silver',
-              'badge': '99.9%',
-            },
           ],
         ),
 
@@ -2291,7 +2254,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         break;
       case 'forex':
       case 'global_fx':
-        setState(() => _bottomNavIndex = 3);
+      case 'remittance':
+      case 'fx':
+      case 'abroad':
+        setState(() => _bottomNavIndex = 1);
         break;
 
       default:
@@ -3186,18 +3152,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   void _selectBillCategoryAndOpen(String category) {
-    final matching = BharatOnePayApi.bbpsBillers
-        .where((b) => b['category'] == category)
-        .toList();
-    setState(() {
-      _selectedBillCategory = category;
-      _fetchedBill = null;
-      _consumerIdCtrl.clear();
-      if (matching.isNotEmpty) {
-        _selectedBiller = matching.first;
-      }
-      _bottomNavIndex = 1;
-    });
+    _openBillsModal(category: category);
   }
 
   Widget _buildWealthAndSafetyHighlights() {
@@ -3256,7 +3211,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         const SizedBox(width: 10),
         Expanded(
           child: InkWell(
-            onTap: () => setState(() => _bottomNavIndex = 3),
+            onTap: () => setState(() => _bottomNavIndex = 1),
             borderRadius: BorderRadius.circular(18),
             child: Container(
               padding: const EdgeInsets.all(14),
@@ -3452,6 +3407,104 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
+  void _openBillsModal({String? category}) {
+    if (category != null) {
+      _selectedBillCategory = category;
+      final matching = BharatOnePayApi.bbpsBillers
+          .where((b) => b['category'] == category)
+          .toList();
+      if (matching.isNotEmpty) {
+        _selectedBiller = matching.first;
+      }
+      _fetchedBill = null;
+      _consumerIdCtrl.clear();
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            _billsModalSetter = setModalState;
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.90,
+              decoration: BoxDecoration(
+                color: _bgScaffold,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _isDark ? const Color(0xFF0F172A) : Colors.white,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.receipt_long_rounded,
+                            color: Color(0xFF2563EB),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bharat Connect (BBPS)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Instant bill fetch & receipt • NPCI Bharat Connect',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildBillsTab(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      _billsModalSetter = null;
+      if (mounted) setState(() {});
+    });
+  }
+
   // TAB 1: BBPS UTILITY BILLS & RECHARGES (Electricity, Water, Gas, Broadband)
   // ===========================================================================
   Widget _buildBillsTab() {
@@ -3562,7 +3615,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     final list = BharatOnePayApi.bbpsBillers
                         .where((b) => b['category'] == cat)
                         .toList();
-                    setState(() {
+                    _setBillState(() {
                       _selectedBillCategory = cat;
                       _fetchedBill = null;
                       _consumerIdCtrl.clear();
@@ -3610,7 +3663,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           _selectedBiller!['id'] == b['id'];
                       return InkWell(
                         onTap: () {
-                          setState(() {
+                          _setBillState(() {
                             _selectedBiller = b;
                             _fetchedBill = null;
                           });
@@ -4043,13 +4096,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       );
       return;
     }
-    setState(() => _isFetchingBill = true);
+    _setBillState(() => _isFetchingBill = true);
     final res = await BharatOnePayApi.fetchBillDetails(
       billerId: _selectedBiller!['id'],
       consumerNumber: cid,
     );
     if (!mounted) return;
-    setState(() {
+    _setBillState(() {
       _isFetchingBill = false;
       if (res['success'] == true && res['bill'] != null) {
         _fetchedBill = Map<String, dynamic>.from(res['bill']);
@@ -4082,7 +4135,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     if (res['success'] == true) {
       await _syncLiveState();
       if (!mounted) return;
-      setState(() {
+      _setBillState(() {
         if (_fetchedBill != null) _fetchedBill!['alreadyPaid'] = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -6097,6 +6150,712 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     return '$hour:$min $period';
   }
 
+  // ===========================================================================
+  // TAB 3: SMART NOTIFICATIONS & BILL REMINDERS
+  // ===========================================================================
+  Widget _buildNotificationsTab() {
+    final isDark = _isDark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    // Monthly & Annual Recurring Dues Reminders
+    final dueReminders = [
+      {
+        'id': 'due_elec_nov',
+        'type': 'due',
+        'title': 'Electricity Bill Due Soon',
+        'provider': 'BESCOM Bangalore • Consumer #409281729',
+        'amount': '₹1,420',
+        'dueDate': 'Due in 3 days (Nov 2)',
+        'dueUrgent': true,
+        'category': 'ELECTRICITY',
+        'icon': Icons.bolt_rounded,
+        'iconBg': const Color(0xFFFEF3C7),
+        'iconColor': const Color(0xFFD97706),
+        'actionLabel': 'Pay Bill',
+        'action': 'pay_electricity',
+      },
+      {
+        'id': 'due_mobile_nov',
+        'type': 'due',
+        'title': 'Mobile Recharge Expiring',
+        'provider': 'Jio 5G Unlimited (98765 43210)',
+        'amount': '₹349',
+        'dueDate': 'Expires in 4 days (Nov 3)',
+        'dueUrgent': true,
+        'category': 'MOBILE',
+        'icon': Icons.phone_android_rounded,
+        'iconBg': const Color(0xFFEFF6FF),
+        'iconColor': const Color(0xFF2563EB),
+        'actionLabel': 'Recharge',
+        'action': 'recharge_mobile',
+      },
+      {
+        'id': 'due_fastag_low',
+        'type': 'due',
+        'title': 'FASTag Low Balance Alert',
+        'provider': 'NHAI NETC FASTag (KA-01-MJ-4029)',
+        'amount': 'Bal: ₹140',
+        'dueDate': 'Threshold: Min ₹200 required',
+        'dueUrgent': true,
+        'category': 'FASTAG',
+        'icon': Icons.directions_car_rounded,
+        'iconBg': const Color(0xFFFEE2E2),
+        'iconColor': const Color(0xFFDC2626),
+        'actionLabel': 'Top Up ₹500',
+        'action': 'topup_fastag',
+      },
+      {
+        'id': 'due_insurance_nov',
+        'type': 'due',
+        'title': 'Annual Term Life Insurance Due',
+        'provider': 'HDFC Life Click 2 Protect (Policy #POL-882910)',
+        'amount': '₹8,450 / yr',
+        'dueDate': 'Due on Nov 28 (Annual Renewal)',
+        'dueUrgent': false,
+        'category': 'INSURANCE',
+        'icon': Icons.shield_rounded,
+        'iconBg': const Color(0xFFF3E8FF),
+        'iconColor': const Color(0xFF7C3AED),
+        'actionLabel': 'Review & Pay',
+        'action': 'pay_insurance',
+      },
+      {
+        'id': 'due_sip_nov',
+        'type': 'due',
+        'title': 'SIP AutoPay Execution Scheduled',
+        'provider': 'Nifty 50 Index Fund • SBI Mandate',
+        'amount': '₹2,000',
+        'dueDate': 'Scheduled Nov 5 (Auto-Debit)',
+        'dueUrgent': false,
+        'category': 'SIP',
+        'icon': Icons.trending_up_rounded,
+        'iconBg': const Color(0xFFDCFCE7),
+        'iconColor': const Color(0xFF16A34A),
+        'actionLabel': 'View SIP',
+        'action': 'view_sip',
+      },
+      {
+        'id': 'due_water_nov',
+        'type': 'due',
+        'title': 'Quarterly Water & Sewerage Bill',
+        'provider': 'BWSSB Bangalore Water Supply',
+        'amount': '₹380',
+        'dueDate': 'Due Nov 12',
+        'dueUrgent': false,
+        'category': 'WATER',
+        'icon': Icons.water_drop_rounded,
+        'iconBg': const Color(0xFFE0F2FE),
+        'iconColor': const Color(0xFF0284C7),
+        'actionLabel': 'Pay Bill',
+        'action': 'pay_water',
+      },
+    ].where((a) => !_dismissedAlertIds.contains(a['id'])).toList();
+
+    // Transactions / Payments live notifications
+    final liveTxns = BharatOnePayApi.recentTransactions.map((t) {
+      final isCredit = t['isCredit'] == true;
+      final amt = (t['amount'] as num?)?.toDouble() ?? 0.0;
+      final userOrPayee = t['user'] ?? t['payee'] ?? 'UPI Transfer';
+      final remark = t['remark'] ?? (isCredit ? 'Payment received' : 'Payment sent');
+      final date = t['date'] ?? 'Recently';
+      return {
+        'id': 'txn_${t['id'] ?? t.hashCode}',
+        'type': 'activity',
+        'title': isCredit ? 'Payment Received' : 'Money Sent',
+        'subtitle': isCredit
+            ? '₹${amt.toStringAsFixed(0)} credited from $userOrPayee'
+            : '₹${amt.toStringAsFixed(0)} paid to $userOrPayee',
+        'detail': '$remark • Ref #${t['id'] ?? 'UPI'}',
+        'time': date,
+        'isCredit': isCredit,
+        'amount': amt,
+        'rawTxn': t,
+      };
+    }).toList();
+
+    final activeDuesCount = dueReminders.length;
+    final paymentsCount = liveTxns.length;
+
+    // Filtered items based on tab selection
+    final showDues = _selectedNotificationFilter == 'ALL' || _selectedNotificationFilter == 'DUES';
+    final showPayments = _selectedNotificationFilter == 'ALL' || _selectedNotificationFilter == 'PAYMENTS';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner summary card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF671F).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Color(0xFFFF671F),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Smart Alerts & Due Reminders',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Monthly / annual payments & live transactions',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (dueReminders.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$activeDuesCount Due',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_month_rounded, color: Color(0xFF38BDF8), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Total Due This Month:',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const Text(
+                        '₹10,219',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Filter selector chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildNotificationFilterChip(
+                  label: 'All Alerts (${activeDuesCount + paymentsCount})',
+                  filterKey: 'ALL',
+                ),
+                const SizedBox(width: 8),
+                _buildNotificationFilterChip(
+                  label: 'Due Reminders ($activeDuesCount)',
+                  filterKey: 'DUES',
+                  icon: Icons.access_time_rounded,
+                ),
+                const SizedBox(width: 8),
+                _buildNotificationFilterChip(
+                  label: 'Payments & Receipts ($paymentsCount)',
+                  filterKey: 'PAYMENTS',
+                  icon: Icons.payments_rounded,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // 1. DUE REMINDERS SECTION
+          if (showDues && dueReminders.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Upcoming Dues & Renewals',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: titleColor,
+                  ),
+                ),
+                Text(
+                  '$activeDuesCount Pending',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFF671F),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...dueReminders.map((due) {
+              final isUrgent = due['dueUrgent'] == true;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isUrgent ? const Color(0xFFFCA5A5) : borderColor,
+                    width: isUrgent ? 1.5 : 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: due['iconBg'] as Color,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            due['icon'] as IconData,
+                            color: due['iconColor'] as Color,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      due['title'] as String,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: titleColor,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isUrgent)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEE2E2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'URGENT',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                due['provider'] as String,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: subColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.schedule_rounded,
+                                    size: 13,
+                                    color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFF10B981),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    due['dueDate'] as String,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          color: subColor,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            setState(() {
+                              _dismissedAlertIds.add(due['id'] as String);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bill Amount',
+                              style: TextStyle(fontSize: 10, color: subColor),
+                            ),
+                            Text(
+                              due['amount'] as String,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: titleColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton(
+                          onPressed: () => _handleDueNotificationAction(due['action'] as String),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF671F),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                due['actionLabel'] as String,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_rounded, size: 14),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+
+          // 2. LIVE PAYMENT NOTIFICATIONS SECTION
+          if (showPayments) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Payment & Transaction Activity',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: titleColor,
+                  ),
+                ),
+                Text(
+                  'Live Feed',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: subColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (liveTxns.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(24),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Text(
+                  'No recent transaction activity to show.',
+                  style: TextStyle(color: subColor, fontSize: 13),
+                ),
+              )
+            else
+              ...liveTxns.map((act) {
+                final isCredit = act['isCredit'] == true;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: InkWell(
+                    onTap: () {
+                      final raw = act['rawTxn'] as Map<String, dynamic>;
+                      _showTransactionReceiptModal(raw);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                              color: isCredit ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  act['title'] as String,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: titleColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  act['subtitle'] as String,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${act['detail']} • ${act['time']}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: subColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${isCredit ? '+' : '-'} ₹${(act['amount'] as double).toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: isCredit ? const Color(0xFF16A34A) : titleColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'View Receipt >',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFFF671F),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+          ],
+
+          if (dueReminders.isEmpty && liveTxns.isEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(32),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 48, color: subColor),
+                  const SizedBox(height: 12),
+                  Text(
+                    'All caught up!',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: titleColor),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'No pending dues or unread notifications at this time.',
+                    style: TextStyle(fontSize: 12, color: subColor),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationFilterChip({
+    required String label,
+    required String filterKey,
+    IconData? icon,
+  }) {
+    final isSelected = _selectedNotificationFilter == filterKey;
+    return InkWell(
+      onTap: () => setState(() => _selectedNotificationFilter = filterKey),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF671F) : (_isDark ? const Color(0xFF1E293B) : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF671F) : (_isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? Colors.white : (_isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : (_isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleDueNotificationAction(String action) {
+    switch (action) {
+      case 'pay_electricity':
+        _openBillsModal(category: 'ELECTRICITY');
+        break;
+      case 'recharge_mobile':
+        _openBillsModal(category: 'MOBILE');
+        break;
+      case 'topup_fastag':
+        _openBillsModal(category: 'FASTAG');
+        break;
+      case 'pay_water':
+        _openBillsModal(category: 'WATER');
+        break;
+      case 'pay_insurance':
+        _showInsuranceDiscoveryModal('health_insurance');
+        break;
+      case 'view_sip':
+        setState(() => _bottomNavIndex = 2);
+        break;
+      default:
+        _openBillsModal();
+        break;
+    }
+  }
+
   Widget _buildHistoryTab() {
     final allTxns = BharatOnePayApi.recentTransactions;
 
@@ -6756,9 +7515,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             label: _t('tab_home'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.receipt_long_rounded),
-            activeIcon: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFF671F)),
-            label: _t('tab_bills'),
+            icon: const Icon(Icons.public_rounded),
+            activeIcon: const Icon(Icons.public_rounded, color: Color(0xFFFF671F)),
+            label: _t('tab_global'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.trending_up_rounded),
@@ -6766,9 +7525,23 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             label: _t('tab_wealth'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.public_rounded),
-            activeIcon: const Icon(Icons.public_rounded, color: Color(0xFFFF671F)),
-            label: _t('tab_global'),
+            icon: Badge(
+              label: const Text(
+                '4',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              backgroundColor: const Color(0xFFEF4444),
+              child: const Icon(Icons.notifications_none_rounded),
+            ),
+            activeIcon: Badge(
+              label: const Text(
+                '4',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              backgroundColor: const Color(0xFFEF4444),
+              child: const Icon(Icons.notifications_active_rounded, color: Color(0xFFFF671F)),
+            ),
+            label: _t('tab_notifications'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.history_rounded),

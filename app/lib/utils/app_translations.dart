@@ -167,6 +167,8 @@ class AppTranslations {
       'tab_bills': 'Bills & Recharges',
       'tab_wealth': 'SIP & Stocks',
       'tab_global': 'Global FX',
+
+      'tab_notifications': 'Notifications',
       'tab_bank': 'Bank & Me',
       'tab_history': 'History',
       'electricity': 'Electricity',
@@ -210,6 +212,8 @@ class AppTranslations {
       'tab_bills': 'बिल भुगतान',
       'tab_wealth': 'SIP और शेयर',
       'tab_global': 'ग्लोबल FX',
+
+      'tab_notifications': 'सूचनाएं',
       'tab_bank': 'बैंक और मैं',
       'tab_history': 'इतिहास',
       'electricity': 'बिजली बिल',
@@ -253,6 +257,8 @@ class AppTranslations {
       'tab_bills': 'বিল পেমেন্ট',
       'tab_wealth': 'SIP ও শেয়ার',
       'tab_global': 'গ্লোবাল FX',
+
+      'tab_notifications': 'বিজ্ঞপ্তি',
       'tab_bank': 'ব্যাঙ্ক ও প্রোফাইল',
       'tab_history': 'ইতিহাস',
       'electricity': 'বিদ্যুৎ বিল',
@@ -296,6 +302,8 @@ class AppTranslations {
       'tab_bills': 'बिल पेमेंट्स',
       'tab_wealth': 'SIP आणि शेअर्स',
       'tab_global': 'ग्लोबल FX',
+
+      'tab_notifications': 'सूचना',
       'tab_bank': 'बँक आणि मी',
       'tab_history': 'व्यवहार',
       'electricity': 'वीज बिल',
@@ -339,6 +347,8 @@ class AppTranslations {
       'tab_bills': 'பில் செலுத்துதல்',
       'tab_wealth': 'SIP & பங்குகள்',
       'tab_global': 'குளோபல் FX',
+
+      'tab_notifications': 'அறிவிப்புகள்',
       'tab_bank': 'வங்கி & சுயவிவரம்',
       'tab_history': 'வரலாறு',
       'electricity': 'மின்சார பில்',
@@ -382,6 +392,8 @@ class AppTranslations {
       'tab_bills': 'బిల్లు చెల్లింపులు',
       'tab_wealth': 'SIP & స్టాక్స్',
       'tab_global': 'గ్లోబల్ FX',
+
+      'tab_notifications': 'నోటిఫికేషన్లు',
       'tab_bank': 'బ్యాంక్ & ప్రొఫైల్',
       'tab_history': 'చరిత్ర',
       'electricity': 'కరెంట్ బిల్లు',
@@ -425,6 +437,8 @@ class AppTranslations {
       'tab_bills': 'બિલ પેમેન્ટ',
       'tab_wealth': 'SIP અને શેર્સ',
       'tab_global': 'ગ્લોબલ FX',
+
+      'tab_notifications': 'સૂચનાઓ',
       'tab_bank': 'બેંક અને હું',
       'tab_history': 'ઇતિહાસ',
       'electricity': 'વીજળી બિલ',
@@ -468,6 +482,8 @@ class AppTranslations {
       'tab_bills': 'ಬಿಲ್ ಪಾವತಿಗಳು',
       'tab_wealth': 'SIP & ಷೇರುಗಳು',
       'tab_global': 'ಗ್ಲೋಬಲ್ FX',
+
+      'tab_notifications': 'ಸೂಚನೆಗಳು',
       'tab_bank': 'ಬ್ಯಾಂಕ್ ಮತ್ತು ನಾನು',
       'tab_history': 'ಇತಿಹಾಸ',
       'electricity': 'ವಿದ್ಯುತ್ ಬಿಲ್',
@@ -511,6 +527,8 @@ class AppTranslations {
       'tab_bills': 'ബിൽ പേയ്മെന്റുകൾ',
       'tab_wealth': 'SIP & ഓഹരികൾ',
       'tab_global': 'ഗ്ലോബൽ FX',
+
+      'tab_notifications': 'അറിയിപ്പുകൾ',
       'tab_bank': 'ബാങ്കും പ്രൊഫൈലും',
       'tab_history': 'ചരിത്രം',
       'electricity': 'വൈദ്യുതി ബിൽ',
@@ -554,6 +572,8 @@ class AppTranslations {
       'tab_bills': 'ਬਿੱਲ ਭੁਗਤਾਨ',
       'tab_wealth': 'SIP ਅਤੇ ਸ਼ੇਅਰ',
       'tab_global': 'ਗਲੋਬਲ FX',
+
+      'tab_notifications': 'ਸੂਚਨਾਵਾਂ',
       'tab_bank': 'ਬੈਂਕ ਅਤੇ ਮੈਂ',
       'tab_history': 'ਇਤਿਹਾਸ',
       'electricity': 'ਬਿਜਲੀ ਦਾ ਬਿੱਲ',
@@ -597,6 +617,8 @@ class AppTranslations {
       'tab_bills': 'ବିଲ୍ ପେମେଣ୍ଟ',
       'tab_wealth': 'SIP ଓ ସେୟାର',
       'tab_global': 'ଗ୍ଲୋବାଲ FX',
+
+      'tab_notifications': 'ବିଜ୍ଞପ୍ତି',
       'tab_bank': 'ବ୍ୟାଙ୍କ ଓ ମୁଁ',
       'tab_history': 'ଇତିହାସ',
       'electricity': 'ବିଦ୍ୟୁତ୍ ବିଲ୍',

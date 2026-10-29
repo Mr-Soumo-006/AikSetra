@@ -113,6 +113,7 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
             'badge': 'Low Rate',
           },
         ];
+      case 'savings_investments':
       case 'gold_wealth':
       case 'gold':
       case 'wealth':
@@ -285,6 +286,7 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
             ],
           },
         ];
+      case 'savings_investments':
       case 'gold_wealth':
       case 'gold':
       case 'wealth':
