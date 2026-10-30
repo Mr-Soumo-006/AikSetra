@@ -31,7 +31,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _fetchBusinessData();
   }
 
@@ -1594,6 +1594,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
         ],
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: const Color(0xFF00E676),
           indicatorWeight: 3,
           labelColor: Colors.white,
@@ -1604,6 +1606,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
             Tab(text: 'Ledger', icon: Icon(Icons.menu_book, size: 18)),
             Tab(text: 'Balance Sheet', icon: Icon(Icons.pie_chart, size: 18)),
             Tab(text: 'Owners & Accs', icon: Icon(Icons.group, size: 18)),
+            Tab(text: 'Payroll & HR', icon: Icon(Icons.badge, size: 18)),
+            Tab(text: 'Statutory Audit', icon: Icon(Icons.fact_check, size: 18)),
           ],
         ),
       ),
@@ -1616,6 +1620,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                 _buildLedgerTab(cardBg, cardBorder, textPrimary, textSecondary),
                 _buildBalanceSheetTab(cardBg, cardBorder, textPrimary, textSecondary, balance),
                 _buildOwnersAndAccountsTab(cardBg, cardBorder, textPrimary, textSecondary, bankName, accNo, vpa, balance),
+                _buildPayrollTab(cardBg, cardBorder, textPrimary, textSecondary),
+                _buildAuditorTab(cardBg, cardBorder, textPrimary, textSecondary),
               ],
             ),
     );
@@ -2982,6 +2988,1121 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                       );
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // ================= TAB 5: PAYROLL & HR MANAGEMENT =================
+  Widget _buildPayrollTab(Color cardBg, Color cardBorder, Color textPrimary, Color textSecondary) {
+    final employees = BharatOnePayApi.businessEmployees;
+    final reimbursements = BharatOnePayApi.businessReimbursements;
+
+    double totalPayroll = 0;
+    double disbursed = 0;
+    double pendingSalary = 0;
+    for (final e in employees) {
+      final sal = (e['salary'] as num).toDouble();
+      totalPayroll += sal;
+      if (e['status'] == 'PAID') {
+        disbursed += sal;
+      } else {
+        pendingSalary += sal;
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {}),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Payroll Overview Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.payments, color: Color(0xFF00E676), size: 22),
+                        SizedBox(width: 8),
+                        Text(
+                          'Monthly Payroll Overview',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Oct 2026 Cycle',
+                        style: TextStyle(color: Color(0xFF00E676), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Total Budget', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹${totalPayroll.toStringAsFixed(0)}',
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Disbursed', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹${disbursed.toStringAsFixed(0)}',
+                            style: const TextStyle(color: Color(0xFF00E676), fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Pending Payout', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '₹${pendingSalary.toStringAsFixed(0)}',
+                            style: const TextStyle(color: Color(0xFFFF9100), fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00E676),
+                          foregroundColor: const Color(0xFF0D1B2A),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.flash_on, size: 16),
+                        label: Text(
+                          pendingSalary > 0 ? 'Disburse All Pending (₹${pendingSalary.toStringAsFixed(0)})' : 'All Salaries Paid',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        onPressed: pendingSalary <= 0
+                            ? null
+                            : () {
+                                final res = BharatOnePayApi.disburseAllPendingSalaries();
+                                if (res['success'] == true) {
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: const Color(0xFF046A38),
+                                      content: Text('Disbursed ${res['count']} salaries worth ₹${res['totalAmount']} successfully!'),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(res['message'] ?? 'Disbursal failed')),
+                                  );
+                                }
+                              },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.person_add, color: Colors.white),
+                      tooltip: 'Add Employee',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => _showAddEmployeeModal(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Employee List Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Company Employees (${employees.length})',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+              ),
+              Text(
+                'Auto-debit from Settlement',
+                style: TextStyle(fontSize: 11, color: textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...employees.map((emp) {
+            final isPaid = emp['status'] == 'PAID';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: const Color(0xFF046A38).withValues(alpha: 0.15),
+                        child: Text(
+                          (emp['name'] as String).substring(0, 1),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF046A38)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              emp['name'],
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textPrimary),
+                            ),
+                            Text(
+                              '${emp['role']} • ${emp['department']}',
+                              style: TextStyle(fontSize: 11, color: textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '₹${(emp['salary'] as num).toStringAsFixed(0)}/mo',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isPaid ? const Color(0xFF059669).withValues(alpha: 0.15) : const Color(0xFFFF9100).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isPaid ? 'PAID' : 'PENDING',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isPaid ? const Color(0xFF059669) : const Color(0xFFFF9100),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${emp['bank']} • PAN: ${emp['pan']}',
+                        style: TextStyle(fontSize: 10, color: textSecondary),
+                      ),
+                      if (!isPaid)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF046A38),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            minimumSize: const Size(0, 32),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () {
+                            final res = BharatOnePayApi.disbursePayrollSalary(empId: emp['id']);
+                            if (res['success'] == true) {
+                              setState(() {});
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF046A38),
+                                  content: Text('Salary of ₹${emp['salary']} paid to ${emp['name']} (UTR: ${res['utr']})'),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(res['message'] ?? 'Payment failed')),
+                              );
+                            }
+                          },
+                          child: const Text('Pay Salary', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        )
+                      else
+                        Text(
+                          'UTR: ${emp['utr'] ?? "CMS99214"}',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 20),
+
+          // Employee Reimbursements Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Employee Reimbursement Claims (${reimbursements.length})',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add, size: 14),
+                label: const Text('New Claim', style: TextStyle(fontSize: 12)),
+                onPressed: () => _showSubmitReimbursementModal(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...reimbursements.map((rmb) {
+            final isApproved = rmb['status'] == 'APPROVED_PAID';
+            final isRejected = rmb['status'] == 'REJECTED';
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          rmb['category'],
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                        ),
+                      ),
+                      Text(
+                        '₹${(rmb['amount'] as num).toStringAsFixed(0)}',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    rmb['title'],
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Submitted by ${rmb['employeeName']} on ${rmb['date']} • Receipt: ${rmb['receiptNumber']}',
+                    style: TextStyle(fontSize: 10, color: textSecondary),
+                  ),
+                  if (rmb['remarks'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Note: ${rmb['remarks']}',
+                      style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isApproved
+                              ? const Color(0xFF059669).withValues(alpha: 0.15)
+                              : (isRejected
+                                  ? const Color(0xFFDC2626).withValues(alpha: 0.15)
+                                  : const Color(0xFFFF9100).withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          isApproved ? 'APPROVED & PAID' : (isRejected ? 'REJECTED' : 'PENDING APPROVAL'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isApproved
+                                ? const Color(0xFF059669)
+                                : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFFF9100)),
+                          ),
+                        ),
+                      ),
+                      if (!isApproved && !isRejected)
+                        Row(
+                          children: [
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFDC2626),
+                                side: const BorderSide(color: Color(0xFFDC2626)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                minimumSize: const Size(0, 30),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                BharatOnePayApi.rejectReimbursement(claimId: rmb['id'], reason: 'Receipt unverified or exceeding limit');
+                                setState(() {});
+                              },
+                              child: const Text('Reject', style: TextStyle(fontSize: 11)),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF046A38),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                minimumSize: const Size(0, 30),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                final res = BharatOnePayApi.approveReimbursement(claimId: rmb['id']);
+                                if (res['success'] == true) {
+                                  setState(() {});
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: const Color(0xFF046A38),
+                                      content: Text('Claim approved! ₹${rmb['amount']} disbursed to ${rmb['employeeName']}.'),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(res['message'] ?? 'Payout failed')),
+                                  );
+                                }
+                              },
+                              child: const Text('Approve & Payout', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ================= TAB 6: STATUTORY AUDITOR INVOICE CHECKING =================
+  Widget _buildAuditorTab(Color cardBg, Color cardBorder, Color textPrimary, Color textSecondary) {
+    final auditInvoices = BharatOnePayApi.businessAuditInvoices;
+
+    int clearedCount = 0;
+    int flaggedCount = 0;
+    int pendingCount = 0;
+    double totalItc = 0;
+
+    for (final inv in auditInvoices) {
+      final st = inv['auditStatus'];
+      totalItc += (inv['totalTax'] as num).toDouble();
+      if (st == 'CLEARED') clearedCount++;
+      else if (st == 'DISCREPANCY') flaggedCount++;
+      else pendingCount++;
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {}),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Auditor Banner & Credentials
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF042F2E), Color(0xFF115E59)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.verified_user, color: Color(0xFF2DD4BF), size: 22),
+                        SizedBox(width: 8),
+                        Text(
+                          'Statutory Tax Audit Panel',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2DD4BF).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'ICAI Compliant',
+                        style: TextStyle(color: Color(0xFF2DD4BF), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Amit Ghosh, CA (Chief Statutory Auditor)',
+                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Membership #034871 • Ghosh & Associates Chartered Accountants\nMandatory GSTR-2B 3-Way Match & Tax Audit under Sec 44AB',
+                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Total Invoices', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text('${auditInvoices.length}', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('ITC Claimable', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text('₹${totalItc.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF2DD4BF), fontSize: 17, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Clean Cleared', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text('$clearedCount', style: const TextStyle(color: Color(0xFF00E676), fontSize: 17, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Flagged', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(height: 2),
+                          Text('$flaggedCount ($pendingCount pend)', style: const TextStyle(color: Color(0xFFFF5252), fontSize: 13, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Invoice Checking Header & Actions
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'GST Invoice Audit & Reconciliation',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF046A38),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: const Size(0, 32),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.verified, size: 14),
+                label: const Text('Audit Report', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                onPressed: () => _showAuditCertificateDialog(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Invoices List for Auditor Inspection
+          ...auditInvoices.map((inv) {
+            final isCleared = inv['auditStatus'] == 'CLEARED';
+            final isDiscrepancy = inv['auditStatus'] == 'DISCREPANCY';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDiscrepancy
+                      ? const Color(0xFFDC2626).withValues(alpha: 0.5)
+                      : (isCleared ? const Color(0xFF059669).withValues(alpha: 0.4) : cardBorder),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        inv['invoiceNumber'],
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E3A8A)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isCleared
+                              ? const Color(0xFF059669).withValues(alpha: 0.15)
+                              : (isDiscrepancy
+                                  ? const Color(0xFFDC2626).withValues(alpha: 0.15)
+                                  : const Color(0xFFFF9100).withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isCleared ? 'AUDITOR CLEARED' : (isDiscrepancy ? 'DISCREPANCY FLAGGED' : 'PENDING CHECK'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isCleared
+                                ? const Color(0xFF059669)
+                                : (isDiscrepancy ? const Color(0xFFDC2626) : const Color(0xFFFF9100)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    inv['vendorName'],
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textPrimary),
+                  ),
+                  Text(
+                    'GSTIN: ${inv['gstin']} • Date: ${inv['invoiceDate']}',
+                    style: TextStyle(fontSize: 11, color: textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9).withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Taxable Value:', style: TextStyle(fontSize: 11, color: textSecondary)),
+                            Text('₹${(inv['taxableValue'] as num).toStringAsFixed(2)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textPrimary)),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('GST Total (CGST+SGST/IGST):', style: TextStyle(fontSize: 11, color: textSecondary)),
+                            Text('₹${(inv['totalTax'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                          ],
+                        ),
+                        const Divider(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Gross Invoice Amount:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPrimary)),
+                            Text('₹${(inv['amount'] as num).toStringAsFixed(2)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        isDiscrepancy ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                        size: 14,
+                        color: isDiscrepancy ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          '3-Way Match: ${inv['threeWayMatch']}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isDiscrepancy ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (inv['udin'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      inv['udin'],
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                    ),
+                  ],
+                  if (inv['auditRemarks'] != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Auditor Remarks: ${inv['auditRemarks']}',
+                      style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF046A38),
+                        side: const BorderSide(color: Color(0xFF046A38)),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.policy, size: 14),
+                      label: const Text('Auditor Inspection & Certification', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      onPressed: () => _showAuditorInspectModal(inv),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ================= AUDITOR & PAYROLL DIALOG HELPERS =================
+  void _showAddEmployeeModal() {
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController();
+    final deptCtrl = TextEditingController();
+    final salCtrl = TextEditingController();
+    final bankCtrl = TextEditingController();
+    final panCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Add Company Employee', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Employee Full Name', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: roleCtrl, decoration: const InputDecoration(labelText: 'Designation / Job Title', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: deptCtrl, decoration: const InputDecoration(labelText: 'Department (Engineering, Sales, etc.)', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: salCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monthly Gross Salary (₹)', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: bankCtrl, decoration: const InputDecoration(labelText: 'Bank Account & Bank Name', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: panCtrl, decoration: const InputDecoration(labelText: 'PAN Number', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                  onPressed: () {
+                    final name = nameCtrl.text.trim();
+                    final sal = double.tryParse(salCtrl.text.trim()) ?? 0.0;
+                    if (name.isEmpty || sal <= 0) return;
+
+                    final newEmp = {
+                      'id': 'EMP-00${BharatOnePayApi.businessEmployees.length + 1}',
+                      'name': name,
+                      'role': roleCtrl.text.trim().isEmpty ? 'Associate' : roleCtrl.text.trim(),
+                      'department': deptCtrl.text.trim().isEmpty ? 'Operations' : deptCtrl.text.trim(),
+                      'salary': sal,
+                      'bank': bankCtrl.text.trim().isEmpty ? 'SBI (••••1234)' : bankCtrl.text.trim(),
+                      'ifsc': 'SBIN0001000',
+                      'pan': panCtrl.text.trim().isEmpty ? 'ABCDE1234F' : panCtrl.text.trim().toUpperCase(),
+                      'status': 'PENDING',
+                      'lastPaidDate': 'Not Yet Paid',
+                      'utr': null,
+                    };
+                    BharatOnePayApi.businessEmployees.add(newEmp);
+                    BharatOnePayApi.saveSessionToDisk();
+                    Navigator.pop(ctx);
+                    setState(() {});
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Employee $name added to company payroll!')),
+                    );
+                  },
+                  child: const Text('Add to Payroll Roster', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSubmitReimbursementModal() {
+    final titleCtrl = TextEditingController();
+    final amtCtrl = TextEditingController();
+    final recCtrl = TextEditingController();
+    final remCtrl = TextEditingController();
+    String category = 'Travel & Conveyance';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) => Padding(
+          padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Submit Expense Claim', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Expense Description', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'Travel & Conveyance', child: Text('Travel & Conveyance')),
+                    DropdownMenuItem(value: 'Cloud Infrastructure', child: Text('Cloud Infrastructure')),
+                    DropdownMenuItem(value: 'Software Tools', child: Text('Software Tools')),
+                    DropdownMenuItem(value: 'Office Supplies & Hardware', child: Text('Office Supplies & Hardware')),
+                    DropdownMenuItem(value: 'Client Meeting & Meals', child: Text('Client Meeting & Meals')),
+                  ],
+                  onChanged: (val) => setMState(() => category = val ?? category),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: amtCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Claim Amount (₹)', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: recCtrl, decoration: const InputDecoration(labelText: 'Receipt / Tax Invoice Number', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: remCtrl, decoration: const InputDecoration(labelText: 'Business Justification', border: OutlineInputBorder())),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+                    onPressed: () {
+                      final title = titleCtrl.text.trim();
+                      final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
+                      if (title.isEmpty || amt <= 0) return;
+
+                      BharatOnePayApi.submitReimbursementClaim(
+                        employeeName: 'Soumo Naskar (Owner/Staff)',
+                        title: title,
+                        category: category,
+                        amount: amt,
+                        receiptNumber: recCtrl.text.trim().isEmpty ? 'REC-${DateTime.now().millisecondsSinceEpoch % 10000}' : recCtrl.text.trim(),
+                        remarks: remCtrl.text.trim().isEmpty ? 'Official business expenditure' : remCtrl.text.trim(),
+                      );
+                      Navigator.pop(ctx);
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Reimbursement claim submitted for review!')),
+                      );
+                    },
+                    child: const Text('Submit Claim', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAuditorInspectModal(Map<String, dynamic> inv) {
+    final remarksCtrl = TextEditingController(text: inv['auditRemarks'] ?? '');
+    bool gstr2bMatched = inv['gstr2bStatus']?.toString().contains('Reflected') ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) => Padding(
+          padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Auditor Inspection • ${inv['invoiceNumber']}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Vendor: ${inv['vendorName']} (GSTIN: ${inv['gstin']})', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                const Divider(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Taxable Base Value:', style: TextStyle(fontSize: 13)),
+                    Text('₹${(inv['taxableValue'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('CGST + SGST (9% + 9%):', style: TextStyle(fontSize: 13)),
+                    Text('₹${((inv['cgst'] as num) + (inv['sgst'] as num)).toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('IGST (Interstate 18%):', style: TextStyle(fontSize: 13)),
+                    Text('₹${(inv['igst'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total Certified Invoice:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text('₹${(inv['amount'] as num).toStringAsFixed(2)}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: gstr2bMatched,
+                  title: const Text('GSTR-2B Auto-Drafted ITC Verified on GST Portal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Supplier filed GSTR-1, eligible for Section 16(2)(aa) ITC', style: TextStyle(fontSize: 10)),
+                  onChanged: (val) => setMState(() => gstr2bMatched = val ?? false),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: remarksCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Auditor Remarks & Compliance Notes',
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter tax findings, RCM checks or clean audit note...',
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFDC2626)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          BharatOnePayApi.auditClearInvoice(
+                            invoiceNumber: inv['invoiceNumber'],
+                            remarks: remarksCtrl.text.trim().isEmpty ? 'Discrepancy noted by Statutory Auditor' : remarksCtrl.text.trim(),
+                            isClean: false,
+                          );
+                          Navigator.pop(ctx);
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Invoice flagged for discrepancy. Notice generated.')),
+                          );
+                        },
+                        child: const Text('Flag Discrepancy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF046A38),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          final res = BharatOnePayApi.auditClearInvoice(
+                            invoiceNumber: inv['invoiceNumber'],
+                            remarks: remarksCtrl.text.trim().isEmpty ? 'Clean 3-way match verified. Cleared by CA.' : remarksCtrl.text.trim(),
+                            isClean: true,
+                          );
+                          Navigator.pop(ctx);
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: const Color(0xFF046A38),
+                              content: Text('Invoice Verified & Cleared! (${res['invoice']?['udin'] ?? "UDIN Generated"})'),
+                            ),
+                          );
+                        },
+                        child: const Text('Clear & Certify', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAuditCertificateDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Color(0xFF046A38)),
+            SizedBox(width: 8),
+            Text('Statutory Audit Certificate', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ghosh & Associates Chartered Accountants\nKolkata, West Bengal (ICAI Reg: 320141E)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'This certifies that Pentile Business Solutions (GSTIN: 19AAECN1234F1Z5) has undergone statutory audit review for FY 2026-27. Invoices, GST 3-Way Match, and Payroll records have been verified in accordance with ICAI Auditing Standards.',
+              style: TextStyle(fontSize: 11, color: Color(0xFF334155)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('UDIN: 26034871AKST99281', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF1E3A8A))),
+                  Text('Auditor: Amit Ghosh, FCA (Membership #034871)', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                  Text('Date: 30 October 2026', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Downloading Statutory Audit Compliance Certificate PDF...')),
+              );
+            },
+            child: const Text('Download PDF'),
           ),
         ],
       ),

@@ -2577,7 +2577,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         break;
 
       // Investments, Savings & Precious Metals
-      case 'sip_mutual_funds':
       case 'investments':
       case 'stocks':
         setState(() => _bottomNavIndex = 2);
@@ -2594,23 +2593,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'invest_platinum':
         _showGoldSilverVaultModal('Platinum');
         break;
+      case 'sip':
+      case 'sip_invest':
+      case 'mutual_funds':
+      case 'sip_mutual_funds':
+        _showMfInvestmentModal();
+        break;
       case 'fd':
       case 'fixed_deposits':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const CalculatorsScreen(initialTool: 'FD Maturity'),
-          ),
-        );
+        _showFdInvestmentModal();
         break;
       case 'rd':
       case 'recurring_deposits':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const CalculatorsScreen(initialTool: 'RD Maturity'),
-          ),
-        );
+        _showRdInvestmentModal();
         break;
       case 'gullak':
       case 'savings_products':
@@ -2761,11 +2756,16 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'trains':
       case 'buses':
       case 'hotels':
+      case 'movies':
+      case 'movie_tickets':
+      case 'entertainment':
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => TravelScreen(
-              initialCategory: routeKey == 'travel' ? 'Flights' : routeKey,
+              initialCategory: (routeKey == 'travel' || routeKey.isEmpty)
+                  ? 'Flights'
+                  : (routeKey.contains('movie') ? 'Movies' : (routeKey.substring(0, 1).toUpperCase() + routeKey.substring(1))),
             ),
           ),
         );
@@ -2980,12 +2980,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Comparing best $title policies...')),
-              );
+              _showPolicyPurchaseModal(title, price, icon, color);
             },
             child: const Text(
-              'View Quotes',
+              'Buy Policy',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
@@ -3242,29 +3240,54 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         ),
                         onPressed: () {
                           Navigator.pop(ctx);
-                          showDialog(
-                            context: context,
-                            builder: (dCtx) => AlertDialog(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              title: const Row(
-                                children: [
-                                  Icon(Icons.task_alt_rounded, color: Color(0xFF059669)),
-                                  SizedBox(width: 8),
-                                  Text('Application Submitted', style: TextStyle(fontSize: 16)),
+                          final res = BharatOnePayApi.disburseInstantLoan(
+                            loanType: loanTitle,
+                            amount: selectedAmount.toDouble(),
+                            tenureMonths: selectedTenure,
+                            interestRate: rate,
+                          );
+                          if (res['success'] == true) {
+                            setState(() {});
+                            showDialog(
+                              context: context,
+                              builder: (dCtx) => AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: const Row(
+                                  children: [
+                                    Icon(Icons.task_alt_rounded, color: Color(0xFF059669)),
+                                    SizedBox(width: 8),
+                                    Text('Loan Disbursed Instantly!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '₹$selectedAmount has been credited directly to your primary bank account (${res['loan']?['disbursedToBank'] ?? 'SBI ••••3038'})!',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF046A38)),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text('Updated Account Balance: ₹${(res['newBalance'] as num?)?.toStringAsFixed(2) ?? ""}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    Text('Monthly EMI: ₹${(res['loan']?['monthlyEmi'] as num?)?.toStringAsFixed(0)} / mo for $selectedTenure months at $rate% p.a.', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                    const SizedBox(height: 6),
+                                    Text('Sanction ID: #${res['loan']?['loanId']}', style: const TextStyle(fontSize: 11, color: Color(0xFF1E3A8A), fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dCtx),
+                                    child: const Text('View Available Balance', style: TextStyle(color: Color(0xFF046A38), fontWeight: FontWeight.bold)),
+                                  ),
                                 ],
                               ),
-                              content: Text(
-                                'Your $loanTitle request for ₹$selectedAmount has been approved in principle! Sanction letter #AK-LN-${DateTime.now().millisecondsSinceEpoch % 100000} has been sent to your registered profile email.',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dCtx),
-                                  child: const Text('OK', style: TextStyle(color: Color(0xFFFF671F), fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ),
-                          );
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(res['message'] ?? 'Disbursal failed')),
+                            );
+                          }
                         },
                         child: const Text(
                           'Apply Instantly & Disburse',
@@ -11332,6 +11355,738 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       ),
     );
   }
+
+  // ================= FIXED DEPOSIT (FD) BOOKING FLOW =================
+  void _showFdInvestmentModal() {
+    String selectedBank = 'State Bank of India';
+    double interestRate = 7.8;
+    int selectedAmount = 50000;
+    int selectedTenure = 12; // months
+    String payoutOption = 'Cumulative at Maturity';
+
+    final Map<String, double> bankRates = {
+      'State Bank of India': 7.8,
+      'HDFC Bank': 7.75,
+      'ICICI Bank': 7.7,
+      'AikSetra Smart Neo': 8.2,
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) {
+          final maturityVal = selectedAmount + (selectedAmount * interestRate * selectedTenure / (12 * 100));
+          final earnedInterest = maturityVal - selectedAmount;
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.lock_clock, color: Color(0xFF2563EB), size: 22),
+                        SizedBox(width: 8),
+                        Text('Open Fixed Deposit (FD)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                      ],
+                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('🔒 DICGC Insured up to ₹5,00,000 per depositor • Zero penalty premature withdrawal', style: TextStyle(fontSize: 10, color: Color(0xFF1E40AF))),
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Select Partner Bank', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: bankRates.keys.map((bName) {
+                      final isSel = selectedBank == bName;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('$bName (${bankRates[bName]}%)'),
+                          selected: isSel,
+                          onSelected: (_) => setMState(() {
+                            selectedBank = bName;
+                            interestRate = bankRates[bName]!;
+                          }),
+                          selectedColor: const Color(0xFF2563EB),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : const Color(0xFF334155),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Deposit Amount (₹)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [10000, 25000, 50000, 100000, 200000].map((amt) {
+                    final isSel = selectedAmount == amt;
+                    return ChoiceChip(
+                      label: Text('₹${amt ~/ 1000}K'),
+                      selected: isSel,
+                      onSelected: (_) => setMState(() => selectedAmount = amt),
+                      selectedColor: const Color(0xFF0D1B2A),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Tenure (Months)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [12, 24, 36, 60].map((m) {
+                    final isSel = selectedTenure == m;
+                    return ChoiceChip(
+                      label: Text('${m ~/ 12} Yr (${m}M)'),
+                      selected: isSel,
+                      onSelected: (_) => setMState(() => selectedTenure = m),
+                      selectedColor: const Color(0xFF046A38),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // Calculation Summary
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Estimated Maturity Value', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                          Text('₹${maturityVal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                          Text('+₹${earnedInterest.toStringAsFixed(0)} Guaranteed Interest', style: const TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF046A38),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          final res = BharatOnePayApi.bookFixedDeposit(
+                            amount: selectedAmount.toDouble(),
+                            tenureMonths: selectedTenure,
+                            interestRate: interestRate,
+                            bankName: selectedBank,
+                            payoutOption: payoutOption,
+                          );
+                          if (res['success'] == true) {
+                            setState(() {});
+                            _showFdSuccessDialog(res['fd']);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(res['message'] ?? 'FD Booking Failed')),
+                            );
+                          }
+                        },
+                        child: const Text('Lock & Book FD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showFdSuccessDialog(Map<String, dynamic> fd) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Text('FD Booked Successfully!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${fd['bankName']} Digital FD', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 4),
+            Text('Principal Deposited: ₹${(fd['principal'] as num).toStringAsFixed(0)}', style: const TextStyle(fontSize: 12)),
+            Text('Interest Rate: ${fd['interestRate']}% p.a.', style: const TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+            Text('Maturity Amount: ₹${(fd['maturityAmount'] as num).toStringAsFixed(0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+            Text('Maturity Date: ${fd['maturityDate']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+              child: Text('FD Receipt #: ${fd['fdNumber']}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A))),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Digital FD Certificate downloaded to device storage!')),
+              );
+            },
+            child: const Text('Download Certificate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= RECURRING DEPOSIT (RD) FLOW =================
+  void _showRdInvestmentModal() {
+    int monthlyAmount = 5000;
+    int selectedTenure = 24;
+    double interestRate = 7.4;
+    String selectedBank = 'HDFC Bank';
+    int debitDay = 5;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) {
+          final totalInvested = monthlyAmount * selectedTenure;
+          final estMaturity = totalInvested + (totalInvested * interestRate * 0.55 * (selectedTenure / 12) / 100);
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.account_balance_wallet, color: Color(0xFF0284C7), size: 22),
+                        SizedBox(width: 8),
+                        Text('Start Monthly RD', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                      ],
+                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const Text('Build guaranteed wealth with disciplined monthly auto-debits at 7.4% p.a.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 14),
+
+                const Text('Monthly Installment', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [1000, 2500, 5000, 10000].map((amt) {
+                    final isSel = monthlyAmount == amt;
+                    return ChoiceChip(
+                      label: Text('₹$amt/mo'),
+                      selected: isSel,
+                      onSelected: (_) => setMState(() => monthlyAmount = amt),
+                      selectedColor: const Color(0xFF0284C7),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Tenure (Months)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [12, 24, 36].map((m) {
+                    final isSel = selectedTenure == m;
+                    return ChoiceChip(
+                      label: Text('$m Mo'),
+                      selected: isSel,
+                      onSelected: (_) => setMState(() => selectedTenure = m),
+                      selectedColor: const Color(0xFF0D1B2A),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Estimated Maturity Value', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                          Text('₹${estMaturity.toStringAsFixed(0)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                          Text('Total Deposit: ₹$totalInvested', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                        ],
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF046A38),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          final res = BharatOnePayApi.startRecurringDeposit(
+                            monthlyAmount: monthlyAmount.toDouble(),
+                            tenureMonths: selectedTenure,
+                            interestRate: interestRate,
+                            bankName: selectedBank,
+                            debitDay: debitDay,
+                          );
+                          if (res['success'] == true) {
+                            setState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: const Color(0xFF046A38),
+                                content: Text('Recurring Deposit started! 1st installment of ₹$monthlyAmount debited.'),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(res['message'] ?? 'RD setup failed')),
+                            );
+                          }
+                        },
+                        child: const Text('Start RD Auto-Pay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ================= MUTUAL FUNDS & SIP INVESTMENT FLOW =================
+  void _showMfInvestmentModal() {
+    final funds = [
+      {
+        'name': 'Parag Parikh Flexi Cap Fund',
+        'category': 'Flexi Cap Equity',
+        'cagr': '21.4% (3Y CAGR)',
+        'risk': 'Very High',
+        'rating': '5★ Value Research',
+      },
+      {
+        'name': 'SBI Bluechip Direct Fund',
+        'category': 'Large Cap Equity',
+        'cagr': '16.8% (3Y CAGR)',
+        'risk': 'Moderate',
+        'rating': '4★ Morningstar',
+      },
+      {
+        'name': 'Nippon India Small Cap Fund',
+        'category': 'Small Cap Equity',
+        'cagr': '28.2% (3Y CAGR)',
+        'risk': 'High',
+        'rating': '5★ Crisil',
+      },
+      {
+        'name': 'UTI Nifty 50 Index Fund',
+        'category': 'Index Fund',
+        'cagr': '15.2% (3Y CAGR)',
+        'risk': 'Moderate',
+        'rating': '0.18% Low Expense',
+      },
+    ];
+
+    int selectedFundIdx = 0;
+    bool isSip = true;
+    int amount = 2500;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) {
+          final selFund = funds[selectedFundIdx];
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.pie_chart, color: Color(0xFF7C3AED), size: 22),
+                        SizedBox(width: 8),
+                        Text('Invest in Direct Mutual Funds', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                      ],
+                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const Text('0% Commission Direct Mutual Funds • Instant Folio Allocation', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 14),
+
+                // SIP vs Lumpsum Toggle
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setMState(() => isSip = true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSip ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('Monthly Auto-SIP', style: TextStyle(color: isSip ? Colors.white : const Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setMState(() => isSip = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: !isSip ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text('One-Time Lumpsum', style: TextStyle(color: !isSip ? Colors.white : const Color(0xFF334155), fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Select Mutual Fund Scheme', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                ...funds.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final f = entry.value;
+                  final isSel = selectedFundIdx == idx;
+
+                  return GestureDetector(
+                    onTap: () => setMState(() => selectedFundIdx = idx),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isSel ? const Color(0xFF7C3AED).withValues(alpha: 0.08) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isSel ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(isSel ? Icons.radio_button_checked : Icons.radio_button_off, size: 18, color: isSel ? const Color(0xFF7C3AED) : const Color(0xFF94A3B8)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(f['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0D1B2A))),
+                                Text('${f['category']} • ${f['rating']}', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          Text(f['cagr']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF059669))),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12),
+
+                Text(isSip ? 'Monthly SIP Amount' : 'Investment Amount', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [500, 1000, 2500, 5000].map((amt) {
+                    final isSel = amount == amt;
+                    return ChoiceChip(
+                      label: Text('₹$amt'),
+                      selected: isSel,
+                      onSelected: (_) => setMState(() => amount = amt),
+                      selectedColor: const Color(0xFF7C3AED),
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      labelStyle: TextStyle(
+                        color: isSel ? Colors.white : const Color(0xFF334155),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 18),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF046A38),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      final res = BharatOnePayApi.investMutualFund(
+                        fundName: selFund['name']!,
+                        category: selFund['category']!,
+                        amount: amount.toDouble(),
+                        isSip: isSip,
+                      );
+                      if (res['success'] == true) {
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF046A38),
+                            content: Text(
+                              isSip
+                                  ? 'Auto-SIP of ₹$amount/mo started in ${selFund['name']} (Folio: ${res['mutualFund']?['folioNumber']})'
+                                  : 'Invested ₹$amount in ${selFund['name']} successfully!',
+                            ),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(res['message'] ?? 'Investment failed')),
+                        );
+                      }
+                    },
+                    child: Text(
+                      isSip ? 'Start Monthly Auto-SIP of ₹$amount' : 'Invest ₹$amount Lumpsum',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ================= INSURANCE POLICY CHECKOUT & ISSUANCE =================
+  void _showPolicyPurchaseModal(String title, String price, IconData icon, Color color) {
+    String nomineeName = 'Ruma Naskar';
+    String nomineeRelation = 'Mother';
+    double coverAmount = title.contains('Term') ? 10000000.0 : (title.contains('Health') ? 500000.0 : 200000.0);
+    double premium = title.contains('Bike') ? 652.0 : (title.contains('Term') ? 4900.0 : 4560.0);
+    String insurer = title.contains('Health') ? 'Star Health & Allied Insurance' : (title.contains('Term') ? 'LIC of India' : 'HDFC ERGO General');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 22),
+                    const SizedBox(width: 8),
+                    Text('Buy $title', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                  ],
+                ),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 6),
+            Text('Partner Insurer: $insurer', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+            Text('Sum Insured: ₹${(coverAmount ~/ 100000)} Lakhs Cashless Protection', style: const TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+            Text('Registered Nominee: $nomineeName ($nomineeRelation)', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            const SizedBox(height: 12),
+
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Annual Premium Payable', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      Text('₹${premium.toStringAsFixed(0)} / year', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                    ],
+                  ),
+                  const Text('Includes 18% GST', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF046A38),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  final res = BharatOnePayApi.purchaseInsurancePolicy(
+                    planType: title,
+                    insurer: insurer,
+                    coverAmount: coverAmount,
+                    premium: premium,
+                    nominee: '$nomineeName ($nomineeRelation)',
+                    registrationOrMember: 'IND-9830113038',
+                  );
+                  if (res['success'] == true) {
+                    setState(() {});
+                    _showPolicySuccessDialog(res['policy']);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(res['message'] ?? 'Policy purchase failed')),
+                    );
+                  }
+                },
+                child: Text('Pay ₹${premium.toStringAsFixed(0)} & Issue Policy', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPolicySuccessDialog(Map<String, dynamic> pol) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.shield, color: Color(0xFF059669)),
+            SizedBox(width: 8),
+            Text('Policy Issued Instantly!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(pol['planType'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text('Insurer: ${pol['insurer']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+            const SizedBox(height: 6),
+            Text('Policy Number: ${pol['policyNumber']}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A))),
+            Text('Cover Amount: ₹${(pol['coverAmount'] as num).toStringAsFixed(0)} Cashless', style: const TextStyle(fontSize: 12, color: Color(0xFF046A38), fontWeight: FontWeight.bold)),
+            Text('Valid Till: ${pol['expiryDate']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            Text('Nominee: ${pol['nominee']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Digital Insurance Policy Certificate & Cashless Health Card downloaded!')),
+              );
+            },
+            child: const Text('Download Policy Card'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 }
 
 // =============================================================================

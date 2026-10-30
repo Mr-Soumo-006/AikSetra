@@ -1238,6 +1238,681 @@ class BharatOnePayApi {
 
   static Set<String> paidDueIds = {};
 
+  // ================= BUSINESS PAYROLL & EMPLOYEE ROSTER =================
+  static List<Map<String, dynamic>> businessEmployees = [
+    {
+      'id': 'EMP-001',
+      'name': 'Aditya Verma',
+      'role': 'Senior Full-Stack Engineer',
+      'department': 'Engineering & Tech',
+      'salary': 85000.0,
+      'bank': 'HDFC Bank (••••4412)',
+      'ifsc': 'HDFC0001024',
+      'pan': 'BPRPV4412K',
+      'status': 'PAID',
+      'lastPaidDate': '28 Oct 2026',
+      'utr': 'CMS982347102941',
+    },
+    {
+      'id': 'EMP-002',
+      'name': 'Pooja Sharma',
+      'role': 'UI/UX Product Designer',
+      'department': 'Product & Design',
+      'salary': 65000.0,
+      'bank': 'ICICI Bank (••••8831)',
+      'ifsc': 'ICIC0000341',
+      'pan': 'CPQPS8831M',
+      'status': 'PENDING',
+      'lastPaidDate': '28 Sep 2026',
+      'utr': null,
+    },
+    {
+      'id': 'EMP-003',
+      'name': 'Debashis Roy',
+      'role': 'DevOps & Cloud Architect',
+      'department': 'Infrastructure',
+      'salary': 75000.0,
+      'bank': 'SBI (••••1190)',
+      'ifsc': 'SBIN0004521',
+      'pan': 'AQZPR1190R',
+      'status': 'PENDING',
+      'lastPaidDate': '28 Sep 2026',
+      'utr': null,
+    },
+    {
+      'id': 'EMP-004',
+      'name': 'Sneha Mukherjee',
+      'role': 'Accounts & Billing Specialist',
+      'department': 'Finance & Operations',
+      'salary': 42000.0,
+      'bank': 'Axis Bank (••••6602)',
+      'ifsc': 'UTIB0000892',
+      'pan': 'BKMPM6602L',
+      'status': 'PAID',
+      'lastPaidDate': '28 Oct 2026',
+      'utr': 'CMS982347103551',
+    },
+  ];
+
+  // ================= BUSINESS REIMBURSEMENTS =================
+  static List<Map<String, dynamic>> businessReimbursements = [
+    {
+      'id': 'RMB-401',
+      'employeeId': 'EMP-001',
+      'employeeName': 'Aditya Verma',
+      'title': 'AWS Cloud Hosting & Server Billing (Oct 2026)',
+      'category': 'Cloud Infrastructure',
+      'amount': 12450.0,
+      'date': '29 Oct 2026',
+      'status': 'PENDING_APPROVAL', // PENDING_APPROVAL, APPROVED_PAID, REJECTED
+      'receiptNumber': 'INV-AWS-883910',
+      'remarks': 'Approved by Tech Lead, pending business payout.',
+    },
+    {
+      'id': 'RMB-402',
+      'employeeId': 'EMP-002',
+      'employeeName': 'Pooja Sharma',
+      'title': 'Figma Enterprise Annual Team Seat & Design Fonts',
+      'category': 'Software Tools',
+      'amount': 4800.0,
+      'date': '27 Oct 2026',
+      'status': 'APPROVED_PAID',
+      'receiptNumber': 'FIG-REC-2026-99',
+      'remarks': 'Paid via business account settlement.',
+      'paidDate': '28 Oct 2026',
+      'utr': 'RMB98201412499',
+    },
+    {
+      'id': 'RMB-403',
+      'employeeId': 'EMP-003',
+      'employeeName': 'Debashis Roy',
+      'title': 'Emergency Server Farm Onsite Cab Travel',
+      'category': 'Travel & Conveyance',
+      'amount': 1850.0,
+      'date': '26 Oct 2026',
+      'status': 'PENDING_APPROVAL',
+      'receiptNumber': 'UBER-IND-99120',
+      'remarks': 'Official emergency travel to Sector V Data Center.',
+    },
+  ];
+
+  // ================= STATUTORY AUDITOR INVOICES =================
+  static List<Map<String, dynamic>> businessAuditInvoices = [
+    {
+      'invoiceNumber': 'INV-2026-0891',
+      'vendorName': 'Apex Tech Retailers Pvt Ltd',
+      'gstin': '27AAACA9876P1ZV',
+      'invoiceDate': '25 Oct 2026',
+      'amount': 45000.0,
+      'taxableValue': 38135.59,
+      'cgst': 3432.20,
+      'sgst': 3432.20,
+      'igst': 0.0,
+      'totalTax': 6864.40,
+      'threeWayMatch': 'MATCHED (PO #9910 + E-Way #88219 + GSTR-2B)',
+      'gstr2bStatus': 'Reflected in Oct GSTR-2B',
+      'auditStatus': 'CLEARED', // CLEARED, DISCREPANCY, PENDING_REVIEW
+      'auditRemarks': 'Full 3-way match confirmed. Eligible for 100% ITC claims.',
+      'auditedBy': 'Amit Ghosh, CA (Chief Statutory Auditor)',
+      'auditDate': '28 Oct 2026',
+      'udin': 'UDIN: 26034871AKST99281',
+    },
+    {
+      'invoiceNumber': 'INV-2026-0904',
+      'vendorName': 'Metro Supermart Chain',
+      'gstin': '07CCCCM1122C1Z4',
+      'invoiceDate': '27 Oct 2026',
+      'amount': 28400.0,
+      'taxableValue': 24067.80,
+      'cgst': 0.0,
+      'sgst': 0.0,
+      'igst': 4332.20,
+      'totalTax': 4332.20,
+      'threeWayMatch': 'MATCHED (Interstate B2B E-Way Bill)',
+      'gstr2bStatus': 'GSTR-1 Filed by Vendor',
+      'auditStatus': 'PENDING_REVIEW',
+      'auditRemarks': 'Auditor inspection pending before issuing clean certificate.',
+      'auditedBy': null,
+      'auditDate': null,
+      'udin': null,
+    },
+    {
+      'invoiceNumber': 'INV-2026-0742',
+      'vendorName': 'Kolkata Distributing & Logistics',
+      'gstin': '19BBBPK4321A1Z9',
+      'invoiceDate': '20 Oct 2026',
+      'amount': 18200.0,
+      'taxableValue': 15423.73,
+      'cgst': 1388.13,
+      'sgst': 1388.13,
+      'igst': 0.0,
+      'totalTax': 2776.26,
+      'threeWayMatch': 'FLAGGED (TDS under Sec 194C / Reverse Charge applicable)',
+      'gstr2bStatus': 'Partially matched in auto-drafted ITC',
+      'auditStatus': 'DISCREPANCY',
+      'auditRemarks': 'Transporter RCM verification required under GST Section 9(3).',
+      'auditedBy': 'Amit Ghosh, CA (Chief Statutory Auditor)',
+      'auditDate': '26 Oct 2026',
+      'udin': null,
+    },
+  ];
+
+  // ================= USER INVESTMENTS & LOANS & POLICIES =================
+  static List<Map<String, dynamic>> userFixedDeposits = [
+    {
+      'fdNumber': 'FD-SBI-2026-8812',
+      'bankName': 'State Bank of India',
+      'principal': 50000.0,
+      'interestRate': 7.8,
+      'tenureMonths': 12,
+      'maturityAmount': 53900.0,
+      'bookingDate': '15 Oct 2026',
+      'maturityDate': '15 Oct 2027',
+      'payoutType': 'Cumulative at Maturity',
+      'status': 'ACTIVE',
+    },
+  ];
+
+  static List<Map<String, dynamic>> userRecurringDeposits = [
+    {
+      'rdNumber': 'RD-HDFC-2026-4401',
+      'bankName': 'HDFC Bank',
+      'monthlyAmount': 5000.0,
+      'tenureMonths': 24,
+      'interestRate': 7.4,
+      'maturityAmount': 129850.0,
+      'debitDay': 5,
+      'totalDeposited': 25000.0,
+      'status': 'ACTIVE',
+    },
+  ];
+
+  static List<Map<String, dynamic>> userMutualFunds = [
+    {
+      'folioNumber': 'FOL-PP-99014',
+      'fundName': 'Parag Parikh Flexi Cap Fund - Direct Growth',
+      'category': 'Flexi Cap Equity',
+      'investedAmount': 25000.0,
+      'currentValue': 27840.0,
+      'returnsPct': 11.36,
+      'isSip': true,
+      'sipAmount': 2500.0,
+      'sipDay': 10,
+      'status': 'ACTIVE',
+    },
+    {
+      'folioNumber': 'FOL-SBI-88192',
+      'fundName': 'SBI Bluechip Fund - Direct Plan Growth',
+      'category': 'Large Cap Equity',
+      'investedAmount': 15000.0,
+      'currentValue': 16120.0,
+      'returnsPct': 7.46,
+      'isSip': false,
+      'status': 'ACTIVE',
+    },
+  ];
+
+  static List<Map<String, dynamic>> userInsurancePolicies = [
+    {
+      'policyNumber': 'POL-HE-2026-9921',
+      'planType': 'Health Insurance (Cashless 10K+ Hospitals)',
+      'insurer': 'HDFC ERGO Health Suraksha',
+      'coverAmount': 500000.0,
+      'annualPremium': 4560.0,
+      'nominee': 'Ruma Naskar (Mother)',
+      'issueDate': '01 Sep 2026',
+      'expiryDate': '31 Aug 2027',
+      'status': 'ACTIVE',
+    },
+  ];
+
+  static List<Map<String, dynamic>> userActiveLoans = [];
+
+  // ================= PAYROLL & REIMBURSEMENT ACTIONS =================
+  static Map<String, dynamic> disbursePayrollSalary({required String empId}) {
+    final idx = businessEmployees.indexWhere((e) => e['id'] == empId);
+    if (idx == -1) return {'success': false, 'message': 'Employee not found'};
+    final emp = businessEmployees[idx];
+    final double salary = (emp['salary'] as num).toDouble();
+
+    final curBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    if (curBal < salary) {
+      return {'success': false, 'message': 'Insufficient settlement balance to disburse salary'};
+    }
+
+    final newBal = curBal - salary;
+    businessProfile['balance'] = newBal;
+
+    final now = DateTime.now();
+    final utr = 'CMS${now.millisecondsSinceEpoch.toString().substring(3)}';
+    emp['status'] = 'PAID';
+    emp['lastPaidDate'] = 'Today, 30 Oct 2026';
+    emp['utr'] = utr;
+
+    businessLedger.insert(0, {
+      'id': 'LED-${now.millisecondsSinceEpoch.toString().substring(7)}',
+      'date': 'Today, Just now',
+      'party': emp['name'],
+      'vpa': emp['bank'],
+      'particulars': 'Payroll Salary Disbursal • Emp #${emp['id']}',
+      'method': 'IMPS / Corporate CMS',
+      'type': 'DEBIT',
+      'amount': salary,
+      'balance': newBal,
+    });
+
+    saveSessionToDisk();
+    return {'success': true, 'utr': utr, 'employee': emp};
+  }
+
+  static Map<String, dynamic> disburseAllPendingSalaries() {
+    final pending = businessEmployees.where((e) => e['status'] == 'PENDING').toList();
+    if (pending.isEmpty) return {'success': false, 'message': 'No pending salaries to disburse'};
+
+    double totalRequired = 0;
+    for (final p in pending) {
+      totalRequired += (p['salary'] as num).toDouble();
+    }
+
+    final curBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    if (curBal < totalRequired) {
+      return {'success': false, 'message': 'Insufficient balance: Need ₹$totalRequired, Available: ₹$curBal'};
+    }
+
+    for (final p in pending) {
+      disbursePayrollSalary(empId: p['id']);
+    }
+
+    saveSessionToDisk();
+    return {'success': true, 'count': pending.length, 'totalAmount': totalRequired};
+  }
+
+  static Map<String, dynamic> approveReimbursement({required String claimId}) {
+    final idx = businessReimbursements.indexWhere((r) => r['id'] == claimId);
+    if (idx == -1) return {'success': false, 'message': 'Claim not found'};
+    final claim = businessReimbursements[idx];
+    final double amount = (claim['amount'] as num).toDouble();
+
+    final curBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    if (curBal < amount) {
+      return {'success': false, 'message': 'Insufficient settlement balance for reimbursement'};
+    }
+
+    final newBal = curBal - amount;
+    businessProfile['balance'] = newBal;
+
+    final now = DateTime.now();
+    final utr = 'RMB${now.millisecondsSinceEpoch.toString().substring(4)}';
+    claim['status'] = 'APPROVED_PAID';
+    claim['paidDate'] = 'Today, 30 Oct 2026';
+    claim['utr'] = utr;
+
+    businessLedger.insert(0, {
+      'id': 'LED-${now.millisecondsSinceEpoch.toString().substring(7)}',
+      'date': 'Today, Just now',
+      'party': claim['employeeName'],
+      'vpa': 'Reimbursement Account',
+      'particulars': 'Expense Reimbursement • ${claim['title']}',
+      'method': 'Direct Settlement',
+      'type': 'DEBIT',
+      'amount': amount,
+      'balance': newBal,
+    });
+
+    saveSessionToDisk();
+    return {'success': true, 'utr': utr, 'claim': claim};
+  }
+
+  static Map<String, dynamic> rejectReimbursement({required String claimId, required String reason}) {
+    final idx = businessReimbursements.indexWhere((r) => r['id'] == claimId);
+    if (idx == -1) return {'success': false, 'message': 'Claim not found'};
+    final claim = businessReimbursements[idx];
+    claim['status'] = 'REJECTED';
+    claim['remarks'] = 'Rejected by Auditor/Owner: $reason';
+
+    saveSessionToDisk();
+    return {'success': true, 'claim': claim};
+  }
+
+  static Map<String, dynamic> submitReimbursementClaim({
+    required String employeeName,
+    required String title,
+    required String category,
+    required double amount,
+    required String receiptNumber,
+    required String remarks,
+  }) {
+    final id = 'RMB-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final claim = {
+      'id': id,
+      'employeeId': 'EMP-001',
+      'employeeName': employeeName,
+      'title': title,
+      'category': category,
+      'amount': amount,
+      'date': 'Today, 30 Oct 2026',
+      'status': 'PENDING_APPROVAL',
+      'receiptNumber': receiptNumber,
+      'remarks': remarks,
+    };
+    businessReimbursements.insert(0, claim);
+    saveSessionToDisk();
+    return {'success': true, 'claim': claim};
+  }
+
+  static Map<String, dynamic> auditClearInvoice({
+    required String invoiceNumber,
+    required String remarks,
+    required bool isClean,
+  }) {
+    final idx = businessAuditInvoices.indexWhere((i) => i['invoiceNumber'] == invoiceNumber);
+    if (idx == -1) return {'success': false, 'message': 'Invoice not found'};
+
+    final now = DateTime.now();
+    final udin = 'UDIN: 26034871AKST${now.millisecondsSinceEpoch.toString().substring(8)}';
+    final inv = businessAuditInvoices[idx];
+
+    if (isClean) {
+      inv['auditStatus'] = 'CLEARED';
+      inv['auditRemarks'] = remarks.isNotEmpty ? remarks : 'Auditor 3-way match verified. Approved for full ITC credit.';
+      inv['auditedBy'] = 'Amit Ghosh, CA (Chief Statutory Auditor)';
+      inv['auditDate'] = '30 Oct 2026';
+      inv['udin'] = udin;
+    } else {
+      inv['auditStatus'] = 'DISCREPANCY';
+      inv['auditRemarks'] = remarks.isNotEmpty ? remarks : 'Statutory discrepancy flagged by Auditor. Notice issued to vendor.';
+      inv['auditedBy'] = 'Amit Ghosh, CA (Chief Statutory Auditor)';
+      inv['auditDate'] = '30 Oct 2026';
+    }
+
+    saveSessionToDisk();
+    return {'success': true, 'invoice': inv};
+  }
+
+  static void recordTransaction({
+    required String title,
+    required String type,
+    required String category,
+    required double amount,
+    required String reference,
+    required String status,
+  }) {
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final min = now.minute.toString().padLeft(2, '0');
+    final period = now.hour >= 12 ? 'PM' : 'AM';
+    final isCredit = type.toUpperCase() == 'CREDIT';
+
+    recentTransactions.insert(0, {
+      'id': 'TXN-' + now.millisecondsSinceEpoch.toString().substring(5),
+      'date': 'Today, ' + hour.toString() + ':' + min + ' ' + period,
+      'user': title,
+      'receiverName': title,
+      'receiverVpa': reference,
+      'amount': amount,
+      'isCredit': isCredit,
+      'remark': title,
+      'status': status,
+      'category': category,
+      'createdAt': now.toIso8601String(),
+    });
+  }
+
+  // ================= USER INVESTMENT ACTIONS =================
+  static Map<String, dynamic> bookFixedDeposit({
+    required double amount,
+    required int tenureMonths,
+    required double interestRate,
+    required String bankName,
+    required String payoutOption,
+  }) {
+    if (linkedAccounts.isEmpty) return {'success': false, 'message': 'No bank account linked'};
+    final acc = currentAccount ?? linkedAccounts.first;
+    if (acc.balance < amount) {
+      return {'success': false, 'message': 'Insufficient account balance in ${acc.bankName} (Available: ₹${acc.balance.toStringAsFixed(2)})'};
+    }
+
+    // Debit user account
+    final aIdx = linkedAccounts.indexWhere((a) => a.id == acc.id);
+    linkedAccounts[aIdx] = acc.copyWith(balance: acc.balance - amount);
+    if (currentAccount?.id == acc.id) currentAccount = linkedAccounts[aIdx];
+
+    final double maturity = amount + (amount * interestRate * tenureMonths / (12 * 100));
+    final now = DateTime.now();
+    final fdNum = 'FD-${bankName.replaceAll(' ', '').toUpperCase().substring(0, 3)}-${now.year}-${now.millisecondsSinceEpoch.toString().substring(8)}';
+
+    final fd = {
+      'fdNumber': fdNum,
+      'bankName': bankName,
+      'principal': amount,
+      'interestRate': interestRate,
+      'tenureMonths': tenureMonths,
+      'maturityAmount': double.parse(maturity.toStringAsFixed(2)),
+      'bookingDate': '30 Oct 2026',
+      'maturityDate': '30 Oct ${now.year + (tenureMonths ~/ 12)}',
+      'payoutType': payoutOption,
+      'status': 'ACTIVE',
+    };
+    userFixedDeposits.insert(0, fd);
+
+    // Record transaction
+    recordTransaction(
+      title: 'Fixed Deposit Booking • $bankName',
+      type: 'DEBIT',
+      category: 'INVESTMENT',
+      amount: amount,
+      reference: fdNum,
+      status: 'SUCCESS',
+    );
+
+    saveSessionToDisk();
+    return {'success': true, 'fd': fd};
+  }
+
+  static Map<String, dynamic> startRecurringDeposit({
+    required double monthlyAmount,
+    required int tenureMonths,
+    required double interestRate,
+    required String bankName,
+    int debitDay = 5,
+  }) {
+    if (linkedAccounts.isEmpty) return {'success': false, 'message': 'No bank account linked'};
+    final acc = currentAccount ?? linkedAccounts.first;
+    if (acc.balance < monthlyAmount) {
+      return {'success': false, 'message': 'Insufficient balance for 1st installment (Available: ₹${acc.balance.toStringAsFixed(2)})'};
+    }
+
+    final aIdx = linkedAccounts.indexWhere((a) => a.id == acc.id);
+    linkedAccounts[aIdx] = acc.copyWith(balance: acc.balance - monthlyAmount);
+    if (currentAccount?.id == acc.id) currentAccount = linkedAccounts[aIdx];
+
+    final double totalInvest = monthlyAmount * tenureMonths;
+    final double estimatedMaturity = totalInvest + (totalInvest * interestRate * 0.55 * (tenureMonths / 12) / 100);
+    final now = DateTime.now();
+    final rdNum = 'RD-${bankName.replaceAll(' ', '').toUpperCase().substring(0, 3)}-${now.year}-${now.millisecondsSinceEpoch.toString().substring(8)}';
+
+    final rd = {
+      'rdNumber': rdNum,
+      'bankName': bankName,
+      'monthlyAmount': monthlyAmount,
+      'tenureMonths': tenureMonths,
+      'interestRate': interestRate,
+      'maturityAmount': double.parse(estimatedMaturity.toStringAsFixed(2)),
+      'debitDay': debitDay,
+      'totalDeposited': monthlyAmount,
+      'status': 'ACTIVE',
+    };
+    userRecurringDeposits.insert(0, rd);
+
+    recordTransaction(
+      title: 'Recurring Deposit 1st Installment • $bankName',
+      type: 'DEBIT',
+      category: 'INVESTMENT',
+      amount: monthlyAmount,
+      reference: rdNum,
+      status: 'SUCCESS',
+    );
+
+    saveSessionToDisk();
+    return {'success': true, 'rd': rd};
+  }
+
+  static Map<String, dynamic> investMutualFund({
+    required String fundName,
+    required String category,
+    required double amount,
+    required bool isSip,
+    int sipDay = 10,
+  }) {
+    if (linkedAccounts.isEmpty) return {'success': false, 'message': 'No bank account linked'};
+    final acc = currentAccount ?? linkedAccounts.first;
+    if (acc.balance < amount) {
+      return {'success': false, 'message': 'Insufficient balance in ${acc.bankName} (Available: ₹${acc.balance.toStringAsFixed(2)})'};
+    }
+
+    final aIdx = linkedAccounts.indexWhere((a) => a.id == acc.id);
+    linkedAccounts[aIdx] = acc.copyWith(balance: acc.balance - amount);
+    if (currentAccount?.id == acc.id) currentAccount = linkedAccounts[aIdx];
+
+    final now = DateTime.now();
+    final folio = 'FOL-${now.millisecondsSinceEpoch.toString().substring(6)}';
+
+    final mf = {
+      'folioNumber': folio,
+      'fundName': fundName,
+      'category': category,
+      'investedAmount': amount,
+      'currentValue': amount,
+      'returnsPct': 0.0,
+      'isSip': isSip,
+      'sipAmount': isSip ? amount : 0.0,
+      'sipDay': sipDay,
+      'status': 'ACTIVE',
+    };
+    userMutualFunds.insert(0, mf);
+
+    if (isSip) {
+      mySips.insert(0, {
+        'id': 'sip_${now.millisecondsSinceEpoch}',
+        'name': fundName,
+        'category': category,
+        'amount': amount,
+        'frequency': 'Monthly',
+        'nextDate': '${sipDay.toString().padLeft(2, '0')} Nov 2026',
+        'status': 'Active',
+      });
+    }
+
+    recordTransaction(
+      title: '${isSip ? "Monthly Auto-SIP Started" : "Mutual Fund Lumpsum"} • $fundName',
+      type: 'DEBIT',
+      category: 'INVESTMENT',
+      amount: amount,
+      reference: folio,
+      status: 'SUCCESS',
+    );
+
+    saveSessionToDisk();
+    return {'success': true, 'mutualFund': mf};
+  }
+
+  static Map<String, dynamic> purchaseInsurancePolicy({
+    required String planType,
+    required String insurer,
+    required double coverAmount,
+    required double premium,
+    required String nominee,
+    required String registrationOrMember,
+  }) {
+    if (linkedAccounts.isEmpty) return {'success': false, 'message': 'No bank account linked'};
+    final acc = currentAccount ?? linkedAccounts.first;
+    if (acc.balance < premium) {
+      return {'success': false, 'message': 'Insufficient balance for policy premium (Available: ₹${acc.balance.toStringAsFixed(2)})'};
+    }
+
+    final aIdx = linkedAccounts.indexWhere((a) => a.id == acc.id);
+    linkedAccounts[aIdx] = acc.copyWith(balance: acc.balance - premium);
+    if (currentAccount?.id == acc.id) currentAccount = linkedAccounts[aIdx];
+
+    final now = DateTime.now();
+    final polNum = 'POL-${insurer.replaceAll(' ', '').toUpperCase().substring(0, 4)}-${now.millisecondsSinceEpoch.toString().substring(7)}';
+
+    final pol = {
+      'policyNumber': polNum,
+      'planType': planType,
+      'insurer': insurer,
+      'coverAmount': coverAmount,
+      'annualPremium': premium,
+      'nominee': nominee,
+      'registrationOrMember': registrationOrMember,
+      'issueDate': '30 Oct 2026',
+      'expiryDate': '30 Oct 2027',
+      'status': 'ACTIVE',
+    };
+    userInsurancePolicies.insert(0, pol);
+
+    recordTransaction(
+      title: 'Insurance Policy Premium • $insurer',
+      type: 'DEBIT',
+      category: 'INSURANCE',
+      amount: premium,
+      reference: polNum,
+      status: 'SUCCESS',
+    );
+
+    saveSessionToDisk();
+    return {'success': true, 'policy': pol};
+  }
+
+  static Map<String, dynamic> disburseInstantLoan({
+    required String loanType,
+    required double amount,
+    required int tenureMonths,
+    required double interestRate,
+  }) {
+    if (linkedAccounts.isEmpty) return {'success': false, 'message': 'No bank account linked'};
+    final acc = currentAccount ?? linkedAccounts.first;
+
+    // Credit money directly to user account balance!
+    final aIdx = linkedAccounts.indexWhere((a) => a.id == acc.id);
+    final updatedBal = acc.balance + amount;
+    linkedAccounts[aIdx] = acc.copyWith(balance: updatedBal);
+    if (currentAccount?.id == acc.id) currentAccount = linkedAccounts[aIdx];
+
+    final monthlyRate = interestRate / 12 / 100;
+    final emi = (amount * monthlyRate * (1 + monthlyRate) * tenureMonths) /
+        ((1 + monthlyRate) * tenureMonths - 1);
+    final emiDisplay = emi.isFinite && emi > 0 ? emi.round().toDouble() : (amount / tenureMonths);
+
+    final now = DateTime.now();
+    final loanId = 'LN-${now.millisecondsSinceEpoch.toString().substring(7)}';
+
+    final loan = {
+      'loanId': loanId,
+      'loanType': loanType,
+      'sanctionedAmount': amount,
+      'tenureMonths': tenureMonths,
+      'interestRate': interestRate,
+      'monthlyEmi': emiDisplay,
+      'disbursalDate': '30 Oct 2026',
+      'disbursedToBank': '${acc.bankName} (${acc.maskedAccountNumber})',
+      'status': 'ACTIVE_DISBURSED',
+    };
+    userActiveLoans.insert(0, loan);
+
+    recordTransaction(
+      title: 'Instant Loan Disbursal Credit • $loanType',
+      type: 'CREDIT',
+      category: 'LOAN',
+      amount: amount,
+      reference: loanId,
+      status: 'SUCCESS',
+    );
+
+    saveSessionToDisk();
+    return {'success': true, 'loan': loan, 'newBalance': updatedBal};
+  }
+
   static Future<void> updateBusinessLogo(String logoData) async {
     businessProfile['logo'] = logoData;
     try {
@@ -1744,6 +2419,14 @@ class BharatOnePayApi {
       await prefs.setString('aiksetra_business_ledger', jsonEncode(businessLedger.take(40).toList()));
       await prefs.setString('aiksetra_business_owners', jsonEncode(businessOwners));
       await prefs.setString('aiksetra_business_vendors', jsonEncode(businessVendors));
+      await prefs.setString('aiksetra_business_employees', jsonEncode(businessEmployees));
+      await prefs.setString('aiksetra_business_reimbursements', jsonEncode(businessReimbursements));
+      await prefs.setString('aiksetra_business_audit_invoices', jsonEncode(businessAuditInvoices));
+      await prefs.setString('aiksetra_user_fds', jsonEncode(userFixedDeposits));
+      await prefs.setString('aiksetra_user_rds', jsonEncode(userRecurringDeposits));
+      await prefs.setString('aiksetra_user_mfs', jsonEncode(userMutualFunds));
+      await prefs.setString('aiksetra_user_insurance', jsonEncode(userInsurancePolicies));
+      await prefs.setString('aiksetra_user_loans', jsonEncode(userActiveLoans));
       await prefs.setStringList('aiksetra_paid_dues', paidDueIds.toList());
     } catch (_) {}
   }
@@ -1815,6 +2498,38 @@ class BharatOnePayApi {
         final bizVndJson = prefs.getString('aiksetra_business_vendors');
         if (bizVndJson != null) {
           businessVendors = List<Map<String, dynamic>>.from(jsonDecode(bizVndJson));
+        }
+        final bizEmpJson = prefs.getString('aiksetra_business_employees');
+        if (bizEmpJson != null) {
+          businessEmployees = List<Map<String, dynamic>>.from(jsonDecode(bizEmpJson));
+        }
+        final bizRmbJson = prefs.getString('aiksetra_business_reimbursements');
+        if (bizRmbJson != null) {
+          businessReimbursements = List<Map<String, dynamic>>.from(jsonDecode(bizRmbJson));
+        }
+        final bizAudJson = prefs.getString('aiksetra_business_audit_invoices');
+        if (bizAudJson != null) {
+          businessAuditInvoices = List<Map<String, dynamic>>.from(jsonDecode(bizAudJson));
+        }
+        final userFdJson = prefs.getString('aiksetra_user_fds');
+        if (userFdJson != null) {
+          userFixedDeposits = List<Map<String, dynamic>>.from(jsonDecode(userFdJson));
+        }
+        final userRdJson = prefs.getString('aiksetra_user_rds');
+        if (userRdJson != null) {
+          userRecurringDeposits = List<Map<String, dynamic>>.from(jsonDecode(userRdJson));
+        }
+        final userMfJson = prefs.getString('aiksetra_user_mfs');
+        if (userMfJson != null) {
+          userMutualFunds = List<Map<String, dynamic>>.from(jsonDecode(userMfJson));
+        }
+        final userInsJson = prefs.getString('aiksetra_user_insurance');
+        if (userInsJson != null) {
+          userInsurancePolicies = List<Map<String, dynamic>>.from(jsonDecode(userInsJson));
+        }
+        final userLoanJson = prefs.getString('aiksetra_user_loans');
+        if (userLoanJson != null) {
+          userActiveLoans = List<Map<String, dynamic>>.from(jsonDecode(userLoanJson));
         }
         final savedPaid = prefs.getStringList('aiksetra_paid_dues');
         if (savedPaid != null) {
