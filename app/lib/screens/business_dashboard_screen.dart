@@ -738,12 +738,391 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
     );
   }
 
+  // ==========================================
+  // VENDOR & B2B BUYER MANAGEMENT
+  // ==========================================
+  void _showAddVendorModal() {
+    final nameCtrl = TextEditingController();
+    final dealCtrl = TextEditingController();
+    final contactCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final gstinCtrl = TextEditingController();
+    final balCtrl = TextEditingController(text: '50000');
+    bool isBuyer = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setMState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          decoration: BoxDecoration(
+            color: ThemeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Add Vendor / Commercial Buyer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
+                ),
+                const Text(
+                  'Add B2B buyers who purchase your products or supply vendors.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 14),
+
+                // Deal Type Selector
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setMState(() => isBuyer = true),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isBuyer ? const Color(0xFFEFF6FF) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isBuyer ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1), width: isBuyer ? 2 : 1),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '🛍️ B2B Buyer\n(Buys our products)',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isBuyer ? const Color(0xFF1D4ED8) : const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setMState(() => isBuyer = false),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: !isBuyer ? const Color(0xFFDCFCE7) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: !isBuyer ? const Color(0xFF046A38) : const Color(0xFFCBD5E1), width: !isBuyer ? 2 : 1),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '🚚 Supplier Vendor\n(Supplies materials)',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: !isBuyer ? const Color(0xFF046A38) : const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Company / Business Name', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(hintText: 'e.g. Apex Tech Retailers Pvt Ltd', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 10),
+
+                const Text('Products Dealt / Service Description', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: dealCtrl,
+                  decoration: InputDecoration(hintText: 'e.g. Bulk Software Licenses & IT Hardware', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Contact Person', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: contactCtrl,
+                            decoration: InputDecoration(hintText: 'e.g. Sunil Verma', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Phone Number', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(hintText: '+91 98201 14455', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('GSTIN Number', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: gstinCtrl,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(hintText: '27AAACA9876P1ZV', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(isBuyer ? 'Receivable (₹)' : 'Payable (₹)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: balCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(hintText: '50000', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF046A38),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty) return;
+                      final bal = double.tryParse(balCtrl.text.trim()) ?? 0.0;
+                      BharatOnePayApi.addVendor(
+                        name: nameCtrl.text.trim(),
+                        type: isBuyer ? 'B2B Commercial Buyer' : 'Supply Vendor',
+                        deal: dealCtrl.text.trim().isNotEmpty ? dealCtrl.text.trim() : 'Commercial Product Dealing',
+                        contactPerson: contactCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                        gstin: gstinCtrl.text.trim().toUpperCase(),
+                        balance: bal,
+                        isBuyer: isBuyer,
+                      );
+                      Navigator.pop(ctx);
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${nameCtrl.text.trim()} added to vendor management!'),
+                          backgroundColor: const Color(0xFF046A38),
+                        ),
+                      );
+                    },
+                    child: Text(isBuyer ? 'Add B2B Product Buyer' : 'Add Supplier Vendor', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showPayVendorDialog(Map<String, dynamic> vendor) {
+    final amtCtrl = TextEditingController(text: ((vendor['balance'] as num?)?.toDouble() ?? 5000.0).toStringAsFixed(0));
+    final currentPool = (BharatOnePayApi.businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.outbox_rounded, color: Color(0xFFDC2626), size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Pay Vendor', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(vendor['name'] as String, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF046A38).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Business Balance Available:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text('₹${currentPool.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF046A38))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('Payment Amount (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            TextField(
+              controller: amtCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                prefixText: '₹ ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text('Debits directly from Pentile Business Pool & records to ledger.', style: TextStyle(fontSize: 10, color: const Color(0xFF64748B))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            onPressed: () {
+              final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
+              if (amt <= 0 || amt > currentPool) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid amount or insufficient business balance'), backgroundColor: Colors.redAccent),
+                );
+                return;
+              }
+              final ok = BharatOnePayApi.payVendor(vendorId: vendor['id'] as String, amount: amt);
+              Navigator.pop(ctx);
+              if (ok) {
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('₹${amt.toStringAsFixed(2)} paid to ${vendor['name']}! Business ledger updated.'),
+                    backgroundColor: const Color(0xFF046A38),
+                  ),
+                );
+              }
+            },
+            child: const Text('Confirm Payment', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCollectVendorDialog(Map<String, dynamic> vendor) {
+    final amtCtrl = TextEditingController(text: ((vendor['balance'] as num?)?.toDouble() ?? 10000.0).toStringAsFixed(0));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.inbox_rounded, color: Color(0xFF046A38), size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Collect from Buyer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(vendor['name'] as String, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)), overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Collect product invoice payment from ${vendor['name']}. Funds will be credited directly to your business account pool.', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+            const SizedBox(height: 12),
+            const Text('Collection Amount (₹)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            TextField(
+              controller: amtCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                prefixText: '₹ ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            onPressed: () {
+              final amt = double.tryParse(amtCtrl.text.trim()) ?? 0.0;
+              if (amt <= 0) return;
+              BharatOnePayApi.collectFromVendor(vendorId: vendor['id'] as String, amount: amt);
+              Navigator.pop(ctx);
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('₹${amt.toStringAsFixed(2)} collected from ${vendor['name']}! Added to business balance & ledger.'),
+                  backgroundColor: const Color(0xFF046A38),
+                ),
+              );
+            },
+            child: const Text('Record Collection', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddOwnerModal() {
     final nameCtrl = TextEditingController();
     final roleCtrl = TextEditingController(text: 'Co-Director / Partner');
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final panCtrl = TextEditingController();
+    String authStatus = 'AUTHORIZED SIGNATORY';
 
     showModalBottomSheet(
       context: context,
@@ -799,6 +1178,26 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                 decoration: InputDecoration(hintText: '+91 9830554433', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
               ),
               const SizedBox(height: 12),
+              const Text('Authorization Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              StatefulBuilder(builder: (c, setDState) {
+                return DropdownButtonFormField<String>(
+                  value: authStatus,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'AUTHORIZED SIGNATORY', child: Text('✍️ Authorized Signatory')),
+                    DropdownMenuItem(value: 'AUDITOR AUTHORIZED', child: Text('📊 Auditor Authorized (Statutory CA)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDState(() => authStatus = val);
+                    }
+                  },
+                );
+              }),
+              const SizedBox(height: 12),
               const Text('Personal PAN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               TextField(
@@ -825,18 +1224,18 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                       'email': emailCtrl.text.trim(),
                       'phone': phoneCtrl.text.trim(),
                       'pan': panCtrl.text.trim().toUpperCase(),
-                      'stake': 'Partner Stake',
-                      'status': 'AUTHORIZED SIGNATORY',
+                      'stake': authStatus == 'AUDITOR AUTHORIZED' ? 'Statutory Auditor' : 'Voting Signatory',
+                      'status': authStatus,
                       'isPrimary': false,
                     });
                     BharatOnePayApi.saveSessionToDisk();
                     Navigator.pop(ctx);
                     setState(() {});
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${nameCtrl.text.trim()} added as authorized business signatory!')),
+                      SnackBar(content: Text('${nameCtrl.text.trim()} added as $authStatus!')),
                     );
                   },
-                  child: const Text('Add Authorized Signatory', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Add Member to System', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -2284,12 +2683,17 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
               itemBuilder: (context, idx) {
                 final owner = BharatOnePayApi.businessOwners[idx];
                 final isPrimary = owner['isPrimary'] == true;
+                final status = (owner['status'] ?? 'AUTHORIZED SIGNATORY').toString();
+                final isAuditor = status.contains('AUDITOR');
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: isPrimary ? const Color(0xFF046A38) : const Color(0xFF1D4ED8),
-                    child: Text(
-                      (owner['name'] as String).substring(0, 1),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    backgroundColor: isPrimary
+                        ? const Color(0xFF046A38)
+                        : (isAuditor ? const Color(0xFF7C3AED) : const Color(0xFF1D4ED8)),
+                    child: Icon(
+                      isAuditor ? Icons.account_balance_rounded : Icons.verified_user_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
                   title: Row(
@@ -2314,21 +2718,190 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isPrimary ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                      color: isAuditor
+                          ? const Color(0xFFF3E8FF)
+                          : (isPrimary ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF)),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      owner['status'] ?? 'AUTHORIZED',
+                      status,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 8.5,
                         fontWeight: FontWeight.bold,
-                        color: isPrimary ? const Color(0xFF046A38) : const Color(0xFF64748B),
+                        color: isAuditor
+                            ? const Color(0xFF7C3AED)
+                            : (isPrimary ? const Color(0xFF046A38) : const Color(0xFF1D4ED8)),
                       ),
                     ),
                   ),
                 );
               },
             ),
+          ),
+          const SizedBox(height: 24),
+
+          // Vendors & Commercial Buyers Section Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Vendors & Commercial Buyers', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary)),
+                  Text('B2B clients purchasing our products & suppliers', style: TextStyle(fontSize: 11, color: textSecondary)),
+                ],
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add_business_rounded, size: 16, color: Color(0xFF046A38)),
+                label: const Text('Add Vendor', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                onPressed: _showAddVendorModal,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Vendors & Buyers List
+          Container(
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cardBorder),
+            ),
+            child: BharatOnePayApi.businessVendors.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Text('No vendors or commercial buyers added yet.', style: TextStyle(color: textSecondary, fontSize: 12)),
+                    ),
+                  )
+                : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: BharatOnePayApi.businessVendors.length,
+                    separatorBuilder: (context, index) => Divider(height: 1, color: cardBorder),
+                    itemBuilder: (context, idx) {
+                      final vendor = BharatOnePayApi.businessVendors[idx];
+                      final isBuyer = vendor['isBuyer'] == true;
+                      final bal = (vendor['balance'] as num?)?.toDouble() ?? 0.0;
+                      return Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: isBuyer ? const Color(0xFFEFF6FF) : const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    isBuyer ? Icons.storefront_rounded : Icons.local_shipping_rounded,
+                                    color: isBuyer ? const Color(0xFF2563EB) : const Color(0xFF046A38),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              vendor['name'] as String,
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: isBuyer ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              isBuyer ? 'B2B BUYER' : 'SUPPLIER',
+                                              style: TextStyle(
+                                                fontSize: 8.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: isBuyer ? const Color(0xFF1D4ED8) : const Color(0xFF046A38),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        (vendor['deal'] ?? 'Commercial Product Dealing').toString(),
+                                        style: TextStyle(fontSize: 11, color: textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '₹${bal.toStringAsFixed(0)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w900,
+                                        color: isBuyer ? const Color(0xFF046A38) : const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    Text(
+                                      isBuyer ? 'Receivable' : 'Payable',
+                                      style: TextStyle(fontSize: 9.5, color: textSecondary, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'GSTIN: ${vendor['gstin']} • Contact: ${vendor['contactPerson']} (${vendor['phone']})',
+                              style: TextStyle(fontSize: 10, color: textSecondary),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (isBuyer) ...[
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                      side: const BorderSide(color: Color(0xFF046A38)),
+                                    ),
+                                    icon: const Icon(Icons.inbox_rounded, size: 14, color: Color(0xFF046A38)),
+                                    label: const Text('Collect / Bill', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF046A38))),
+                                    onPressed: () => _showCollectVendorDialog(vendor),
+                                  ),
+                                ] else ...[
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF046A38),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    icon: const Icon(Icons.outbox_rounded, size: 14),
+                                    label: const Text('Pay Vendor', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    onPressed: () => _showPayVendorDialog(vendor),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

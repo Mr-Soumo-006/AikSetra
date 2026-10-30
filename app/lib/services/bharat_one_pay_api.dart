@@ -1142,7 +1142,7 @@ class BharatOnePayApi {
       'id': 'own_01',
       'name': 'Soumo Naskar',
       'role': 'Founder & Managing Director',
-      'email': 'soumo@gmail.com',
+      'email': 'soumonaska3038@aiksetra',
       'phone': '+91 9830113038',
       'pan': 'AAECN1234F',
       'stake': '100% Voting Rights',
@@ -1152,26 +1152,64 @@ class BharatOnePayApi {
     {
       'id': 'own_02',
       'name': 'Rahul Sen',
-      'role': 'Store Manager & Head Cashier',
+      'role': 'Store Manager & Operations Head',
       'email': 'rahul.store@aiksetra.com',
       'phone': '+91 9830998877',
       'pan': '••••9988H',
       'stake': 'Operational Staff',
-      'status': 'AUTHORIZED',
+      'status': 'AUTHORIZED SIGNATORY',
       'isPrimary': false,
     },
     {
       'id': 'own_03',
       'name': 'Amit Ghosh, CA',
-      'role': 'Chief Statutory Auditor & CA',
+      'role': 'Chief Statutory Auditor & Tax Controller',
       'email': 'amit.ca@ghoshassociates.in',
       'phone': '+91 9831223344',
       'pan': '••••2233K',
       'stake': 'Financial Controller',
-      'status': 'AUDITOR',
+      'status': 'AUDITOR AUTHORIZED',
       'isPrimary': false,
     },
   ];
+
+  static List<Map<String, dynamic>> businessVendors = [
+    {
+      'id': 'vnd_01',
+      'name': 'Apex Tech Retailers Pvt Ltd',
+      'type': 'B2B Commercial Buyer',
+      'deal': 'Wholesale Software Licenses & Cloud Services',
+      'contactPerson': 'Sunil Verma',
+      'phone': '+91 98201 14455',
+      'gstin': '27AAACA9876P1ZV',
+      'balance': 84500.0,
+      'isBuyer': true, // Buys our products
+    },
+    {
+      'id': 'vnd_02',
+      'name': 'Metro Supermart Chain',
+      'type': 'B2B Commercial Buyer',
+      'deal': 'Retail Consumer Tech & Electronics Supply',
+      'contactPerson': 'Deepak Joshi',
+      'phone': '+91 98110 22334',
+      'gstin': '07CCCCM1122C1Z4',
+      'balance': 124000.0,
+      'isBuyer': true, // Buys our products
+    },
+    {
+      'id': 'vnd_03',
+      'name': 'Kolkata Distributing & Logistics',
+      'type': 'Supply Vendor',
+      'deal': 'Packaging Materials & Transportation Logistics',
+      'contactPerson': 'Manish Roy',
+      'phone': '+91 98305 66778',
+      'gstin': '19BBBPK4321A1Z9',
+      'balance': 18200.0,
+      'isBuyer': false,
+    },
+  ];
+
+  static Set<String> paidDueIds = {};
 
   static Future<void> updateBusinessLogo(String logoData) async {
     businessProfile['logo'] = logoData;
@@ -1311,6 +1349,203 @@ class BharatOnePayApi {
     saveSessionToDisk();
   }
 
+  static bool recordBusinessPayout({
+    required String payeeName,
+    required String payeeVpaOrBank,
+    required double amount,
+    required String category,
+    String? particulars,
+    String method = 'IMPS / RTGS',
+  }) {
+    final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    if (amount <= 0 || amount > currentBal) return false;
+    final newBal = currentBal - amount;
+    businessProfile['balance'] = newBal;
+
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final min = now.minute.toString().padLeft(2, '0');
+    final period = now.hour >= 12 ? 'PM' : 'AM';
+    final timeStr = 'Today, $hour:$min $period';
+
+    businessLedger.insert(0, {
+      'id': 'LED-${now.millisecondsSinceEpoch.toString().substring(7)}',
+      'date': timeStr,
+      'party': payeeName,
+      'vpa': payeeVpaOrBank,
+      'particulars': particulars ?? '$category Payout',
+      'method': method,
+      'type': 'DEBIT',
+      'amount': amount,
+      'balance': newBal,
+    });
+
+    recentTransactions.insert(0, {
+      'id': 'TXN-BIZ-${now.millisecondsSinceEpoch.toString().substring(6)}',
+      'date': timeStr,
+      'user': payeeName,
+      'receiverName': payeeName,
+      'receiverVpa': payeeVpaOrBank,
+      'amount': amount,
+      'isCredit': false,
+      'remark': particulars ?? 'Business Account Payment',
+      'status': 'SUCCESS',
+      'source': 'Pentile Business Pool',
+    });
+
+    saveSessionToDisk();
+    return true;
+  }
+
+  static bool payVendor({
+    required String vendorId,
+    required double amount,
+    String? remarks,
+  }) {
+    final vIdx = businessVendors.indexWhere((v) => v['id'] == vendorId);
+    if (vIdx == -1) return false;
+    final vendor = businessVendors[vIdx];
+
+    final success = recordBusinessPayout(
+      payeeName: vendor['name'] as String,
+      payeeVpaOrBank: (vendor['gstin'] ?? 'Vendor').toString(),
+      amount: amount,
+      category: 'Vendor Payment',
+      particulars: remarks ?? 'Vendor Commercial Payment - ${vendor['name']}',
+      method: 'IMPS B2B Commercial',
+    );
+
+    if (success) {
+      final oldBal = (vendor['balance'] as num?)?.toDouble() ?? 0.0;
+      vendor['balance'] = (oldBal - amount).clamp(0.0, double.infinity);
+      saveSessionToDisk();
+      return true;
+    }
+    return false;
+  }
+
+  static bool collectFromVendor({
+    required String vendorId,
+    required double amount,
+    String? remarks,
+  }) {
+    final vIdx = businessVendors.indexWhere((v) => v['id'] == vendorId);
+    if (vIdx == -1) return false;
+    final vendor = businessVendors[vIdx];
+
+    final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+    final newBal = currentBal + amount;
+    businessProfile['balance'] = newBal;
+
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final min = now.minute.toString().padLeft(2, '0');
+    final period = now.hour >= 12 ? 'PM' : 'AM';
+    final timeStr = 'Today, $hour:$min $period';
+
+    businessLedger.insert(0, {
+      'id': 'LED-${now.millisecondsSinceEpoch.toString().substring(7)}',
+      'date': timeStr,
+      'party': vendor['name'],
+      'vpa': (vendor['gstin'] ?? 'B2B Buyer').toString(),
+      'particulars': remarks ?? 'B2B Product Sale Collection - ${vendor['name']}',
+      'method': 'UPI B2B Collect',
+      'type': 'CREDIT',
+      'amount': amount,
+      'balance': newBal,
+    });
+
+    final oldBal = (vendor['balance'] as num?)?.toDouble() ?? 0.0;
+    vendor['balance'] = (oldBal - amount).clamp(0.0, double.infinity);
+
+    recentTransactions.insert(0, {
+      'id': 'TXN-COL-${now.millisecondsSinceEpoch.toString().substring(6)}',
+      'date': timeStr,
+      'user': vendor['name'],
+      'receiverName': 'Pentile Merchant Store',
+      'receiverVpa': businessProfile['merchantVpa'] ?? 'merchant@aiksetra',
+      'amount': amount,
+      'isCredit': true,
+      'remark': 'B2B Product Payment Collection',
+      'status': 'SUCCESS',
+      'source': 'B2B Commercial Buyer',
+    });
+
+    saveSessionToDisk();
+    return true;
+  }
+
+  static void addVendor({
+    required String name,
+    required String type,
+    required String deal,
+    required String contactPerson,
+    required String phone,
+    required String gstin,
+    required double balance,
+    bool isBuyer = true,
+  }) {
+    businessVendors.add({
+      'id': 'vnd_${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      'name': name,
+      'type': type,
+      'deal': deal,
+      'contactPerson': contactPerson,
+      'phone': phone,
+      'gstin': gstin,
+      'balance': balance,
+      'isBuyer': isBuyer,
+    });
+    saveSessionToDisk();
+  }
+
+  static void markDueAsPaid({
+    required String dueId,
+    required double amount,
+    required String provider,
+  }) {
+    paidDueIds.add(dueId);
+
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final min = now.minute.toString().padLeft(2, '0');
+    final period = now.hour >= 12 ? 'PM' : 'AM';
+    final timeStr = 'Today, $hour:$min $period';
+
+    // If in business mode, debit from business pool; otherwise from personal account
+    if (isBusinessMode) {
+      final currentBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+      final newBal = (currentBal - amount).clamp(0.0, double.infinity);
+      businessProfile['balance'] = newBal;
+      businessLedger.insert(0, {
+        'id': 'LED-${now.millisecondsSinceEpoch.toString().substring(7)}',
+        'date': timeStr,
+        'party': provider,
+        'vpa': 'BBPS Utility',
+        'particulars': 'Bill Payment via Bharat Connect',
+        'method': 'BBPS AutoPay',
+        'type': 'DEBIT',
+        'amount': amount,
+        'balance': newBal,
+      });
+    }
+
+    recentTransactions.insert(0, {
+      'id': 'TXN-BBPS-${now.millisecondsSinceEpoch.toString().substring(6)}',
+      'date': timeStr,
+      'user': provider,
+      'receiverName': provider,
+      'receiverVpa': 'bbps.biller@npci',
+      'amount': amount,
+      'isCredit': false,
+      'remark': 'Bill Payment Successful',
+      'status': 'SUCCESS',
+      'metadata': {'isBbpsBill': true, 'biller': provider},
+    });
+
+    saveSessionToDisk();
+  }
+
   static bool recordBusinessSettlement({
     required double amount,
     BankAccountModel? destinationAccount,
@@ -1426,6 +1661,8 @@ class BharatOnePayApi {
       await prefs.setString('aiksetra_business_profile', jsonEncode(businessProfile));
       await prefs.setString('aiksetra_business_ledger', jsonEncode(businessLedger.take(40).toList()));
       await prefs.setString('aiksetra_business_owners', jsonEncode(businessOwners));
+      await prefs.setString('aiksetra_business_vendors', jsonEncode(businessVendors));
+      await prefs.setStringList('aiksetra_paid_dues', paidDueIds.toList());
     } catch (_) {}
   }
 
@@ -1492,6 +1729,14 @@ class BharatOnePayApi {
         final bizOwnJson = prefs.getString('aiksetra_business_owners');
         if (bizOwnJson != null) {
           businessOwners = List<Map<String, dynamic>>.from(jsonDecode(bizOwnJson));
+        }
+        final bizVndJson = prefs.getString('aiksetra_business_vendors');
+        if (bizVndJson != null) {
+          businessVendors = List<Map<String, dynamic>>.from(jsonDecode(bizVndJson));
+        }
+        final savedPaid = prefs.getStringList('aiksetra_paid_dues');
+        if (savedPaid != null) {
+          paidDueIds = savedPaid.toSet();
         }
         return true;
       }
@@ -2152,6 +2397,29 @@ class BharatOnePayApi {
     bool bypassScamWarning = false,
   }) async {
     final effectiveName = receiverName ?? receiverVpa;
+
+    // Auto-update business pool & ledger when in business mode
+    if (isBusinessMode) {
+      final curBizBal = (businessProfile['balance'] as num?)?.toDouble() ?? 48250.0;
+      final newBizBal = (curBizBal - amount).clamp(0.0, double.infinity);
+      businessProfile['balance'] = newBizBal;
+      final now = DateTime.now();
+      final hr = now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
+      final period = now.hour >= 12 ? 'PM' : 'AM';
+      final timeStr = '$hr:${now.minute.toString().padLeft(2, '0')} $period';
+      businessLedger.insert(0, {
+        'id': 'b2b_${DateTime.now().millisecondsSinceEpoch}',
+        'type': 'DEBIT',
+        'title': 'Business Payout • $effectiveName',
+        'vendor': effectiveName,
+        'description': remark.isNotEmpty ? remark : 'Commercial Payout',
+        'amount': -amount,
+        'balance': newBizBal,
+        'method': 'Pentile Business Settlement Pool',
+        'time': 'Today, $timeStr',
+        'status': 'SETTLED',
+      });
+    }
 
     // If paying via a linked Credit Card or Debit Card
     if (cardId != null) {

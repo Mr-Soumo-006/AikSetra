@@ -291,6 +291,93 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
+      floatingActionButton: _buildFinemanFloatingButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  // Floating Fineman AI Assistant Button (Fixed in position above bottom nav bar)
+  Widget _buildFinemanFloatingButton() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6, right: 2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFF9933), // Saffron
+            Color(0xFF8B5CF6), // AI Purple
+            Color(0xFF046A38), // Green
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFF671F).withValues(alpha: 0.5),
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AIAssistantScreen()),
+            );
+          },
+          child: Tooltip(
+            message: 'Fineman AI Assistant',
+            child: SizedBox(
+              width: 58,
+              height: 58,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Center(
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'AI',
+                        style: TextStyle(
+                          color: Color(0xFFFF9933),
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -947,7 +1034,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           Row(
                             children: [
                               const Text(
-                                'AikSetra AI Assistant',
+                                'Fineman AI Assistant',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -6636,7 +6723,14 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       };
     }).toList();
 
-    final activeDuesCount = dueReminders.length;
+    final activeDuesCount = dueReminders.where((a) => !BharatOnePayApi.paidDueIds.contains(a['id'])).length;
+    double totalDueAmount = 0.0;
+    for (final d in dueReminders) {
+      if (!BharatOnePayApi.paidDueIds.contains(d['id'])) {
+        final raw = (d['amount'] as String).replaceAll(RegExp(r'[^0-9.]'), '');
+        totalDueAmount += double.tryParse(raw) ?? 0.0;
+      }
+    }
     final paymentsCount = liveTxns.length;
 
     // Filtered items based on tab selection
@@ -6746,8 +6840,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           ),
                         ],
                       ),
-                      const Text(
-                        '₹10,219',
+                      Text(
+                        '₹${totalDueAmount.toStringAsFixed(0)}',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -6870,7 +6964,23 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  if (isUrgent)
+                                  if (BharatOnePayApi.paidDueIds.contains(due['id']))
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDCFCE7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'PAID ✓',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                    )
+                                  else if (isUrgent)
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                       decoration: BoxDecoration(
@@ -6954,29 +7064,49 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             ),
                           ],
                         ),
-                        ElevatedButton(
-                          onPressed: () => _handleDueNotificationAction(due['action'] as String),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF671F),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                due['actionLabel'] as String,
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                        Builder(builder: (ctx) {
+                          final isPaid = BharatOnePayApi.paidDueIds.contains(due['id']);
+                          if (isPaid) {
+                            return OutlinedButton.icon(
+                              onPressed: () => _showDueReceiptDialog(due),
+                              icon: const Icon(Icons.receipt_long_rounded, size: 14, color: Color(0xFF10B981)),
+                              label: const Text(
+                                'Receipt',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: Color(0xFF10B981)),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.arrow_forward_rounded, size: 14),
-                            ],
-                          ),
-                        ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF10B981)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            );
+                          }
+                          final rawAmt = (due['amount'] as String).replaceAll(RegExp(r'[^0-9.]'), '');
+                          final dueAmt = double.tryParse(rawAmt) ?? 500.0;
+                          return ElevatedButton(
+                            onPressed: () => _showPayDueConfirmDialog(due, dueAmt),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF671F),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  due['actionLabel'] as String,
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_rounded, size: 14),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ],
@@ -7186,6 +7316,206 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showPayDueConfirmDialog(Map<String, dynamic> due, double amount) {
+    final isBiz = BharatOnePayApi.isBusinessMode;
+    final debitSource = isBiz
+        ? 'Pentile Business Settlement Pool (Bal: ₹${((BharatOnePayApi.businessProfile['balance'] as num?)?.toDouble() ?? 48250.0).toStringAsFixed(2)})'
+        : 'State Bank of India •••• 3038 (Primary)';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (due['iconColor'] as Color).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(due['icon'] as IconData, color: due['iconColor'] as Color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Pay ${due['title']}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              due['provider'] as String,
+              style: TextStyle(
+                fontSize: 12,
+                color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Amount Due', style: TextStyle(fontSize: 12, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
+                      Text(
+                        '₹${amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: _isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Debit From', style: TextStyle(fontSize: 11, color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B))),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          debitSource,
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF046A38)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: const [
+                Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF00E676)),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Bharat Connect BBPS Assured • 0% Convenience Fee',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF00E676), fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF671F),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              BharatOnePayApi.markDueAsPaid(
+                dueId: due['id'] as String,
+                amount: amount,
+                provider: due['provider'] as String,
+              );
+              setState(() {});
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: const Color(0xFF046A38),
+                  content: Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Payment of ₹${amount.toStringAsFixed(0)} to ${due['provider']} Successful!',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            child: const Text('Confirm & Pay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDueReceiptDialog(Map<String, dynamic> due) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.receipt_long_rounded, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text('Bharat Connect Receipt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 22),
+                  SizedBox(width: 8),
+                  Text('STATUS: PAID & SETTLED', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF10B981), fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('Biller: ${due['provider']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 4),
+            Text('Amount: ${due['amount']}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text('Reference: NPCI-BBPS-${DateTime.now().millisecondsSinceEpoch}', style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+            const SizedBox(height: 4),
+            const Text('Payment Mode: Digital Clearance / Instant Auto-Settlement', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -7885,22 +8215,38 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             label: _t('tab_wealth'),
           ),
           BottomNavigationBarItem(
-            icon: Badge(
-              label: const Text(
-                '4',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              backgroundColor: const Color(0xFFEF4444),
-              child: const Icon(Icons.notifications_none_rounded),
-            ),
-            activeIcon: Badge(
-              label: const Text(
-                '4',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              backgroundColor: const Color(0xFFEF4444),
-              child: const Icon(Icons.notifications_active_rounded, color: Color(0xFFFF671F)),
-            ),
+            icon: Builder(builder: (context) {
+              final activeDues = [
+                'due_elec_nov', 'due_mobile_nov', 'due_fastag_low', 'due_insurance_nov', 'due_sip_nov', 'due_water_nov'
+              ].where((id) => !_dismissedAlertIds.contains(id) && !BharatOnePayApi.paidDueIds.contains(id)).toList();
+              if (activeDues.isNotEmpty) {
+                return Badge(
+                  label: Text(
+                    '${activeDues.length}',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  backgroundColor: const Color(0xFFEF4444),
+                  child: const Icon(Icons.notifications_none_rounded),
+                );
+              }
+              return const Icon(Icons.notifications_none_rounded);
+            }),
+            activeIcon: Builder(builder: (context) {
+              final activeDues = [
+                'due_elec_nov', 'due_mobile_nov', 'due_fastag_low', 'due_insurance_nov', 'due_sip_nov', 'due_water_nov'
+              ].where((id) => !_dismissedAlertIds.contains(id) && !BharatOnePayApi.paidDueIds.contains(id)).toList();
+              if (activeDues.isNotEmpty) {
+                return Badge(
+                  label: Text(
+                    '${activeDues.length}',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  backgroundColor: const Color(0xFFEF4444),
+                  child: const Icon(Icons.notifications_active_rounded, color: Color(0xFFFF671F)),
+                );
+              }
+              return const Icon(Icons.notifications_active_rounded, color: Color(0xFFFF671F));
+            }),
             label: _t('tab_notifications'),
           ),
           BottomNavigationBarItem(

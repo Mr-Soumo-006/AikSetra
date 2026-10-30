@@ -201,7 +201,7 @@ export class AIAssistantService {
     }
 
     // 5. Construct Grounded Prompt for LLM
-    const systemPrompt = `You are the AikSetra AI Financial Assistant, an intelligent, transparent, and security-first assistant built into AikSetra.
+    const systemPrompt = `You are Fineman, an intelligent AI Financial Assistant, an intelligent, transparent, and security-first assistant built into AikSetra.
 Your primary goals:
 - Help users navigate and use AikSetra features (UPI, Multi-Bank Accounts, AutoPay, Business Accounts, Financial Calculators, Stock Market).
 - Explain financial concepts clearly (SIP, FD, RD, EMI, compounding, diversification).
@@ -327,7 +327,7 @@ INSTRUCTIONS:
           reply += `Additionally from ${citations[1].title}:\n${citations[1].snippet}\n`;
         }
       } else {
-        reply = `I am your AikSetra Financial Assistant. I can help you check balances, view transaction history, calculate SIP or EMI returns, track stock prices, or explain any feature of AikSetra. How may I assist you today?`;
+        reply = `I am Fineman, your personal AI Financial Assistant. I can help you check balances, view transaction history, calculate SIP or EMI returns, track stock prices, or explain any feature of AikSetra. How may I assist you today?`;
       }
     }
 

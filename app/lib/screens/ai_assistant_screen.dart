@@ -49,7 +49,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         id: 'welcome_01',
         role: 'assistant',
         content:
-            'Hello! I am your **AikSetra AI Financial Assistant**.\n\n'
+            'Hello! I am **Fineman**, your personal AI financial assistant.\n\n'
             'I am connected to your AikSetra platform and powered by our local neural engine and verified financial knowledge base.\n\n'
             '**Here is what I can do for you:**\n'
             '• **Check Balances & Accounts**: View your linked accounts and switch default banks.\n'
@@ -254,7 +254,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'AikSetra Assistant',
+                    'Fineman AI',
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   Row(
