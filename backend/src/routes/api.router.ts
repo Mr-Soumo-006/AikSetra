@@ -1415,28 +1415,58 @@ apiRouter.get('/business/invoices/:invoiceId/pdf', (req, res) => {
 const handleStatementPdfRequest = (req: any, res: any) => {
   const params = req.method === 'GET' ? req.query : req.body;
   const isBusiness = params.isBusiness === 'true' || params.type === 'business';
-  const accountName = params.accountName || (isBusiness ? 'Pentile Digital Store (Current Account •••• 4589)' : 'Primary Bank Account (SBI •••• 3038)');
-  const period = params.period || (isBusiness ? 'Today\'s Business Ledger & Audit Sheet (30 Oct 2026)' : 'Date-Wise Passbook Statement (Last 30 Days)');
+  const holderName = params.holderName || (isBusiness ? 'Pentile Business Solutions' : 'Soumo Naskar');
+  const accountName = params.accountName || (isBusiness ? 'Pentile Digital Store (Current Account)' : 'Primary Bank Account (SBI)');
+  const accountNumber = params.accountNumber || (isBusiness ? '•••• 4589' : '•••• 3038');
+  const panNumber = params.panNumber || 'AAECN1234F';
+  const gstin = params.gstin || (isBusiness ? '19AAECN1234F1Z5' : '');
+  const ifscCode = params.ifscCode || (isBusiness ? 'HDFC0001234' : 'SBIN0001234');
+  const address = params.address || (isBusiness ? 'Plot 42, Tech Park, Sector V, Salt Lake, Kolkata, WB 700091' : 'Sector V, Salt Lake City, Kolkata, WB 700091');
+  const period = params.period || (isBusiness ? "Today's Business Ledger & Audit Sheet (30 Oct 2026)" : "Date-Wise Statement (Last 30 Days)");
+  const startDate = params.startDate || (isBusiness ? '30 Oct 2026' : '01 Oct 2026');
+  const endDate = params.endDate || '30 Oct 2026';
   
+  let openingBal = params.openingBalance ? Number(params.openingBalance) : (isBusiness ? 42500.0 : 35200.0);
+  let closingBal = params.closingBalance ? Number(params.closingBalance) : (isBusiness ? 48250.0 : 85400.0);
+
   let txList: any[] = [];
   if (Array.isArray(params.transactions) && params.transactions.length > 0) {
     txList = params.transactions;
-  } else if (isBusiness) {
-    txList = [
-      { id: 'BL1001', date: '30 Oct 2026, 02:45 PM', title: 'Aditya Sen', category: 'Standee QR Collection', type: 'credit', amount: 1450.0, ref: 'UPI/STAN/994821', balance: 48250.0 },
-      { id: 'BL1002', date: '30 Oct 2026, 01:15 PM', title: 'Priya Das', category: 'Payment Link Collection', type: 'credit', amount: 3200.0, ref: 'PLINK/99410', balance: 46800.0 },
-      { id: 'BL1003', date: '30 Oct 2026, 11:30 AM', title: 'Daily Bank Settlement Payout', category: 'Auto IMPS to SBI Current', type: 'debit', amount: 15000.0, ref: 'IMPS/SETTLE/3321', balance: 43600.0 },
-      { id: 'BL1004', date: '30 Oct 2026, 10:05 AM', title: 'Rohan Sharma', category: 'POS Store Terminal', type: 'credit', amount: 850.0, ref: 'POS/CARD/1129', balance: 58600.0 },
-      { id: 'BL1005', date: '29 Oct 2026, 06:40 PM', title: 'Tech Distributors Pvt Ltd', category: 'Vendor Inventory Purchase', type: 'debit', amount: 12500.0, ref: 'RTGS/VENDOR/4412', balance: 57750.0 },
-    ];
-  } else {
-    txList = [
-      { id: 'TXN10091', date: '25 Oct 2026, 09:30 AM', title: 'Salary Credit - AikSetra Tech', category: 'Salary', type: 'credit', amount: 85000.0, ref: 'NEFT/HDFC/202610250930' },
-      { id: 'TXN10084', date: '24 Oct 2026, 06:00 AM', title: 'Auto-SIP - Nifty 50 Index Fund', category: 'Investment', type: 'debit', amount: 5000.0, ref: 'NACH/UMRN/202610240600' },
-      { id: 'TXN10079', date: '22 Oct 2026, 04:15 PM', title: 'Electricity Bill (BESCOM)', category: 'BBPS Utility', type: 'debit', amount: 2450.0, ref: 'BBPS/CESC/88192014' },
-      { id: 'TXN10065', date: '19 Oct 2026, 02:40 PM', title: 'Commercial Vendor Payout', category: 'Vendor Settlement', type: 'debit', amount: 15000.0, ref: 'RTGS/SBI/202610190240' },
-      { id: 'TXN10052', date: '18 Oct 2026, 08:00 PM', title: 'B2B Client Receivable Credited', category: 'B2B Collection', type: 'credit', amount: 18450.0, ref: 'UPI/PENTILE/77192' },
-    ];
+  } else if (typeof params.transactions === 'string') {
+    try {
+      txList = JSON.parse(params.transactions);
+    } catch (_) {}
+  }
+
+  if (txList.length === 0) {
+    if (isBusiness) {
+      txList = [
+        { id: 'BL1001', date: '30 Oct 2026, 02:45 PM', title: 'Aditya Sen', category: 'Standee QR Collection', type: 'credit', amount: 1450.0, ref: 'UPI/STAN/994821', balance: 48250.0 },
+        { id: 'BL1002', date: '30 Oct 2026, 01:15 PM', title: 'Priya Das', category: 'Payment Link Collection', type: 'credit', amount: 3200.0, ref: 'PLINK/99410', balance: 46800.0 },
+        { id: 'BL1003', date: '30 Oct 2026, 11:30 AM', title: 'Daily Bank Settlement Payout', category: 'Auto IMPS to SBI Current', type: 'debit', amount: 15000.0, ref: 'IMPS/SETTLE/3321', balance: 43600.0 },
+        { id: 'BL1004', date: '30 Oct 2026, 10:05 AM', title: 'Rohan Sharma', category: 'POS Store Terminal', type: 'credit', amount: 850.0, ref: 'POS/CARD/1129', balance: 58600.0 },
+        { id: 'BL1005', date: '29 Oct 2026, 06:40 PM', title: 'Tech Distributors Pvt Ltd', category: 'Vendor Inventory Purchase', type: 'debit', amount: 12500.0, ref: 'RTGS/VENDOR/4412', balance: 57750.0 },
+        { id: 'BL1006', date: '28 Oct 2026, 04:20 PM', title: 'Payroll Salary Disbursal', category: 'Corporate CMS IMPS', type: 'debit', amount: 85000.0, ref: 'CMS982347102', balance: 70250.0 },
+        { id: 'BL1007', date: '27 Oct 2026, 03:10 PM', title: 'Metro Supermart Chain', category: 'B2B Wholesale Sale', type: 'credit', amount: 28400.0, ref: 'GST/INV-904', balance: 155250.0 },
+      ];
+    } else {
+      txList = [
+        { id: 'TXN10091', date: '25 Oct 2026, 09:30 AM', title: 'Salary Credit - AikSetra Tech', category: 'Salary', type: 'credit', amount: 85000.0, ref: 'NEFT/HDFC/202610250930' },
+        { id: 'TXN10084', date: '24 Oct 2026, 06:00 AM', title: 'Auto-SIP - Nifty 50 Index Fund', category: 'Investment', type: 'debit', amount: 5000.0, ref: 'NACH/UMRN/202610240600' },
+        { id: 'TXN10079', date: '22 Oct 2026, 04:15 PM', title: 'CESC Electricity Bill', category: 'BBPS Utility', type: 'debit', amount: 2450.0, ref: 'BBPS/CESC/88192014' },
+        { id: 'TXN10065', date: '19 Oct 2026, 02:40 PM', title: 'Commercial Vendor Payout', category: 'Vendor Settlement', type: 'debit', amount: 15000.0, ref: 'RTGS/SBI/202610190240' },
+        { id: 'TXN10052', date: '18 Oct 2026, 08:00 PM', title: 'B2B Client Receivable Credited', category: 'B2B Collection', type: 'credit', amount: 18450.0, ref: 'UPI/PENTILE/77192' },
+        { id: 'TXN10041', date: '16 Oct 2026, 09:12 PM', title: 'Swiggy Food Delivery', category: 'Food & Dining', type: 'debit', amount: 480.0, ref: 'UPI/SWIGGY/991204' },
+      ];
+    }
+  }
+
+  // Filter txList if specific timeline is requested
+  const pLower = period.toLowerCase();
+  if (pLower.includes('today')) {
+    txList = txList.filter(t => t.date && (t.date.includes('30 Oct') || t.date.includes('Today')));
+  } else if (pLower.includes('7 days')) {
+    txList = txList.filter(t => t.date && !t.date.includes('18 Oct') && !t.date.includes('16 Oct'));
   }
 
   let totalCredits = 0;
@@ -1448,8 +1478,19 @@ const handleStatementPdfRequest = (req: any, res: any) => {
 
   PdfGeneratorService.generateStatementPdf({
     accountName,
+    accountNumber,
+    holderName,
+    panNumber,
+    gstin,
+    ifscCode,
+    address,
+    isBusiness,
     statementPeriod: period,
+    startDate,
+    endDate,
     generatedDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    openingBalance: openingBal,
+    closingBalance: closingBal,
     totalCredits,
     totalDebits,
     netCashflow: totalCredits - totalDebits,

@@ -1,3 +1,4 @@
+import '../widgets/export_statement_pdf_modal.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -2074,31 +2075,8 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
     );
   }
 
-  void _downloadBusinessLedgerPdf() async {
-    final pdfUrl = BharatOnePayApi.getStatementPdfUrl(isBusiness: true);
-    try {
-      final uri = Uri.parse(pdfUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Generating official PDF of Today\'s Pentile Business Ledger & Balance Sheet...'),
-          backgroundColor: Color(0xFF046A38),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Opening PDF ledger download...'),
-          backgroundColor: Color(0xFF0D1B2A),
-        ),
-      );
-    }
+  void _downloadBusinessLedgerPdf() {
+    ExportStatementPdfModal.show(context, initialIsBusiness: true);
   }
 
   void _downloadInvoicePdf(dynamic inv) async {

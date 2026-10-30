@@ -2348,9 +2348,47 @@ class BharatOnePayApi {
     return '${ApiConfig.baseUrl}/business/invoices/$invoiceId/pdf';
   }
 
-  static String getStatementPdfUrl({bool? isBusiness}) {
+  static String getStatementPdfUrl({
+    bool? isBusiness,
+    String? period,
+    String? startDate,
+    String? endDate,
+    String? accountName,
+    String? accountNumber,
+    String? holderName,
+    String? panNumber,
+    String? gstin,
+    String? ifsc,
+    double? openingBalance,
+    double? closingBalance,
+  }) {
     final biz = isBusiness ?? isBusinessMode;
-    return '${ApiConfig.baseUrl}/account/statement/pdf?type=${biz ? "business" : "personal"}&isBusiness=$biz';
+    final effectiveHolder = holderName ?? (biz ? (businessProfile['companyName'] ?? 'Pentile') : (currentUser?.fullName ?? 'Soumo Naskar'));
+    final effectiveAcc = accountName ?? (biz ? 'Pentile Digital Store (Current Account)' : (currentAccount?.bankName ?? 'State Bank of India'));
+    final effectiveAccNo = accountNumber ?? (biz ? (businessProfile['bankAccountNo'] ?? '•••• 4589') : (currentAccount?.maskedAccountNumber ?? '•••• 3038'));
+    final effectivePan = panNumber ?? (biz ? (businessProfile['pan'] ?? 'AAECN1234F') : 'AAECN1234F');
+    final effectiveGstin = gstin ?? (biz ? (businessProfile['gstin'] ?? '19AAECN1234F1Z5') : '');
+    final effectiveIfsc = ifsc ?? (biz ? (businessProfile['ifsc'] ?? 'HDFC0001234') : (currentAccount?.ifsc ?? 'SBIN0001234'));
+    final effectivePeriod = period ?? (biz ? "Today's Business Ledger & Audit Sheet (30 Oct 2026)" : "Date-Wise Statement (Last 30 Days)");
+
+    final qParams = <String, String>{
+      'type': biz ? 'business' : 'personal',
+      'isBusiness': biz.toString(),
+      'period': effectivePeriod,
+      if (startDate != null && startDate.isNotEmpty) 'startDate': startDate,
+      if (endDate != null && endDate.isNotEmpty) 'endDate': endDate,
+      'holderName': effectiveHolder,
+      'accountName': effectiveAcc,
+      'accountNumber': effectiveAccNo,
+      'panNumber': effectivePan,
+      if (effectiveGstin.isNotEmpty) 'gstin': effectiveGstin,
+      'ifscCode': effectiveIfsc,
+      if (openingBalance != null) 'openingBalance': openingBalance.toString(),
+      if (closingBalance != null) 'closingBalance': closingBalance.toString(),
+    };
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/account/statement/pdf').replace(queryParameters: qParams);
+    return uri.toString();
   }
 
   static Future<void> saveSessionToDisk() async {

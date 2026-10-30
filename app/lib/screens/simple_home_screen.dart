@@ -1,3 +1,4 @@
+import '../widgets/export_statement_pdf_modal.dart';
 import '../services/theme_manager.dart';
 import 'dart:io';
 import 'dart:async';
@@ -376,35 +377,8 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
-  void _downloadDateWiseStatementPdf() async {
-    final pdfUrl = BharatOnePayApi.getStatementPdfUrl();
-    try {
-      final uri = Uri.parse(pdfUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            BharatOnePayApi.isBusinessMode
-                ? 'Downloading Today\'s Official Pentile Business Ledger PDF...'
-                : 'Downloading Official Date-Wise Account Statement PDF...',
-          ),
-          backgroundColor: const Color(0xFF046A38),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Opening PDF statement download...'),
-          backgroundColor: Color(0xFF0D1B2A),
-        ),
-      );
-    }
+  void _downloadDateWiseStatementPdf() {
+    ExportStatementPdfModal.show(context, initialIsBusiness: BharatOnePayApi.isBusinessMode);
   }
 
   Widget _buildFinemanFloatingButton() {
