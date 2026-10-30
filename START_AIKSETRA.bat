@@ -19,13 +19,17 @@ if "%ERRORLEVEL%"=="0" (
     timeout /t 3 /nobreak >nul
 )
 
-echo [3/3] Starting AikSetra Core Banking & AI Switch Server...
+echo [3/3] Preparing Port 4000 and Starting AikSetra Core Server...
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":4000" ^| find "LISTENING"') do (
+    echo       Freeing port 4000 from previous instance (PID %%a)...
+    taskkill /F /PID %%a 2>nul
+)
 cd /d "D:\AikSetra\backend"
 echo.
 echo =====================================================================
 echo  STATUS:
 echo   - AI LLM Model:       Llama 3.2 (3B) with CUDA Acceleration (RTX 3050)
-echo   - Stock Market Engine: Momentum Breakouts, Value Screener & Targets
+echo   - Stock Market Engine: Momentum Breakouts, Value Screener and Targets
 echo   - Storage Location:   D:\Ollama\models (Zero space used on C:)
 echo   - Backend Server:     http://localhost:4000
 echo   - Developer Console:  http://localhost:4000/console
