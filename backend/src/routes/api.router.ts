@@ -1411,16 +1411,33 @@ apiRouter.get('/business/invoices/:invoiceId/pdf', (req, res) => {
   }, res);
 });
 
-// Download Date-Wise Account Audit Statement PDF
-apiRouter.post('/account/statement/pdf', (req, res) => {
-  const { accountName, period, startDate, endDate, transactions } = req.body;
-  const txList = Array.isArray(transactions) && transactions.length > 0 ? transactions : [
-    { id: 'TXN10091', date: '25 Oct 2026, 09:30 AM', title: 'Salary Credit - AikSetra Tech', category: 'Salary', type: 'credit', amount: 85000.0, ref: 'NEFT/HDFC/202610250930' },
-    { id: 'TXN10084', date: '24 Oct 2026, 06:00 AM', title: 'Auto-SIP - Nifty 50 Index Fund', category: 'Investment', type: 'debit', amount: 5000.0, ref: 'NACH/UMRN/202610240600' },
-    { id: 'TXN10079', date: '22 Oct 2026, 04:15 PM', title: 'Electricity Bill (BESCOM)', category: 'BBPS Utility', type: 'debit', amount: 2450.0, ref: 'BBPS/CESC/88192014' },
-    { id: 'TXN10065', date: '19 Oct 2026, 02:40 PM', title: 'Commercial Vendor Payout', category: 'Vendor Settlement', type: 'debit', amount: 15000.0, ref: 'RTGS/SBI/202610190240' },
-    { id: 'TXN10052', date: '18 Oct 2026, 08:00 PM', title: 'B2B Client Receivable Credited', category: 'B2B Collection', type: 'credit', amount: 18450.0, ref: 'UPI/PENTILE/77192' },
-  ];
+// Download Date-Wise Account Audit Statement PDF (Supports both GET from browser and POST with custom filters)
+const handleStatementPdfRequest = (req: any, res: any) => {
+  const params = req.method === 'GET' ? req.query : req.body;
+  const isBusiness = params.isBusiness === 'true' || params.type === 'business';
+  const accountName = params.accountName || (isBusiness ? 'Pentile Digital Store (Current Account •••• 4589)' : 'Primary Bank Account (SBI •••• 3038)');
+  const period = params.period || (isBusiness ? 'Today\'s Business Ledger & Audit Sheet (30 Oct 2026)' : 'Date-Wise Passbook Statement (Last 30 Days)');
+  
+  let txList: any[] = [];
+  if (Array.isArray(params.transactions) && params.transactions.length > 0) {
+    txList = params.transactions;
+  } else if (isBusiness) {
+    txList = [
+      { id: 'BL1001', date: '30 Oct 2026, 02:45 PM', title: 'Aditya Sen', category: 'Standee QR Collection', type: 'credit', amount: 1450.0, ref: 'UPI/STAN/994821', balance: 48250.0 },
+      { id: 'BL1002', date: '30 Oct 2026, 01:15 PM', title: 'Priya Das', category: 'Payment Link Collection', type: 'credit', amount: 3200.0, ref: 'PLINK/99410', balance: 46800.0 },
+      { id: 'BL1003', date: '30 Oct 2026, 11:30 AM', title: 'Daily Bank Settlement Payout', category: 'Auto IMPS to SBI Current', type: 'debit', amount: 15000.0, ref: 'IMPS/SETTLE/3321', balance: 43600.0 },
+      { id: 'BL1004', date: '30 Oct 2026, 10:05 AM', title: 'Rohan Sharma', category: 'POS Store Terminal', type: 'credit', amount: 850.0, ref: 'POS/CARD/1129', balance: 58600.0 },
+      { id: 'BL1005', date: '29 Oct 2026, 06:40 PM', title: 'Tech Distributors Pvt Ltd', category: 'Vendor Inventory Purchase', type: 'debit', amount: 12500.0, ref: 'RTGS/VENDOR/4412', balance: 57750.0 },
+    ];
+  } else {
+    txList = [
+      { id: 'TXN10091', date: '25 Oct 2026, 09:30 AM', title: 'Salary Credit - AikSetra Tech', category: 'Salary', type: 'credit', amount: 85000.0, ref: 'NEFT/HDFC/202610250930' },
+      { id: 'TXN10084', date: '24 Oct 2026, 06:00 AM', title: 'Auto-SIP - Nifty 50 Index Fund', category: 'Investment', type: 'debit', amount: 5000.0, ref: 'NACH/UMRN/202610240600' },
+      { id: 'TXN10079', date: '22 Oct 2026, 04:15 PM', title: 'Electricity Bill (BESCOM)', category: 'BBPS Utility', type: 'debit', amount: 2450.0, ref: 'BBPS/CESC/88192014' },
+      { id: 'TXN10065', date: '19 Oct 2026, 02:40 PM', title: 'Commercial Vendor Payout', category: 'Vendor Settlement', type: 'debit', amount: 15000.0, ref: 'RTGS/SBI/202610190240' },
+      { id: 'TXN10052', date: '18 Oct 2026, 08:00 PM', title: 'B2B Client Receivable Credited', category: 'B2B Collection', type: 'credit', amount: 18450.0, ref: 'UPI/PENTILE/77192' },
+    ];
+  }
 
   let totalCredits = 0;
   let totalDebits = 0;
@@ -1430,12 +1447,15 @@ apiRouter.post('/account/statement/pdf', (req, res) => {
   }
 
   PdfGeneratorService.generateStatementPdf({
-    accountName: accountName || 'Primary Bank Account (SBI •••• 3038)',
-    statementPeriod: period || 'Last 30 Days (Oct 2026)',
+    accountName,
+    statementPeriod: period,
     generatedDate: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
     totalCredits,
     totalDebits,
     netCashflow: totalCredits - totalDebits,
     transactions: txList,
   }, res);
-});
+};
+
+apiRouter.get('/account/statement/pdf', handleStatementPdfRequest);
+apiRouter.post('/account/statement/pdf', handleStatementPdfRequest);

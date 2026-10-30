@@ -3433,7 +3433,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           const SnackBar(content: Text('Downloading official CIBIL report PDF...')),
                         );
                       },
-                      child: const Text('Download PDF', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                      child: Text('Download PDF', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -3917,22 +3917,24 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               runSpacing: 8,
               children: [
                 ActionChip(
-                  avatar: const CircleAvatar(
-                    backgroundColor: Color(0xFF0F172A),
-                    child: Icon(Icons.contacts_rounded, size: 12, color: Colors.white),
+                  avatar: CircleAvatar(
+                    backgroundColor: const Color(0xFFFF671F),
+                    child: const Icon(Icons.contacts_rounded, size: 12, color: Colors.white),
                   ),
-                  label: const Text(
+                  backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  label: Text(
                     '+ Real Contacts',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
+                      color: _textPrimary,
                     ),
                   ),
                   onPressed: _pickRealDeviceContact,
                 ),
                 ...recentPayees.take(5).map((p) {
                   return ActionChip(
+                  backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                   avatar: CircleAvatar(
                     backgroundColor: const Color(0xFFFF671F),
                     child: Text(
@@ -3946,9 +3948,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   ),
                   label: Text(
                     p['name']!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
+                      color: _textPrimary,
                     ),
                   ),
                   onPressed: () => _showSendMoneyDialog(
@@ -4190,9 +4193,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: _cardBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -5772,9 +5775,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: _cardBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -6239,12 +6242,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           ),
           const SizedBox(height: 16),
 
-          const Text(
+          Text(
             '1. Select Destination Country & Corridor',
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 13,
-              color: Color(0xFF0F172A),
+              color: _textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -6267,12 +6270,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     width: 110,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: isSel ? const Color(0xFF312E81) : Colors.white,
+                      color: isSel ? const Color(0xFF312E81) : _cardBg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isSel
-                            ? const Color(0xFF4F46E5)
-                            : const Color(0xFFCBD5E1),
+                            ? const Color(0xFF818CF8)
+                            : _cardBorder,
                       ),
                     ),
                     child: Column(
@@ -6286,7 +6289,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             fontSize: 14,
                             color: isSel
                                 ? Colors.white
-                                : const Color(0xFF0F172A),
+                                : _textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -6296,7 +6299,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             fontSize: 9,
                             color: isSel
                                 ? const Color(0xFFC7D2FE)
-                                : const Color(0xFF64748B),
+                                : _textSecondary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -6313,19 +6316,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _cardBg,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: _cardBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '2. Recipient Gets ($_fxCurrency)',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
-                    color: Color(0xFF0F172A),
+                    color: _textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -6342,7 +6345,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     prefixText: '$_fxCurrency ',
                     suffixText: _fxCurrency,
                     filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+                    fillColor: _isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -6359,12 +6362,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             child: ActionChip(
                               label: Text(
                                 '$preset $_fxCurrency',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
+                                  color: _textPrimary,
                                 ),
                               ),
-                              backgroundColor: const Color(0xFFF1F5F9),
+                              backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                               onPressed: () {
                                 _fxForeignAmtCtrl.text = preset.toString();
                                 _refreshFxQuote();
@@ -6388,9 +6392,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEF2FF),
+                      color: _isDark ? const Color(0xFF1E1B4B).withValues(alpha: 0.5) : const Color(0xFFEEF2FF),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFC7D2FE)),
+                      border: Border.all(color: _isDark ? const Color(0xFF4338CA) : const Color(0xFFC7D2FE)),
                     ),
                     child: Column(
                       children: [
@@ -6422,19 +6426,20 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total INR Debit from Bank',
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
+                                color: _textPrimary,
                               ),
                             ),
                             Text(
                               '₹${_fxQuote!.totalCostInr.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 20,
-                                color: Color(0xFF312E81),
+                                color: _isDark ? const Color(0xFF818CF8) : const Color(0xFF312E81),
                               ),
                             ),
                           ],
@@ -6447,11 +6452,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       '3. International Beneficiary / Contacts',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
+                        color: _textPrimary,
                       ),
                     ),
                     const Text(
@@ -6522,11 +6528,12 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                           padding: const EdgeInsets.only(right: 6),
                           child: ChoiceChip(
                             selected: isSel,
-                            selectedColor: const Color(0xFF312E81),
+                            selectedColor: const Color(0xFF4F46E5),
+                            backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                             labelStyle: TextStyle(
                               color: isSel
                                   ? Colors.white
-                                  : const Color(0xFF0F172A),
+                                  : _textPrimary,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),
@@ -6546,11 +6553,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                         );
                       }),
                       ActionChip(
-                        label: const Text(
+                        backgroundColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                        label: Text(
                           '+ Clear / Custom',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
+                            color: _textPrimary,
                           ),
                         ),
                         onPressed: () {
@@ -6645,9 +6654,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
           if (fxTxns.isNotEmpty) ...[
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Recent International Transfers',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _textPrimary),
             ),
             const SizedBox(height: 10),
             ...fxTxns.map(
@@ -6657,9 +6666,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _cardBg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: _cardBorder),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -6671,15 +6680,16 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                             Text(
                               t['receiverName']?.toString() ??
                                   'Foreign Transfer',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                color: _textPrimary,
                               ),
                             ),
                             Text(
                               t['remark']?.toString() ?? '',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF64748B),
+                                color: _textSecondary,
                               ),
                             ),
                           ],
@@ -11343,6 +11353,8 @@ class _RealStockChartModalSheet extends StatefulWidget {
 }
 
 class _RealStockChartModalSheetState extends State<_RealStockChartModalSheet> {
+  bool get _isDark => ThemeManager.isDarkMode;
+  Color get _textPrimary => _isDark ? Colors.white : const Color(0xFF0F172A);
   String _selectedTf = '1D';
   bool _isCandleMode = true;
   int? _activeCandleIdx;
@@ -11746,7 +11758,7 @@ class _RealStockChartModalSheetState extends State<_RealStockChartModalSheet> {
                       Navigator.pop(context);
                       widget.onStockSip(stock);
                     },
-                    child: const Text('Start Stock SIP', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                    child: Text('Start Stock SIP', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -11778,7 +11790,7 @@ class _RealStockChartModalSheetState extends State<_RealStockChartModalSheet> {
       children: [
         Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+        Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _textPrimary)),
       ],
     );
   }
@@ -11788,7 +11800,7 @@ class _RealStockChartModalSheetState extends State<_RealStockChartModalSheet> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _textPrimary)),
       ],
     );
   }

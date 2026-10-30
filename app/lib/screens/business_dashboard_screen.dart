@@ -2069,7 +2069,7 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
   }
 
   void _downloadBusinessLedgerPdf() async {
-    final pdfUrl = BharatOnePayApi.getStatementPdfUrl();
+    final pdfUrl = BharatOnePayApi.getStatementPdfUrl(isBusiness: true);
     try {
       final uri = Uri.parse(pdfUrl);
       if (await canLaunchUrl(uri)) {

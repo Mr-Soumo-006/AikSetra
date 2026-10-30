@@ -1673,8 +1673,9 @@ class BharatOnePayApi {
     return '${ApiConfig.baseUrl}/business/invoices/$invoiceId/pdf';
   }
 
-  static String getStatementPdfUrl() {
-    return '${ApiConfig.baseUrl}/account/statement/pdf';
+  static String getStatementPdfUrl({bool? isBusiness}) {
+    final biz = isBusiness ?? isBusinessMode;
+    return '${ApiConfig.baseUrl}/account/statement/pdf?type=${biz ? "business" : "personal"}&isBusiness=$biz';
   }
 
   static Future<void> saveSessionToDisk() async {

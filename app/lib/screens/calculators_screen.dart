@@ -15,19 +15,19 @@ class CalculatorsScreen extends StatefulWidget {
 class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<String> _tools = [
-    'Calculator',
-    'EMI Loan',
-    'SIP Return',
-    'GST Tax',
-    'Income Tax',
-    'TDS Tax',
-    'Currency FX',
-    'FD Maturity',
-    'RD Maturity',
-    'Compound',
-    'Inflation',
-    'Goal Plan',
+  final List<Map<String, dynamic>> _tools = [
+    {'title': 'Calculator', 'sub': 'Financial Tape', 'icon': Icons.calculate_rounded, 'color': Color(0xFFFF9100)},
+    {'title': 'EMI Loan', 'sub': 'Home & Auto', 'icon': Icons.home_work_rounded, 'color': Color(0xFF2563EB)},
+    {'title': 'SIP Return', 'sub': 'Mutual Funds', 'icon': Icons.trending_up_rounded, 'color': Color(0xFF046A38)},
+    {'title': 'GST Tax', 'sub': '4 Slabs & HSN', 'icon': Icons.receipt_long_rounded, 'color': Color(0xFF7C3AED)},
+    {'title': 'Income Tax', 'sub': 'FY 24-25 Regime', 'icon': Icons.account_balance_rounded, 'color': Color(0xFFFF671F)},
+    {'title': 'TDS Tax', 'sub': '194C / J / H / I', 'icon': Icons.gavel_rounded, 'color': Color(0xFF0D9488)},
+    {'title': 'Currency FX', 'sub': 'Live RBI Rates', 'icon': Icons.currency_exchange_rounded, 'color': Color(0xFF0284C7)},
+    {'title': 'FD Maturity', 'sub': 'Quarterly Compound', 'icon': Icons.savings_rounded, 'color': Color(0xFF4338CA)},
+    {'title': 'RD Maturity', 'sub': 'Monthly Recurring', 'icon': Icons.sync_alt_rounded, 'color': Color(0xFF059669)},
+    {'title': 'Compound', 'sub': 'Exponential Gains', 'icon': Icons.pie_chart_rounded, 'color': Color(0xFFD97706)},
+    {'title': 'Inflation', 'sub': 'Purchasing Power', 'icon': Icons.candlestick_chart_rounded, 'color': Color(0xFFDC2626)},
+    {'title': 'Goal Plan', 'sub': 'Target Wealth', 'icon': Icons.track_changes_rounded, 'color': Color(0xFFDB2777)},
   ];
 
   @override
@@ -35,10 +35,15 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
     super.initState();
     int initialIndex = 0;
     if (widget.initialTool != null) {
-      final match = _tools.indexWhere((t) => t.toLowerCase().contains(widget.initialTool!.toLowerCase()));
+      final match = _tools.indexWhere((t) => (t['title'] as String).toLowerCase().contains(widget.initialTool!.toLowerCase()));
       if (match != -1) initialIndex = match;
     }
     _tabController = TabController(length: _tools.length, vsync: this, initialIndex: initialIndex);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -49,22 +54,61 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final scaffoldBg = isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC);
+    final currentTool = _tools[_tabController.index];
+
     return Scaffold(
-      backgroundColor: ThemeManager.isDarkMode ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        title: const Text('Financial Calculator Centre', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Financial Calculator Hub',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.3),
+            ),
+            Text(
+              '12 Precision Engines • ${currentTool['title']} (${currentTool['sub']})',
+              style: TextStyle(fontSize: 10.5, color: (currentTool['color'] as Color).withValues(alpha: 0.9), fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         backgroundColor: const Color(0xFF0D1B2A),
         foregroundColor: Colors.white,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: const Color(0xFFFF9100),
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: _tools.map((t) => Tab(text: t)).toList(),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            color: const Color(0xFF091422),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              indicatorColor: currentTool['color'] as Color,
+              indicatorWeight: 3.5,
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFF94A3B8),
+              tabs: _tools.map((t) {
+                final isSel = _tools.indexOf(t) == _tabController.index;
+                final toolColor = t['color'] as Color;
+                return Tab(
+                  child: Row(
+                    children: [
+                      Icon(t['icon'] as IconData, size: 16, color: isSel ? toolColor : const Color(0xFF94A3B8)),
+                      const SizedBox(width: 6),
+                      Text(
+                        t['title'] as String,
+                        style: TextStyle(
+                          fontWeight: isSel ? FontWeight.w900 : FontWeight.w600,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -92,998 +136,21 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
   }
 }
 
-// 1. EMI CALCULATOR
-class EmiCalculatorView extends StatefulWidget {
-  const EmiCalculatorView({super.key});
-  @override
-  State<EmiCalculatorView> createState() => _EmiCalculatorViewState();
-}
-
-class _EmiCalculatorViewState extends State<EmiCalculatorView> {
-  double _amount = 1000000;
-  double _rate = 8.5;
-  double _tenureYears = 15;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = (_tenureYears * 12).round();
-    final r = (_rate / 12) / 100;
-    final emi = (_amount * r * pow(1 + r, n)) / (pow(1 + r, n) - 1);
-    final totalPayable = emi * n;
-    final totalInterest = totalPayable - _amount;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF86EFAC)),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.verified, color: Color(0xFF16A34A), size: 16),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'LIVE SYNC: Connected to CBIC GST Portal (cbic-gst.gov.in) • Official Slabs Auto-Updated',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _buildResultCard(
-            title: 'Monthly Loan EMI',
-            primaryValue: '₹${emi.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
-            subValues: [
-              {'label': 'Principal Amount', 'val': '₹${_amount.round()}'},
-              {'label': 'Total Interest', 'val': '₹${totalInterest.round()}'},
-              {'label': 'Total Payable', 'val': '₹${totalPayable.round()}'},
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Loan Amount',
-            value: _amount,
-            min: 50000,
-            max: 10000000,
-            step: 50000,
-            display: '₹${_amount.round()}',
-            onChanged: (v) => setState(() => _amount = v),
-          ),
-          _buildSliderField(
-            title: 'Interest Rate (% p.a.)',
-            value: _rate,
-            min: 5.0,
-            max: 20.0,
-            step: 0.1,
-            display: '${_rate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _rate = v),
-          ),
-          _buildSliderField(
-            title: 'Tenure (Years)',
-            value: _tenureYears,
-            min: 1,
-            max: 30,
-            step: 1,
-            display: '${_tenureYears.round()} Years (${(_tenureYears * 12).round()} Months)',
-            onChanged: (v) => setState(() => _tenureYears = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 2. SIP CALCULATOR
-class SipCalculatorView extends StatefulWidget {
-  const SipCalculatorView({super.key});
-  @override
-  State<SipCalculatorView> createState() => _SipCalculatorViewState();
-}
-
-class _SipCalculatorViewState extends State<SipCalculatorView> {
-  double _monthly = 5000;
-  double _rate = 12.0;
-  double _years = 10;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = (_years * 12).round();
-    final i = (_rate / 12) / 100;
-    final totalInvested = _monthly * n;
-    final maturity = _monthly * ((pow(1 + i, n) - 1) / i) * (1 + i);
-    final returns = maturity - totalInvested;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: 'Expected Wealth at Maturity',
-            primaryValue: '₹${maturity.round()}',
-            subValues: [
-              {'label': 'Total Invested', 'val': '₹${totalInvested.round()}'},
-              {'label': 'Est. Wealth Gained', 'val': '₹${returns.round()}'},
-            ],
-            accentColor: const Color(0xFF046A38),
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Monthly Investment',
-            value: _monthly,
-            min: 500,
-            max: 100000,
-            step: 500,
-            display: '₹${_monthly.round()}',
-            onChanged: (v) => setState(() => _monthly = v),
-          ),
-          _buildSliderField(
-            title: 'Expected Annual Return (%)',
-            value: _rate,
-            min: 5.0,
-            max: 25.0,
-            step: 0.5,
-            display: '${_rate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _rate = v),
-          ),
-          _buildSliderField(
-            title: 'Time Period (Years)',
-            value: _years,
-            min: 1,
-            max: 30,
-            step: 1,
-            display: '${_years.round()} Years',
-            onChanged: (v) => setState(() => _years = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 3. GST CALCULATOR
-class GstCalculatorView extends StatefulWidget {
-  const GstCalculatorView({super.key});
-  @override
-  State<GstCalculatorView> createState() => _GstCalculatorViewState();
-}
-
-class _GstCalculatorViewState extends State<GstCalculatorView> {
-  final _amountCtrl = TextEditingController(text: '10000');
-  double _gstRate = 18.0;
-  bool _isInclusive = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final base = double.tryParse(_amountCtrl.text) ?? 0.0;
-    double netAmount = 0;
-    double gstAmount = 0;
-    double totalAmount = 0;
-
-    if (_isInclusive) {
-      totalAmount = base;
-      netAmount = base / (1 + (_gstRate / 100));
-      gstAmount = totalAmount - netAmount;
-    } else {
-      netAmount = base;
-      gstAmount = base * (_gstRate / 100);
-      totalAmount = base + gstAmount;
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: _isInclusive ? 'Net Pre-Tax Value' : 'Total Invoice Amount',
-            primaryValue: '₹${totalAmount.toStringAsFixed(2)}',
-            subValues: [
-              {'label': 'Net Amount', 'val': '₹${netAmount.toStringAsFixed(2)}'},
-              {'label': 'Total GST (${_gstRate.round()}%)', 'val': '₹${gstAmount.toStringAsFixed(2)}'},
-              {'label': 'CGST (${(_gstRate / 2).toStringAsFixed(1)}%)', 'val': '₹${(gstAmount / 2).toStringAsFixed(2)}'},
-              {'label': 'SGST (${(_gstRate / 2).toStringAsFixed(1)}%)', 'val': '₹${(gstAmount / 2).toStringAsFixed(2)}'},
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: ChoiceChip(
-                  label: const Center(child: Text('GST Exclusive (Add GST)')),
-                  selected: !_isInclusive,
-                  onSelected: (val) => setState(() => _isInclusive = !val),
-                  selectedColor: const Color(0xFF046A38),
-                  labelStyle: TextStyle(color: !_isInclusive ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChoiceChip(
-                  label: const Center(child: Text('GST Inclusive (Extract)')),
-                  selected: _isInclusive,
-                  onSelected: (val) => setState(() => _isInclusive = val),
-                  selectedColor: const Color(0xFF046A38),
-                  labelStyle: TextStyle(color: _isInclusive ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _amountCtrl,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: _isInclusive ? 'Total Price (inclusive of GST)' : 'Base Amount (exclusive of GST)',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('GST Slab Rate', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [5.0, 12.0, 18.0, 28.0].map((rate) {
-              final sel = _gstRate == rate;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: sel ? const Color(0xFFFF671F) : (ThemeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white),
-                      foregroundColor: sel ? Colors.white : (ThemeManager.isDarkMode ? Colors.white : const Color(0xFF0D1B2A)),
-                      side: BorderSide(color: sel ? const Color(0xFFFF671F) : (ThemeManager.isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1))),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () => setState(() => _gstRate = rate),
-                    child: Text('${rate.round()}%'),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 4. INCOME TAX ESTIMATOR (New Tax Regime FY 2024-25)
-class IncomeTaxCalculatorView extends StatefulWidget {
-  const IncomeTaxCalculatorView({super.key});
-  @override
-  State<IncomeTaxCalculatorView> createState() => _IncomeTaxCalculatorViewState();
-}
-
-class _IncomeTaxCalculatorViewState extends State<IncomeTaxCalculatorView> {
-  final _salaryCtrl = TextEditingController(text: '1200000');
-
-  @override
-  Widget build(BuildContext context) {
-    final gross = double.tryParse(_salaryCtrl.text) ?? 0.0;
-    const stdDeduction = 75000.0;
-    final taxableIncome = max(0.0, gross - stdDeduction);
-
-    double tax = 0;
-    if (taxableIncome > 1500000) {
-      tax += (taxableIncome - 1500000) * 0.30;
-      tax += 300000 * 0.20;
-      tax += 300000 * 0.15;
-      tax += 300000 * 0.10;
-      tax += 300000 * 0.05;
-    } else if (taxableIncome > 1200000) {
-      tax += (taxableIncome - 1200000) * 0.20;
-      tax += 300000 * 0.15;
-      tax += 300000 * 0.10;
-      tax += 300000 * 0.05;
-    } else if (taxableIncome > 900000) {
-      tax += (taxableIncome - 900000) * 0.15;
-      tax += 300000 * 0.10;
-      tax += 300000 * 0.05;
-    } else if (taxableIncome > 600000) {
-      tax += (taxableIncome - 600000) * 0.10;
-      tax += 300000 * 0.05;
-    } else if (taxableIncome > 300000) {
-      tax += (taxableIncome - 300000) * 0.05;
-    }
-
-    // Section 87A rebate: Nil tax up to 7,00,000 taxable income
-    if (taxableIncome <= 700000) {
-      tax = 0.0;
-    }
-
-    final cess = tax * 0.04;
-    final totalTax = tax + cess;
-    final inHandAnnual = gross - totalTax;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: 'Estimated Total Tax (New Regime)',
-            primaryValue: '₹${totalTax.round()}',
-            subValues: [
-              {'label': 'Taxable Income', 'val': '₹${taxableIncome.round()}'},
-              {'label': 'Standard Deduction', 'val': '₹75,000'},
-              {'label': 'Income Tax', 'val': '₹${tax.round()}'},
-              {'label': 'Health & Edu Cess (4%)', 'val': '₹${cess.round()}'},
-              {'label': 'Est. Annual In-Hand', 'val': '₹${inHandAnnual.round()}'},
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _salaryCtrl,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Gross Annual Salary / Income',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFBFDBFE)),
-            ),
-            child: const Text(
-              'FY 2024-25 (AY 2025-26) New Tax Regime includes standard deduction of ₹75,000 for salaried employees and full tax rebate up to ₹7,75,000 gross salary.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF1E3A8A)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 5. FX CONVERTER
-class FxCalculatorView extends StatefulWidget {
-  const FxCalculatorView({super.key});
-  @override
-  State<FxCalculatorView> createState() => _FxCalculatorViewState();
-}
-
-class _FxCalculatorViewState extends State<FxCalculatorView> {
-  final _inrCtrl = TextEditingController(text: '10000');
-  String _targetCurrency = 'USD';
-  Map<String, double> _rates = {
-    'USD': 84.15,
-    'EUR': 91.20,
-    'GBP': 109.40,
-    'AED': 22.91,
-    'SGD': 63.80,
-    'JPY': 0.55,
-    'CAD': 61.10,
-    'AUD': 55.70,
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchRates();
-  }
-
-  Future<void> _fetchRates() async {
-    final res = await BharatOnePayApi.getLiveFxRates();
-    if (res['success'] == true && res['rates'] != null && mounted) {
-      final map = res['rates'] as Map<String, dynamic>;
-      setState(() {
-        _rates = map.map((k, v) => MapEntry(k, (v as num).toDouble()));
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final inr = double.tryParse(_inrCtrl.text) ?? 0.0;
-    final rate = _rates[_targetCurrency] ?? 1.0;
-    final converted = inr / rate;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: 'Converted Value ($_targetCurrency)',
-            primaryValue: '$_targetCurrency ${converted.toStringAsFixed(2)}',
-            subValues: [
-              {'label': '1 $_targetCurrency', 'val': '₹$rate INR'},
-              {'label': 'Exchange Partner', 'val': 'RBI Ref / AikSetra FX'},
-              {'label': 'FX Markup', 'val': '0% (Direct)'},
-            ],
-            accentColor: const Color(0xFFFF9100),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _inrCtrl,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Amount in Indian Rupees (INR)',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Select Target Foreign Currency', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _rates.keys.map((curr) {
-              final sel = _targetCurrency == curr;
-              return ChoiceChip(
-                label: Text('$curr (₹${_rates[curr]})'),
-                selected: sel,
-                selectedColor: const Color(0xFF0D1B2A),
-                labelStyle: TextStyle(color: sel ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
-                onSelected: (val) {
-                  if (val) setState(() => _targetCurrency = curr);
-                },
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 6. FD CALCULATOR
-class FdCalculatorView extends StatefulWidget {
-  const FdCalculatorView({super.key});
-  @override
-  State<FdCalculatorView> createState() => _FdCalculatorViewState();
-}
-
-class _FdCalculatorViewState extends State<FdCalculatorView> {
-  double _deposit = 100000;
-  double _rate = 7.1;
-  double _years = 5;
-
-  @override
-  Widget build(BuildContext context) {
-    // Quarterly compounding: A = P(1 + r/4)^(4*t)
-    final r = (_rate / 100) / 4;
-    final n = 4 * _years;
-    final maturity = _deposit * pow(1 + r, n);
-    final interest = maturity - _deposit;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: 'FD Maturity Amount (Quarterly Compounding)',
-            primaryValue: '₹${maturity.round()}',
-            subValues: [
-              {'label': 'Principal Deposited', 'val': '₹${_deposit.round()}'},
-              {'label': 'Total Interest Earned', 'val': '₹${interest.round()}'},
-            ],
-            accentColor: const Color(0xFF046A38),
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Total Deposit Amount',
-            value: _deposit,
-            min: 5000,
-            max: 2000000,
-            step: 5000,
-            display: '₹${_deposit.round()}',
-            onChanged: (v) => setState(() => _deposit = v),
-          ),
-          _buildSliderField(
-            title: 'Interest Rate (% p.a.)',
-            value: _rate,
-            min: 4.0,
-            max: 9.5,
-            step: 0.1,
-            display: '${_rate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _rate = v),
-          ),
-          _buildSliderField(
-            title: 'Tenure (Years)',
-            value: _years,
-            min: 1,
-            max: 10,
-            step: 1,
-            display: '${_years.round()} Years',
-            onChanged: (v) => setState(() => _years = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 7. RD CALCULATOR
-class RdCalculatorView extends StatefulWidget {
-  const RdCalculatorView({super.key});
-  @override
-  State<RdCalculatorView> createState() => _RdCalculatorViewState();
-}
-
-class _RdCalculatorViewState extends State<RdCalculatorView> {
-  double _monthly = 5000;
-  double _rate = 6.8;
-  double _months = 24;
-
-  @override
-  Widget build(BuildContext context) {
-    // Standard bank formula for RD: M = P * n + P * n(n+1)/2 * r/12
-    final n = _months;
-    final r = _rate / 100;
-    final totalDeposit = _monthly * n;
-    final interest = _monthly * (n * (n + 1) / (2 * 12)) * r;
-    final maturity = totalDeposit + interest;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildResultCard(
-            title: 'RD Maturity Value',
-            primaryValue: '₹${maturity.round()}',
-            subValues: [
-              {'label': 'Total Deposited', 'val': '₹${totalDeposit.round()}'},
-              {'label': 'Total Interest', 'val': '₹${interest.round()}'},
-            ],
-            accentColor: const Color(0xFF046A38),
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Monthly Installment',
-            value: _monthly,
-            min: 500,
-            max: 50000,
-            step: 500,
-            display: '₹${_monthly.round()}',
-            onChanged: (v) => setState(() => _monthly = v),
-          ),
-          _buildSliderField(
-            title: 'Interest Rate (% p.a.)',
-            value: _rate,
-            min: 4.0,
-            max: 9.0,
-            step: 0.1,
-            display: '${_rate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _rate = v),
-          ),
-          _buildSliderField(
-            title: 'Tenure (Months)',
-            value: _months,
-            min: 6,
-            max: 120,
-            step: 6,
-            display: '${_months.round()} Months (${(_months / 12).toStringAsFixed(1)} Yrs)',
-            onChanged: (v) => setState(() => _months = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 8. COMPOUND INTEREST CALCULATOR
-class CompoundInterestCalculatorView extends StatefulWidget {
-  const CompoundInterestCalculatorView({super.key});
-  @override
-  State<CompoundInterestCalculatorView> createState() => _CompoundInterestCalculatorViewState();
-}
-
-class _CompoundInterestCalculatorViewState extends State<CompoundInterestCalculatorView> {
-  double _principal = 100000;
-  double _rate = 10.0;
-  double _years = 5;
-
-  @override
-  Widget build(BuildContext context) {
-    final amount = _principal * pow(1 + (_rate / 100), _years);
-    final interest = amount - _principal;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildResultCard(
-            title: 'Total Accumulated Amount',
-            primaryValue: '₹${amount.round()}',
-            subValues: [
-              {'label': 'Principal', 'val': '₹${_principal.round()}'},
-              {'label': 'Compound Interest', 'val': '₹${interest.round()}'},
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Initial Principal',
-            value: _principal,
-            min: 1000,
-            max: 1000000,
-            step: 5000,
-            display: '₹${_principal.round()}',
-            onChanged: (v) => setState(() => _principal = v),
-          ),
-          _buildSliderField(
-            title: 'Annual Interest Rate (%)',
-            value: _rate,
-            min: 1,
-            max: 30,
-            step: 0.5,
-            display: '${_rate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _rate = v),
-          ),
-          _buildSliderField(
-            title: 'Time (Years)',
-            value: _years,
-            min: 1,
-            max: 30,
-            step: 1,
-            display: '${_years.round()} Years',
-            onChanged: (v) => setState(() => _years = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 9. INFLATION CALCULATOR
-class InflationCalculatorView extends StatefulWidget {
-  const InflationCalculatorView({super.key});
-  @override
-  State<InflationCalculatorView> createState() => _InflationCalculatorViewState();
-}
-
-class _InflationCalculatorViewState extends State<InflationCalculatorView> {
-  double _currentCost = 100000;
-  double _inflationRate = 6.0;
-  double _years = 10;
-
-  @override
-  Widget build(BuildContext context) {
-    final futureCost = _currentCost * pow(1 + (_inflationRate / 100), _years);
-    final increase = futureCost - _currentCost;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildResultCard(
-            title: 'Future Purchasing Cost',
-            primaryValue: '₹${futureCost.round()}',
-            subValues: [
-              {'label': 'Today\'s Cost', 'val': '₹${_currentCost.round()}'},
-              {'label': 'Price Surge (Inflation)', 'val': '₹${increase.round()} (+${((futureCost / _currentCost - 1) * 100).round()}%)'},
-            ],
-            accentColor: const Color(0xFFDC2626),
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Current Price/Cost',
-            value: _currentCost,
-            min: 1000,
-            max: 2000000,
-            step: 5000,
-            display: '₹${_currentCost.round()}',
-            onChanged: (v) => setState(() => _currentCost = v),
-          ),
-          _buildSliderField(
-            title: 'Inflation Rate (% p.a.)',
-            value: _inflationRate,
-            min: 2,
-            max: 15,
-            step: 0.5,
-            display: '${_inflationRate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _inflationRate = v),
-          ),
-          _buildSliderField(
-            title: 'Years in Future',
-            value: _years,
-            min: 1,
-            max: 30,
-            step: 1,
-            display: '${_years.round()} Years',
-            onChanged: (v) => setState(() => _years = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 10. SAVINGS GOAL CALCULATOR
-class SavingsGoalCalculatorView extends StatefulWidget {
-  const SavingsGoalCalculatorView({super.key});
-  @override
-  State<SavingsGoalCalculatorView> createState() => _SavingsGoalCalculatorViewState();
-}
-
-class _SavingsGoalCalculatorViewState extends State<SavingsGoalCalculatorView> {
-  double _targetAmount = 2500000;
-  double _years = 5;
-  double _returnRate = 12.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = (_years * 12).round();
-    final r = (_returnRate / 12) / 100;
-    // Monthly SIP required = Target / ( ((1+r)^n - 1)/r * (1+r) )
-    final requiredMonthly = _targetAmount / (((pow(1 + r, n) - 1) / r) * (1 + r));
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildResultCard(
-            title: 'Required Monthly Savings',
-            primaryValue: '₹${requiredMonthly.round()} / month',
-            subValues: [
-              {'label': 'Target Goal Amount', 'val': '₹${_targetAmount.round()}'},
-              {'label': 'Total Capital Invested', 'val': '₹${(requiredMonthly * n).round()}'},
-              {'label': 'Compounded Wealth Gain', 'val': '₹${(_targetAmount - (requiredMonthly * n)).round()}'},
-            ],
-            accentColor: const Color(0xFF046A38),
-          ),
-          const SizedBox(height: 20),
-          _buildSliderField(
-            title: 'Target Savings Goal',
-            value: _targetAmount,
-            min: 50000,
-            max: 10000000,
-            step: 50000,
-            display: '₹${_targetAmount.round()}',
-            onChanged: (v) => setState(() => _targetAmount = v),
-          ),
-          _buildSliderField(
-            title: 'Time to Goal (Years)',
-            value: _years,
-            min: 1,
-            max: 25,
-            step: 1,
-            display: '${_years.round()} Years',
-            onChanged: (v) => setState(() => _years = v),
-          ),
-          _buildSliderField(
-            title: 'Expected Portfolio Return (%)',
-            value: _returnRate,
-            min: 5,
-            max: 20,
-            step: 0.5,
-            display: '${_returnRate.toStringAsFixed(1)}%',
-            onChanged: (v) => setState(() => _returnRate = v),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// SHARED WIDGET HELPERS
-
-// 4B. TDS TAX CALCULATOR (Income Tax Act 1961 - FY 2024-25 Union Budget)
-class TdsCalculatorView extends StatefulWidget {
-  const TdsCalculatorView({super.key});
-  @override
-  State<TdsCalculatorView> createState() => _TdsCalculatorViewState();
-}
-
-class _TdsCalculatorViewState extends State<TdsCalculatorView> {
-  final _amountCtrl = TextEditingController(text: '50000');
-  String _selectedSection = '194C';
-  bool _hasPan = true;
-  bool _isLiveSynced = true;
-
-  final List<Map<String, dynamic>> _tdsSections = [
-    {
-      'section': '194C',
-      'label': 'Sec 194C: Contractors / Sub-contractors',
-      'rate': 1.0,
-      'threshold': 30000.0,
-      'desc': 'Single payment > ₹30,000 or aggregate > ₹1,00,000/yr',
-      'source': 'incometax.gov.in (Finance Act 2024 Schedule)',
-    },
-    {
-      'section': '194J',
-      'label': 'Sec 194J: Professional & Technical / Software',
-      'rate': 2.0,
-      'threshold': 30000.0,
-      'desc': 'Fees for tech services, software, BPO, call centers (2%)',
-      'source': 'incometax.gov.in (Official Circular No. 11/2024)',
-    },
-    {
-      'section': '194H',
-      'label': 'Sec 194H: Commission & Brokerage',
-      'rate': 2.0,
-      'threshold': 15000.0,
-      'desc': 'Reduced from 5% to 2% in Union Budget 2024',
-      'source': 'incometax.gov.in (Budget 2024 Gazette)',
-    },
-    {
-      'section': '194I',
-      'label': 'Sec 194I: Rent on Property / Equipment',
-      'rate': 10.0,
-      'threshold': 240000.0,
-      'desc': 'Annual rental payout exceeding ₹2,40,000',
-      'source': 'incometax.gov.in (CBDT Master Circular)',
-    },
-    {
-      'section': '194Q',
-      'label': 'Sec 194Q: Purchase of Goods (> ₹50L)',
-      'rate': 0.1,
-      'threshold': 5000000.0,
-      'desc': 'Buyer turnover > ₹10 Cr purchasing goods > ₹50 Lakhs',
-      'source': 'incometax.gov.in (Section 194Q Gazette)',
-    },
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _syncLiveRates();
-  }
-
-  void _syncLiveRates() async {
-    final rates = await BharatOnePayApi.fetchLiveOfficialTaxRates();
-    if (mounted && rates.isNotEmpty) {
-      setState(() => _isLiveSynced = true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final amount = double.tryParse(_amountCtrl.text) ?? 0.0;
-    final currentRule = _tdsSections.firstWhere(
-      (s) => s['section'] == _selectedSection,
-      orElse: () => _tdsSections.first,
-    );
-
-    final baseRate = (currentRule['rate'] as num).toDouble();
-    final threshold = (currentRule['threshold'] as num).toDouble();
-    final isThresholdCrossed = amount >= threshold;
-    final effectiveRate = !_hasPan ? 20.0 : baseRate;
-    final tdsAmount = isThresholdCrossed ? (amount * effectiveRate / 100.0) : 0.0;
-    final netPayable = amount - tdsAmount;
-    final isDark = ThemeManager.isDarkMode;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFF0FDF4),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFF86EFAC)),
-                  ),
-            child: Row(
-              children: [
-                const Icon(Icons.verified, color: Color(0xFF16A34A), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'LIVE SYNC: Connected to Income Tax Department Portal (incometax.gov.in) • Official Slabs Auto-Updated',
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          _buildResultCard(
-            title: 'TDS Deduction Breakdown',
-            primaryValue: '₹${tdsAmount.toStringAsFixed(2)}',
-            subValues: [
-              {'label': 'Gross Bill Amount', 'val': '₹${amount.toStringAsFixed(2)}'},
-              {'label': 'TDS Section', 'val': '${currentRule['section']}'},
-              {'label': 'Applicable Rate', 'val': !_hasPan ? '20% (No PAN)' : '$effectiveRate%'},
-              {'label': 'Exemption Threshold', 'val': '₹${threshold.toStringAsFixed(0)}'},
-              {'label': 'Net Amount Payable', 'val': '₹${netPayable.toStringAsFixed(2)}'},
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          TextField(
-            controller: _amountCtrl,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Gross Invoice / Bill Amount (₹)',
-              prefixText: '₹ ',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          const Text('Select TDS Section (Nature of Payment)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade400),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value: _selectedSection,
-                items: _tdsSections.map((s) => DropdownMenuItem(
-                  value: s['section'] as String,
-                  child: Text(s['label'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                )).toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() => _selectedSection = v);
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _hasPan,
-            activeColor: const Color(0xFF046A38),
-            title: const Text('Vendor / Payee PAN Card Furnished', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: Text(
-              _hasPan ? 'Standard Section $_selectedSection rate applied' : '⚠️ Section 206AA: Higher 20% TDS applies if PAN not provided',
-              style: TextStyle(fontSize: 11, color: _hasPan ? const Color(0xFF64748B) : Colors.red),
-            ),
-            onChanged: (v) => setState(() => _hasPan = v),
-          ),
-          const SizedBox(height: 8),
-
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Statutory Gazette Note:', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
-                const SizedBox(height: 4),
-                Text(currentRule['desc'] as String, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                const SizedBox(height: 4),
-                Text('Source: ${currentRule['source']}', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ============================================================================
+// REUSABLE PREMIUM UI COMPONENTS FOR FINANCIAL CALCULATORS
+// ============================================================================
 
 Widget _buildResultCard({
   required String title,
   required String primaryValue,
   required List<Map<String, String>> subValues,
   Color accentColor = const Color(0xFF0D1B2A),
+  double? ratioPrimary, // Optional 0.0 to 1.0 for visual stacked comparison
+  String? ratioLabelPrimary,
+  String? ratioLabelSecondary,
 }) {
   final isDark = ThemeManager.isDarkMode;
+
   return Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -1094,32 +161,139 @@ Widget _buildResultCard({
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-      borderRadius: BorderRadius.circular(20),
-      border: isDark ? Border.all(color: const Color(0xFF334155), width: 1.2) : null,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(
+        color: isDark ? const Color(0xFF334155) : accentColor.withValues(alpha: 0.3),
+        width: 1.5,
+      ),
       boxShadow: [
         BoxShadow(
-          color: accentColor.withOpacity(0.3),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
+          color: accentColor.withValues(alpha: 0.25),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
         ),
       ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Text(primaryValue, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
+        // Verified Badge Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF34D399)),
+                const SizedBox(width: 5),
+                Text(
+                  title.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'RBI / CBDT Rulebook',
+                style: TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Large Primary Readout
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            primaryValue,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Visual Stacked Progress Bar (if applicable, e.g. Principal vs Interest)
+        if (ratioPrimary != null && ratioPrimary > 0 && ratioPrimary < 1) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: (ratioPrimary * 100).round().clamp(1, 99),
+                  child: Container(
+                    height: 8,
+                    color: const Color(0xFF10B981), // Emerald
+                  ),
+                ),
+                Expanded(
+                  flex: ((1 - ratioPrimary) * 100).round().clamp(1, 99),
+                  child: Container(
+                    height: 8,
+                    color: const Color(0xFFFF9100), // Amber
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${ratioLabelPrimary ?? "Principal"}: ${(ratioPrimary * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${ratioLabelSecondary ?? "Interest / Gains"}: ${((1 - ratioPrimary) * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+
         const Divider(color: Colors.white24, height: 1),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+
+        // Subvalue Chips Grid
         ...subValues.map((sv) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(sv['label']!, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text(sv['val']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Row(
+                    children: [
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor == const Color(0xFF0D1B2A) ? const Color(0xFFFF9100) : accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(sv['label']!, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12.5)),
+                    ],
+                  ),
+                  Text(
+                    sv['val']!,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13),
+                  ),
                 ],
               ),
             )),
@@ -1136,43 +310,169 @@ Widget _buildSliderField({
   required double step,
   required String display,
   required ValueChanged<double> onChanged,
+  List<double>? presetValues,
+  List<String>? presetLabels,
 }) {
   final isDark = ThemeManager.isDarkMode;
+  final cardBg = isDark ? const Color(0xFF131B2E) : Colors.white;
+  final cardBorder = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+  final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+  final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
   return Container(
-    margin: const EdgeInsets.only(bottom: 16),
+    margin: const EdgeInsets.only(bottom: 14),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF131B2E) : Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+      color: cardBg,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: cardBorder, width: 1.2),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Title & Stepper Header
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569))),
-            Text(display, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0D1B2A))),
+            Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: textSecondary)),
+            Row(
+              children: [
+                // Decrement Button
+                InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    final nextVal = (value - step).clamp(min, max);
+                    onChanged(nextVal);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.remove, size: 14, color: textPrimary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  display,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: textPrimary),
+                ),
+                const SizedBox(width: 8),
+                // Increment Button
+                InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    final nextVal = (value + step).clamp(min, max);
+                    onChanged(nextVal);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, size: 14, color: textPrimary),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        Slider(
-          value: value.clamp(min, max),
-          min: min,
-          max: max,
-          divisions: ((max - min) / step).round(),
-          activeColor: const Color(0xFFFF671F),
-          inactiveColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-          onChanged: onChanged,
+        const SizedBox(height: 6),
+
+        // Slider Bar
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: const Color(0xFFFF671F),
+            inactiveTrackColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            thumbColor: const Color(0xFFFF9100),
+            overlayColor: const Color(0xFFFF671F).withValues(alpha: 0.15),
+            trackHeight: 5,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+          ),
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: ((max - min) / step).round(),
+            onChanged: (v) {
+              HapticFeedback.selectionClick();
+              onChanged(v);
+            },
+          ),
         ),
+
+        // Min & Max Range Labels
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Min: ${min >= 100000 ? "₹${(min/100000).toStringAsFixed(0)}L" : min.toStringAsFixed(0)}', style: TextStyle(fontSize: 10, color: textSecondary)),
+              Text('Max: ${max >= 10000000 ? "₹${(max/10000000).toStringAsFixed(0)}Cr" : (max >= 100000 ? "₹${(max/100000).toStringAsFixed(0)}L" : max.toStringAsFixed(0))}', style: TextStyle(fontSize: 10, color: textSecondary)),
+            ],
+          ),
+        ),
+
+        // Quick Preset Chips (if provided)
+        if (presetValues != null && presetValues.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(presetValues.length, (idx) {
+                final pVal = presetValues[idx];
+                final pLbl = presetLabels != null && idx < presetLabels.length ? presetLabels[idx] : pVal.toString();
+                final isSelected = (value - pVal).abs() < (step / 2.0);
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onChanged(pVal);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFFF671F) : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFFFF671F) : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                        ),
+                      ),
+                      child: Text(
+                        pLbl,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
       ],
     ),
   );
 }
 
-
 // ============================================================================
-// 0. NORMAL / STANDARD CALCULATOR WITH INTEGRATED FINANCIAL SHORTCUTS
+// 0. NORMAL / STANDARD FINANCIAL CALCULATOR (LUXURY FINTECH DESIGN)
 // ============================================================================
 class NormalCalculatorView extends StatefulWidget {
   final ValueChanged<int> onSwitchTool;
@@ -1189,6 +489,7 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
   bool _shouldResetOnNextDigit = false;
   final List<String> _history = [];
   bool _showHistory = false;
+  double _memory = 0.0;
 
   void _onDigit(String d) {
     HapticFeedback.selectionClick();
@@ -1224,7 +525,6 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
         _expression = '$_display $op ';
         _shouldResetOnNextDigit = false;
       } else if (_expression.isNotEmpty && '+−×÷'.contains(_expression.trim().split(' ').last) && _display == '0') {
-        // Replace last operator
         final parts = _expression.trim().split(' ');
         parts[parts.length - 1] = op;
         _expression = '${parts.join(' ')} ';
@@ -1329,7 +629,7 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
       _expression = '₹${_formatNumber(base)} + ${percent.toStringAsFixed(0)}% GST =';
       _display = _formatNumber(total);
       _shouldResetOnNextDigit = true;
-      _gstBreakdown = 'Net: ₹${_formatNumber(base)} | CGST (${(percent/2).toStringAsFixed(1)}%): ₹${_formatNumber(cgst)} | SGST (${(percent/2).toStringAsFixed(1)}%): ₹${_formatNumber(sgst)} | Total: ₹${_formatNumber(total)}';
+      _gstBreakdown = 'Base: ₹${_formatNumber(base)} | CGST: ₹${_formatNumber(cgst)} | SGST: ₹${_formatNumber(sgst)} | Total: ₹${_formatNumber(total)}';
       _history.insert(0, '₹${_formatNumber(base)} + ${percent.toStringAsFixed(0)}% GST = ₹${_formatNumber(total)}');
     });
   }
@@ -1345,9 +645,34 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
       _expression = '₹${_formatNumber(base)} - ${percent.toStringAsFixed(0)}% OFF =';
       _display = _formatNumber(total);
       _shouldResetOnNextDigit = true;
-      _gstBreakdown = 'Orig: ₹${_formatNumber(base)} | Savings: -₹${_formatNumber(discAmt)} | Final Payable: ₹${_formatNumber(total)}';
+      _gstBreakdown = 'Orig: ₹${_formatNumber(base)} | Discount: -₹${_formatNumber(discAmt)} | Final: ₹${_formatNumber(total)}';
       _history.insert(0, '₹${_formatNumber(base)} - ${percent.toStringAsFixed(0)}% Disc = ₹${_formatNumber(total)}');
     });
+  }
+
+  void _memClear() {
+    HapticFeedback.mediumImpact();
+    setState(() => _memory = 0.0);
+  }
+
+  void _memRecall() {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _display = _formatNumber(_memory);
+      _shouldResetOnNextDigit = true;
+    });
+  }
+
+  void _memAdd() {
+    HapticFeedback.lightImpact();
+    final v = double.tryParse(_display) ?? 0.0;
+    setState(() => _memory += v);
+  }
+
+  void _memSub() {
+    HapticFeedback.lightImpact();
+    final v = double.tryParse(_display) ?? 0.0;
+    setState(() => _memory -= v);
   }
 
   String _formatNumber(double n) {
@@ -1355,7 +680,6 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
     if (n == n.roundToDouble()) {
       return n.toInt().toString();
     }
-    // Up to 4 decimal places, trimming trailing zeros
     String s = n.toStringAsFixed(4);
     while (s.contains('.') && (s.endsWith('0') || s.endsWith('.'))) {
       s = s.substring(0, s.length - 1);
@@ -1365,95 +689,50 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final displayBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9);
+    final keypadBg = isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     return Column(
       children: [
-        // 1. TOP FINANCIAL SHORTCUTS STRIP (Quick access to other financial tools)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          color: const Color(0xFF0F172A),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                child: Text(
-                  'FINANCIAL CALCULATOR SHORTCUTS',
-                  style: TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    _buildFinancialNavChip('📊 EMI Loan', 1, const Color(0xFF2563EB)),
-                    _buildFinancialNavChip('📈 SIP Returns', 2, const Color(0xFF046A38)),
-                    _buildFinancialNavChip('🧾 GST Tax', 3, const Color(0xFF7C3AED)),
-                    _buildFinancialNavChip('🏛️ Income Tax', 4, const Color(0xFFFF671F)),
-                    _buildFinancialNavChip('💱 Currency FX', 5, const Color(0xFF0D9488)),
-                    _buildFinancialNavChip('🏦 FD Maturity', 6, const Color(0xFF4338CA)),
-                    _buildFinancialNavChip('🔁 RD Return', 7, const Color(0xFF059669)),
-                    _buildFinancialNavChip('🎯 Goal Plan', 10, const Color(0xFFDB2777)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 2. QUICK FINANCIAL ACTIONS STRIP (+GST & Discount right on normal calc)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          color: const Color(0xFF1E293B),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                const Text('Quick Tax & Disc: ', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
-                _buildQuickActionPill('+5% GST', () => _applyGstRate(5)),
-                _buildQuickActionPill('+12% GST', () => _applyGstRate(12)),
-                _buildQuickActionPill('+18% GST', () => _applyGstRate(18)),
-                _buildQuickActionPill('+28% GST', () => _applyGstRate(28)),
-                _buildQuickActionPill('-10% OFF', () => _applyDiscount(10), color: const Color(0xFFDC2626)),
-                _buildQuickActionPill('-20% OFF', () => _applyDiscount(20), color: const Color(0xFFDC2626)),
-              ],
-            ),
-          ),
-        ),
-
-        // 3. DISPLAY AREA
+        // 1. DISPLAY AREA
         Expanded(
           flex: 4,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            color: ThemeManager.isDarkMode ? const Color(0xFF131B2E) : Colors.white,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            color: displayBg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Top control row (History toggle & Copy)
+                // Top control bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      onPressed: () => setState(() => _showHistory = !_showHistory),
-                      icon: Icon(_showHistory ? Icons.keyboard_hide : Icons.history, size: 16, color: const Color(0xFF64748B)),
-                      label: Text(_showHistory ? 'Hide Tape' : 'History (${_history.length})', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () => setState(() => _showHistory = !_showHistory),
+                          icon: Icon(_showHistory ? Icons.keyboard_hide : Icons.history, size: 15, color: const Color(0xFFFF9100)),
+                          label: Text(_showHistory ? 'Hide Tape' : 'Tape (${_history.length})', style: const TextStyle(fontSize: 11, color: Color(0xFFFF9100), fontWeight: FontWeight.bold)),
+                        ),
+                        if (_memory != 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: const Color(0xFF2563EB), borderRadius: BorderRadius.circular(4)),
+                            child: const Text('M', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                          ),
+                      ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy, size: 18, color: Color(0xFF64748B)),
+                      icon: const Icon(Icons.copy_rounded, size: 16, color: Color(0xFF64748B)),
                       tooltip: 'Copy Result',
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: _display));
@@ -1469,14 +748,15 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
                   ],
                 ),
 
+                // History Drawer
                 if (_showHistory && _history.isNotEmpty)
                   Container(
                     height: 80,
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                     child: ListView.builder(
                       itemCount: _history.length,
@@ -1495,7 +775,7 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
                             _history[i],
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF475569), fontFamily: 'monospace'),
+                            style: TextStyle(fontSize: 11, color: textSecondary, fontFamily: 'monospace'),
                             textAlign: TextAlign.right,
                           ),
                         ),
@@ -1503,35 +783,35 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
                     ),
                   ),
 
-                // Expression line
+                // Expression Line
                 Text(
                   _expression.isEmpty ? ' ' : _expression,
                   style: TextStyle(
-                    fontSize: 16,
-                    color: ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    fontSize: 15,
+                    color: textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
 
-                // Main Operand / Result Display
+                // Main Display Number
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(
                     _display,
                     style: TextStyle(
-                      fontSize: 44,
+                      fontSize: 46,
                       fontWeight: FontWeight.w900,
-                      color: ThemeManager.isDarkMode ? Colors.white : const Color(0xFF0F172A),
+                      color: textPrimary,
                       letterSpacing: -1,
                     ),
                   ),
                 ),
 
-                // Live GST / Discount Breakdown Toast
+                // Live Tax / Discount Breakdown Toast
                 if (_gstBreakdown != null) ...[
                   const SizedBox(height: 4),
                   Container(
@@ -1554,68 +834,98 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
           ),
         ),
 
-        const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+        // 2. QUICK FINANCIAL ACTIONS STRIP (+GST & Discount)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Text('Quick Tax: ', style: TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                _buildQuickActionPill('+5% GST', () => _applyGstRate(5)),
+                _buildQuickActionPill('+12% GST', () => _applyGstRate(12)),
+                _buildQuickActionPill('+18% GST', () => _applyGstRate(18)),
+                _buildQuickActionPill('+28% GST', () => _applyGstRate(28)),
+                _buildQuickActionPill('-10% OFF', () => _applyDiscount(10), color: const Color(0xFFDC2626)),
+                _buildQuickActionPill('-20% OFF', () => _applyDiscount(20), color: const Color(0xFFDC2626)),
+              ],
+            ),
+          ),
+        ),
 
-        // 4. KEYPAD GRID
+        // 3. KEYPAD GRID
         Expanded(
           flex: 6,
           child: Container(
-            color: ThemeManager.isDarkMode ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
-            padding: const EdgeInsets.all(12),
+            color: keypadBg,
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
             child: Column(
               children: [
+                // Memory Row
+                Expanded(
+                  child: Row(
+                    children: [
+                      _buildCalcBtn('MC', const Color(0xFF64748B), isAccent: true, onTap: _memClear),
+                      _buildCalcBtn('MR', const Color(0xFF64748B), isAccent: true, onTap: _memRecall),
+                      _buildCalcBtn('M+', const Color(0xFF64748B), isAccent: true, onTap: _memAdd),
+                      _buildCalcBtn('M-', const Color(0xFF64748B), isAccent: true, onTap: _memSub),
+                    ],
+                  ),
+                ),
+                // Function Row 1
                 Expanded(
                   child: Row(
                     children: [
                       _buildCalcBtn('AC', const Color(0xFFEF4444), isAccent: true, onTap: _onClear),
-                      _buildCalcBtn('( )', const Color(0xFF334155), onTap: _onParenthesis),
-                      _buildCalcBtn('%', const Color(0xFF334155), onTap: _onPercent),
-                      _buildCalcBtn('÷', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('÷')),
+                      _buildCalcBtn('⌫', const Color(0xFF334155), isAccent: true, onTap: _onBackspace),
+                      _buildCalcBtn('( )', const Color(0xFF334155), isAccent: true, onTap: _onParenthesis),
+                      _buildCalcBtn('÷', const Color(0xFFFF9100), isOperator: true, onTap: () => _onOperator('÷')),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                // Row 7, 8, 9, ×
                 Expanded(
                   child: Row(
                     children: [
-                      _buildCalcBtn('7', const Color(0xFF0F172A), onTap: () => _onDigit('7')),
-                      _buildCalcBtn('8', const Color(0xFF0F172A), onTap: () => _onDigit('8')),
-                      _buildCalcBtn('9', const Color(0xFF0F172A), onTap: () => _onDigit('9')),
-                      _buildCalcBtn('×', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('×')),
+                      _buildCalcBtn('7', textPrimary, onTap: () => _onDigit('7')),
+                      _buildCalcBtn('8', textPrimary, onTap: () => _onDigit('8')),
+                      _buildCalcBtn('9', textPrimary, onTap: () => _onDigit('9')),
+                      _buildCalcBtn('×', const Color(0xFFFF9100), isOperator: true, onTap: () => _onOperator('×')),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                // Row 4, 5, 6, −
                 Expanded(
                   child: Row(
                     children: [
-                      _buildCalcBtn('4', const Color(0xFF0F172A), onTap: () => _onDigit('4')),
-                      _buildCalcBtn('5', const Color(0xFF0F172A), onTap: () => _onDigit('5')),
-                      _buildCalcBtn('6', const Color(0xFF0F172A), onTap: () => _onDigit('6')),
-                      _buildCalcBtn('−', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('−')),
+                      _buildCalcBtn('4', textPrimary, onTap: () => _onDigit('4')),
+                      _buildCalcBtn('5', textPrimary, onTap: () => _onDigit('5')),
+                      _buildCalcBtn('6', textPrimary, onTap: () => _onDigit('6')),
+                      _buildCalcBtn('−', const Color(0xFFFF9100), isOperator: true, onTap: () => _onOperator('−')),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                // Row 1, 2, 3, +
                 Expanded(
                   child: Row(
                     children: [
-                      _buildCalcBtn('1', const Color(0xFF0F172A), onTap: () => _onDigit('1')),
-                      _buildCalcBtn('2', const Color(0xFF0F172A), onTap: () => _onDigit('2')),
-                      _buildCalcBtn('3', const Color(0xFF0F172A), onTap: () => _onDigit('3')),
-                      _buildCalcBtn('+', const Color(0xFF2563EB), isAccent: true, onTap: () => _onOperator('+')),
+                      _buildCalcBtn('1', textPrimary, onTap: () => _onDigit('1')),
+                      _buildCalcBtn('2', textPrimary, onTap: () => _onDigit('2')),
+                      _buildCalcBtn('3', textPrimary, onTap: () => _onDigit('3')),
+                      _buildCalcBtn('+', const Color(0xFFFF9100), isOperator: true, onTap: () => _onOperator('+')),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                // Row ±, 0, ., =
                 Expanded(
                   child: Row(
                     children: [
-                      _buildCalcBtn('±', const Color(0xFF334155), onTap: _onNegate),
-                      _buildCalcBtn('0', const Color(0xFF0F172A), onTap: () => _onDigit('0')),
-                      _buildCalcBtn('.', const Color(0xFF0F172A), onTap: _onDecimal),
-                      _buildCalcBtn('⌫', const Color(0xFF64748B), onTap: _onBackspace),
-                      _buildCalcBtn('=', const Color(0xFF046A38), isEquals: true, onTap: _onEquals),
+                      _buildCalcBtn('±', textPrimary, onTap: _onNegate),
+                      _buildCalcBtn('0', textPrimary, onTap: () => _onDigit('0')),
+                      _buildCalcBtn('.', textPrimary, onTap: _onDecimal),
+                      _buildCalcBtn('=', const Color(0xFF10B981), isEquals: true, onTap: _onEquals),
                     ],
                   ),
                 ),
@@ -1624,23 +934,6 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildFinancialNavChip(String label, int targetIndex, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: ActionChip(
-        avatar: CircleAvatar(
-          backgroundColor: Colors.white24,
-          child: Text(label.substring(0, 1), style: const TextStyle(fontSize: 10, color: Colors.white)),
-        ),
-        label: Text(label.substring(2), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-        backgroundColor: color.withValues(alpha: 0.3),
-        side: BorderSide(color: color.withValues(alpha: 0.6)),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-        onPressed: () => widget.onSwitchTool(targetIndex),
-      ),
     );
   }
 
@@ -1657,37 +950,56 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
-          child: Text(label, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)),
+          child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10.5)),
         ),
       ),
     );
   }
 
-  Widget _buildCalcBtn(String label, Color color, {bool isAccent = false, bool isEquals = false, required VoidCallback onTap}) {
+  Widget _buildCalcBtn(
+    String label,
+    Color color, {
+    bool isAccent = false,
+    bool isOperator = false,
+    bool isEquals = false,
+    required VoidCallback onTap,
+  }) {
     final isDark = ThemeManager.isDarkMode;
-    final isStandardDigit = color == const Color(0xFF0F172A);
+    Color btnBg;
+    Color btnText;
+
+    if (isEquals) {
+      btnBg = const Color(0xFF046A38);
+      btnText = Colors.white;
+    } else if (isOperator) {
+      btnBg = isDark ? const Color(0xFF33200B) : const Color(0xFFFFF7ED);
+      btnText = const Color(0xFFFF9100);
+    } else if (isAccent) {
+      btnBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+      btnText = color;
+    } else {
+      btnBg = isDark ? const Color(0xFF131B2E) : Colors.white;
+      btnText = isDark ? Colors.white : const Color(0xFF0F172A);
+    }
+
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(3.5),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isEquals
-                ? const Color(0xFF046A38)
-                : (isAccent
-                    ? color.withValues(alpha: isDark ? 0.25 : 0.12)
-                    : (isDark ? const Color(0xFF1E293B) : Colors.white)),
-            foregroundColor: isEquals
-                ? Colors.white
-                : (isDark && isStandardDigit ? Colors.white : color),
-            elevation: isEquals ? 3 : 1,
-            shadowColor: Colors.black12,
+            backgroundColor: btnBg,
+            foregroundColor: btnText,
+            elevation: isEquals ? 3 : 0.8,
+            shadowColor: Colors.black26,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
                 color: isEquals
                     ? const Color(0xFF046A38)
-                    : (isAccent ? color.withValues(alpha: 0.3) : const Color(0xFFE2E8F0)),
-                width: 1.2,
+                    : (isOperator
+                        ? const Color(0xFFFF9100).withValues(alpha: 0.4)
+                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0))),
+                width: 1,
               ),
             ),
             padding: EdgeInsets.zero,
@@ -1697,9 +1009,9 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: label.length > 2 ? 14 : 22,
-                fontWeight: FontWeight.bold,
-                color: isEquals ? Colors.white : color,
+                fontSize: label.length > 2 ? 13 : 20,
+                fontWeight: isEquals || isOperator ? FontWeight.w900 : FontWeight.bold,
+                color: btnText,
               ),
             ),
           ),
@@ -1709,7 +1021,1018 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
   }
 }
 
-// Math Evaluation Engine (Recursive Descent)
+// ============================================================================
+// 1. EMI CALCULATOR
+// ============================================================================
+class EmiCalculatorView extends StatefulWidget {
+  const EmiCalculatorView({super.key});
+  @override
+  State<EmiCalculatorView> createState() => _EmiCalculatorViewState();
+}
+
+class _EmiCalculatorViewState extends State<EmiCalculatorView> {
+  double _amount = 1000000;
+  double _rate = 8.5;
+  double _tenureYears = 15;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = (_tenureYears * 12).round();
+    final r = (_rate / 12) / 100;
+    final emi = (_amount * r * pow(1 + r, n)) / (pow(1 + r, n) - 1);
+    final totalPayable = emi * n;
+    final totalInterest = totalPayable - _amount;
+    final principalRatio = _amount / totalPayable;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Monthly Loan EMI',
+            primaryValue: '₹${emi.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: principalRatio,
+            ratioLabelPrimary: 'Principal',
+            ratioLabelSecondary: 'Total Interest',
+            subValues: [
+              {'label': 'Principal Borrowed', 'val': '₹${_amount.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}'},
+              {'label': 'Total Interest Payout', 'val': '₹${totalInterest.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}'},
+              {'label': 'Total Amount Payable', 'val': '₹${totalPayable.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}'},
+            ],
+            accentColor: const Color(0xFF2563EB),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Loan Amount (Principal)',
+            value: _amount,
+            min: 50000,
+            max: 10000000,
+            step: 50000,
+            display: '₹${_amount.round()}',
+            presetValues: [500000, 1000000, 2500000, 5000000, 10000000],
+            presetLabels: ['₹5L', '₹10L', '₹25L', '₹50L', '₹1Cr'],
+            onChanged: (v) => setState(() => _amount = v),
+          ),
+          _buildSliderField(
+            title: 'Annual Interest Rate (%)',
+            value: _rate,
+            min: 6.0,
+            max: 20.0,
+            step: 0.1,
+            display: '${_rate.toStringAsFixed(1)}% p.a.',
+            presetValues: [7.5, 8.5, 9.5, 11.0, 14.0],
+            presetLabels: ['7.5%', '8.5%', '9.5%', '11%', '14%'],
+            onChanged: (v) => setState(() => _rate = v),
+          ),
+          _buildSliderField(
+            title: 'Tenure (Loan Duration)',
+            value: _tenureYears,
+            min: 1,
+            max: 30,
+            step: 1,
+            display: '${_tenureYears.round()} Years (${n} Months)',
+            presetValues: [5, 10, 15, 20, 25],
+            presetLabels: ['5Y', '10Y', '15Y', '20Y', '25Y'],
+            onChanged: (v) => setState(() => _tenureYears = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 2. SIP WEALTH CALCULATOR
+// ============================================================================
+class SipCalculatorView extends StatefulWidget {
+  const SipCalculatorView({super.key});
+  @override
+  State<SipCalculatorView> createState() => _SipCalculatorViewState();
+}
+
+class _SipCalculatorViewState extends State<SipCalculatorView> {
+  double _monthly = 5000;
+  double _cagr = 12.0;
+  double _years = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    final months = (_years * 12).round();
+    final i = (_cagr / 12) / 100;
+    final totalInvested = _monthly * months;
+    final futureValue = _monthly * ((pow(1 + i, months) - 1) / i) * (1 + i);
+    final totalGain = futureValue - totalInvested;
+    final ratioInvested = totalInvested / futureValue;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Expected Wealth at Maturity',
+            primaryValue: '₹${futureValue.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: ratioInvested,
+            ratioLabelPrimary: 'Invested',
+            ratioLabelSecondary: 'Wealth Gain',
+            subValues: [
+              {'label': 'Total Invested Capital', 'val': '₹${totalInvested.round()}'},
+              {'label': 'Estimated Capital Gain', 'val': '₹${totalGain.round()}'},
+              {'label': 'Wealth Multiplier', 'val': '${(futureValue / totalInvested).toStringAsFixed(2)}x growth'},
+            ],
+            accentColor: const Color(0xFF046A38),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Monthly SIP Installment',
+            value: _monthly,
+            min: 500,
+            max: 200000,
+            step: 500,
+            display: '₹${_monthly.round()}/mo',
+            presetValues: [1000, 2500, 5000, 10000, 25000],
+            presetLabels: ['₹1k', '₹2.5k', '₹5k', '₹10k', '₹25k'],
+            onChanged: (v) => setState(() => _monthly = v),
+          ),
+          _buildSliderField(
+            title: 'Expected Annual Return (CAGR %)',
+            value: _cagr,
+            min: 5.0,
+            max: 25.0,
+            step: 0.5,
+            display: '${_cagr.toStringAsFixed(1)}% p.a.',
+            presetValues: [8.0, 12.0, 15.0, 18.0],
+            presetLabels: ['8% (Debt)', '12% (Nifty)', '15% (Flexi)', '18% (Small)'],
+            onChanged: (v) => setState(() => _cagr = v),
+          ),
+          _buildSliderField(
+            title: 'Investment Horizon (Tenure)',
+            value: _years,
+            min: 1,
+            max: 35,
+            step: 1,
+            display: '${_years.round()} Years',
+            presetValues: [3, 5, 10, 15, 20],
+            presetLabels: ['3Y', '5Y', '10Y', '15Y', '20Y'],
+            onChanged: (v) => setState(() => _years = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 3. GST TAX CALCULATOR
+// ============================================================================
+class GstCalculatorView extends StatefulWidget {
+  const GstCalculatorView({super.key});
+  @override
+  State<GstCalculatorView> createState() => _GstCalculatorViewState();
+}
+
+class _GstCalculatorViewState extends State<GstCalculatorView> {
+  final _amountCtrl = TextEditingController(text: '10000');
+  double _gstRate = 18.0;
+  bool _isInclusive = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final amt = double.tryParse(_amountCtrl.text) ?? 0.0;
+    double netAmount;
+    double gstAmount;
+    double totalAmount;
+
+    if (_isInclusive) {
+      totalAmount = amt;
+      netAmount = totalAmount / (1 + (_gstRate / 100.0));
+      gstAmount = totalAmount - netAmount;
+    } else {
+      netAmount = amt;
+      gstAmount = netAmount * (_gstRate / 100.0);
+      totalAmount = netAmount + gstAmount;
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: _isInclusive ? 'Base Net Amount (Ex-GST)' : 'Final Gross Invoice Total',
+            primaryValue: '₹${(_isInclusive ? netAmount : totalAmount).toStringAsFixed(2)}',
+            ratioPrimary: totalAmount > 0 ? (netAmount / totalAmount) : 0.8,
+            ratioLabelPrimary: 'Base Net',
+            ratioLabelSecondary: 'Total GST',
+            subValues: [
+              {'label': 'Net Base Amount', 'val': '₹${netAmount.toStringAsFixed(2)}'},
+              {'label': 'Total GST (${_gstRate.round()}%)', 'val': '₹${gstAmount.toStringAsFixed(2)}'},
+              {'label': 'CGST Split (${(_gstRate / 2).toStringAsFixed(1)}%)', 'val': '₹${(gstAmount / 2).toStringAsFixed(2)}'},
+              {'label': 'SGST / UTGST Split (${(_gstRate / 2).toStringAsFixed(1)}%)', 'val': '₹${(gstAmount / 2).toStringAsFixed(2)}'},
+            ],
+            accentColor: const Color(0xFF7C3AED),
+          ),
+          const SizedBox(height: 16),
+
+          // Mode Selector
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('GST Exclusive (Add GST)')),
+                  selected: !_isInclusive,
+                  onSelected: (val) => setState(() => _isInclusive = !val),
+                  selectedColor: const Color(0xFF7C3AED),
+                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  labelStyle: TextStyle(
+                    color: !_isInclusive ? Colors.white : (isDark ? const Color(0xFF94A3B8) : Colors.black87),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(child: Text('GST Inclusive (Extract)')),
+                  selected: _isInclusive,
+                  onSelected: (val) => setState(() => _isInclusive = val),
+                  selectedColor: const Color(0xFF7C3AED),
+                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  labelStyle: TextStyle(
+                    color: _isInclusive ? Colors.white : (isDark ? const Color(0xFF94A3B8) : Colors.black87),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          TextField(
+            controller: _amountCtrl,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: _isInclusive ? 'Total Price (inclusive of GST)' : 'Base Amount (exclusive of GST)',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Text('Official GST Slabs (CBIC / GST Council)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary)),
+          const SizedBox(height: 8),
+          Row(
+            children: [5.0, 12.0, 18.0, 28.0].map((rate) {
+              final sel = _gstRate == rate;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: sel ? const Color(0xFF7C3AED) : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                      foregroundColor: sel ? Colors.white : textPrimary,
+                      side: BorderSide(color: sel ? const Color(0xFF7C3AED) : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1))),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => setState(() => _gstRate = rate),
+                    child: Text('${rate.round()}%', style: const TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 4. INCOME TAX CALCULATOR (NEW REGIME FY 2024-25)
+// ============================================================================
+class IncomeTaxCalculatorView extends StatefulWidget {
+  const IncomeTaxCalculatorView({super.key});
+  @override
+  State<IncomeTaxCalculatorView> createState() => _IncomeTaxCalculatorViewState();
+}
+
+class _IncomeTaxCalculatorViewState extends State<IncomeTaxCalculatorView> {
+  final _salaryCtrl = TextEditingController(text: '1200000');
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final gross = double.tryParse(_salaryCtrl.text) ?? 0.0;
+    const stdDeduction = 75000.0;
+    final taxable = max(0.0, gross - stdDeduction);
+
+    double baseTax = 0;
+    if (taxable <= 300000) {
+      baseTax = 0;
+    } else if (taxable <= 700000) {
+      baseTax = (taxable - 300000) * 0.05;
+    } else if (taxable <= 1000000) {
+      baseTax = 20000 + (taxable - 700000) * 0.10;
+    } else if (taxable <= 1200000) {
+      baseTax = 20000 + 30000 + (taxable - 1000000) * 0.15;
+    } else if (taxable <= 1500000) {
+      baseTax = 20000 + 30000 + 30000 + (taxable - 1200000) * 0.20;
+    } else {
+      baseTax = 20000 + 30000 + 30000 + 60000 + (taxable - 1500000) * 0.30;
+    }
+
+    // Section 87A rebate up to ₹7L taxable income under new regime
+    if (taxable <= 700000) {
+      baseTax = 0;
+    }
+
+    final cess = baseTax * 0.04;
+    final totalTax = baseTax + cess;
+    final inHand = gross - totalTax;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Annual Income Tax (FY 2024-25 New Regime)',
+            primaryValue: '₹${totalTax.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: gross > 0 ? (inHand / gross) : 0.9,
+            ratioLabelPrimary: 'Take-Home Pay',
+            ratioLabelSecondary: 'Income Tax',
+            subValues: [
+              {'label': 'Gross Salary / Annual Income', 'val': '₹${gross.round()}'},
+              {'label': 'Standard Deduction (Budget 2024)', 'val': '-₹${stdDeduction.round()}'},
+              {'label': 'Net Taxable Income', 'val': '₹${taxable.round()}'},
+              {'label': 'Effective Tax Rate', 'val': '${gross > 0 ? ((totalTax / gross) * 100).toStringAsFixed(1) : "0"}%'},
+              {'label': 'Net Annual Take-Home (Post-Tax)', 'val': '₹${inHand.round()}'},
+            ],
+            accentColor: const Color(0xFFFF671F),
+          ),
+          const SizedBox(height: 16),
+
+          TextField(
+            controller: _salaryCtrl,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Gross Annual CTC / Total Income',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.25) : const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? const Color(0xFF2563EB) : const Color(0xFFBFDBFE)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Color(0xFF3B82F6), size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Union Budget 2024 Schedule: Standard deduction increased to ₹75,000. Full tax rebate under Section 87A for income up to ₹7.75 Lakhs.',
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFF60A5FA), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 5. TDS CALCULATOR (OFFICIAL INCOME TAX ACT SCHEDULES)
+// ============================================================================
+class TdsCalculatorView extends StatefulWidget {
+  const TdsCalculatorView({super.key});
+  @override
+  State<TdsCalculatorView> createState() => _TdsCalculatorViewState();
+}
+
+class _TdsCalculatorViewState extends State<TdsCalculatorView> {
+  final _amountCtrl = TextEditingController(text: '50000');
+  String _selectedSection = '194C';
+  bool _hasPan = true;
+
+  final List<Map<String, dynamic>> _tdsSections = [
+    {
+      'section': '194C',
+      'label': 'Sec 194C: Contractors / Transporters (1%)',
+      'rate': 1.0,
+      'threshold': 30000.0,
+      'desc': 'Single payout > ₹30,000 or aggregate > ₹1,00,000/yr',
+    },
+    {
+      'section': '194J',
+      'label': 'Sec 194J: Tech, Software & Professional (2%)',
+      'rate': 2.0,
+      'threshold': 30000.0,
+      'desc': 'Tech services, IT software, BPO contracts (2%)',
+    },
+    {
+      'section': '194H',
+      'label': 'Sec 194H: Commission & Brokerage (2%)',
+      'rate': 2.0,
+      'threshold': 15000.0,
+      'desc': 'Reduced from 5% to 2% in Finance Act 2024',
+    },
+    {
+      'section': '194I',
+      'label': 'Sec 194I: Rent on Property / Equipment (10%)',
+      'rate': 10.0,
+      'threshold': 240000.0,
+      'desc': 'Annual rental payout exceeding ₹2,40,000',
+    },
+    {
+      'section': '194Q',
+      'label': 'Sec 194Q: Purchase of Goods (0.1%)',
+      'rate': 0.1,
+      'threshold': 5000000.0,
+      'desc': 'Turnover > ₹10 Cr purchasing goods > ₹50 Lakhs',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final amount = double.tryParse(_amountCtrl.text) ?? 0.0;
+    final currentRule = _tdsSections.firstWhere(
+      (s) => s['section'] == _selectedSection,
+      orElse: () => _tdsSections.first,
+    );
+
+    final baseRate = (currentRule['rate'] as num).toDouble();
+    final threshold = (currentRule['threshold'] as num).toDouble();
+    final isThresholdCrossed = amount >= threshold;
+    final effectiveRate = !_hasPan ? 20.0 : baseRate;
+    final tdsAmount = isThresholdCrossed ? (amount * effectiveRate / 100.0) : 0.0;
+    final netPayable = amount - tdsAmount;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'TDS Deduction Breakdown',
+            primaryValue: '₹${tdsAmount.toStringAsFixed(2)}',
+            ratioPrimary: amount > 0 ? (netPayable / amount) : 0.98,
+            ratioLabelPrimary: 'Net Payable',
+            ratioLabelSecondary: 'TDS Deducted',
+            subValues: [
+              {'label': 'Gross Bill / Payout Amount', 'val': '₹${amount.toStringAsFixed(2)}'},
+              {'label': 'TDS Section & Nature', 'val': '${currentRule['section']}'},
+              {'label': 'Applicable Rate', 'val': !_hasPan ? '20% (Section 206AA No-PAN)' : '$effectiveRate%'},
+              {'label': 'Exemption Threshold', 'val': '₹${threshold.toStringAsFixed(0)}'},
+              {'label': 'Net Amount Payable to Payee', 'val': '₹${netPayable.toStringAsFixed(2)}'},
+            ],
+            accentColor: const Color(0xFF0D9488),
+          ),
+          const SizedBox(height: 16),
+
+          TextField(
+            controller: _amountCtrl,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Gross Invoice / Bill Amount (₹)',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          Text('Select Nature of Payment (TDS Section)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary)),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF131B2E) : Colors.white,
+              border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                dropdownColor: isDark ? const Color(0xFF131B2E) : Colors.white,
+                value: _selectedSection,
+                items: _tdsSections.map((s) => DropdownMenuItem(
+                  value: s['section'] as String,
+                  child: Text(s['label'] as String, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: textPrimary)),
+                )).toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedSection = v);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _hasPan,
+            activeColor: const Color(0xFF046A38),
+            title: Text('Payee PAN Card Verified', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPrimary)),
+            subtitle: Text(
+              _hasPan ? 'Standard Section $_selectedSection rate applied' : '⚠️ Section 206AA: Mandatory 20% higher TDS without PAN',
+              style: TextStyle(fontSize: 11, color: _hasPan ? const Color(0xFF64748B) : Colors.red),
+            ),
+            onChanged: (v) => setState(() => _hasPan = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 6. FX CURRENCY CONVERTER
+// ============================================================================
+class FxCalculatorView extends StatefulWidget {
+  const FxCalculatorView({super.key});
+  @override
+  State<FxCalculatorView> createState() => _FxCalculatorViewState();
+}
+
+class _FxCalculatorViewState extends State<FxCalculatorView> {
+  final _inrCtrl = TextEditingController(text: '10000');
+  String _targetCurrency = 'USD';
+  Map<String, double> _rates = {
+    'USD': 84.15,
+    'EUR': 91.20,
+    'GBP': 109.40,
+    'AED': 22.91,
+    'SGD': 63.80,
+    'JPY': 0.55,
+    'CAD': 61.10,
+    'AUD': 55.70,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final inr = double.tryParse(_inrCtrl.text) ?? 0.0;
+    final rate = _rates[_targetCurrency] ?? 1.0;
+    final converted = inr / rate;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Foreign Currency Received',
+            primaryValue: '$_targetCurrency ${converted.toStringAsFixed(2)}',
+            subValues: [
+              {'label': '1 $_targetCurrency', 'val': '₹$rate INR'},
+              {'label': 'Exchange Rail', 'val': 'Direct Interbank RBI Ref'},
+              {'label': 'Forex Spread Markup', 'val': '0% Direct Settlement'},
+            ],
+            accentColor: const Color(0xFF0284C7),
+          ),
+          const SizedBox(height: 16),
+
+          TextField(
+            controller: _inrCtrl,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Indian Rupee Amount (INR)',
+              prefixText: '₹ ',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _rates.keys.map((curr) {
+              final sel = _targetCurrency == curr;
+              return ChoiceChip(
+                label: Text('$curr (₹${_rates[curr]})'),
+                selected: sel,
+                selectedColor: const Color(0xFF0284C7),
+                backgroundColor: ThemeManager.isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                labelStyle: TextStyle(color: sel ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
+                onSelected: (val) {
+                  if (val) setState(() => _targetCurrency = curr);
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 7. FD CALCULATOR
+// ============================================================================
+class FdCalculatorView extends StatefulWidget {
+  const FdCalculatorView({super.key});
+  @override
+  State<FdCalculatorView> createState() => _FdCalculatorViewState();
+}
+
+class _FdCalculatorViewState extends State<FdCalculatorView> {
+  double _deposit = 100000;
+  double _rate = 7.1;
+  double _years = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    // Quarterly compounding formula
+    final maturity = _deposit * pow(1 + (_rate / 400.0), 4 * _years);
+    final interest = maturity - _deposit;
+    final ratio = _deposit / maturity;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Maturity Amount (Quarterly Compounded)',
+            primaryValue: '₹${maturity.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: ratio,
+            ratioLabelPrimary: 'Principal',
+            ratioLabelSecondary: 'Interest Earned',
+            subValues: [
+              {'label': 'Principal Deposit', 'val': '₹${_deposit.round()}'},
+              {'label': 'Guaranteed Total Interest', 'val': '₹${interest.round()}'},
+              {'label': 'DICGC Insurance Covered', 'val': 'Up to ₹5,00,000 per bank'},
+            ],
+            accentColor: const Color(0xFF4338CA),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Fixed Deposit Amount',
+            value: _deposit,
+            min: 5000,
+            max: 5000000,
+            step: 5000,
+            display: '₹${_deposit.round()}',
+            presetValues: [25000, 50000, 100000, 500000, 1000000],
+            presetLabels: ['₹25k', '₹50k', '₹1L', '₹5L', '₹10L'],
+            onChanged: (v) => setState(() => _deposit = v),
+          ),
+          _buildSliderField(
+            title: 'Interest Rate (% p.a.)',
+            value: _rate,
+            min: 4.0,
+            max: 10.0,
+            step: 0.1,
+            display: '${_rate.toStringAsFixed(1)}%',
+            presetValues: [6.5, 7.1, 7.5, 8.2],
+            presetLabels: ['6.5%', '7.1% (SBI)', '7.5% (HDFC)', '8.2% (Sr. Cit)'],
+            onChanged: (v) => setState(() => _rate = v),
+          ),
+          _buildSliderField(
+            title: 'Tenure (Years)',
+            value: _years,
+            min: 1,
+            max: 10,
+            step: 1,
+            display: '${_years.round()} Years',
+            presetValues: [1, 2, 3, 5, 10],
+            presetLabels: ['1Y', '2Y', '3Y', '5Y', '10Y'],
+            onChanged: (v) => setState(() => _years = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 8. RD CALCULATOR
+// ============================================================================
+class RdCalculatorView extends StatefulWidget {
+  const RdCalculatorView({super.key});
+  @override
+  State<RdCalculatorView> createState() => _RdCalculatorViewState();
+}
+
+class _RdCalculatorViewState extends State<RdCalculatorView> {
+  double _monthly = 5000;
+  double _rate = 6.8;
+  double _months = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = _months;
+    final r = _rate / 100.0;
+    // Standard RBI RD maturity formula: P * n + P * n(n+1)/2 * (r/12)
+    final totalDeposit = _monthly * n;
+    final interest = _monthly * (n * (n + 1) / 2.0) * (r / 12.0);
+    final maturity = totalDeposit + interest;
+    final ratio = totalDeposit / maturity;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Recurring Deposit Maturity',
+            primaryValue: '₹${maturity.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: ratio,
+            ratioLabelPrimary: 'Total Saved',
+            ratioLabelSecondary: 'Interest Earned',
+            subValues: [
+              {'label': 'Total Monthly Deposits', 'val': '₹${totalDeposit.round()}'},
+              {'label': 'Total Interest Earned', 'val': '₹${interest.round()}'},
+              {'label': 'Duration', 'val': '${(n / 12).toStringAsFixed(1)} Years (${n.round()} Months)'},
+            ],
+            accentColor: const Color(0xFF059669),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Monthly Recurring Deposit',
+            value: _monthly,
+            min: 500,
+            max: 100000,
+            step: 500,
+            display: '₹${_monthly.round()}/mo',
+            presetValues: [1000, 2500, 5000, 10000, 20000],
+            presetLabels: ['₹1k', '₹2.5k', '₹5k', '₹10k', '₹20k'],
+            onChanged: (v) => setState(() => _monthly = v),
+          ),
+          _buildSliderField(
+            title: 'Annual Interest Rate (%)',
+            value: _rate,
+            min: 4.0,
+            max: 9.0,
+            step: 0.1,
+            display: '${_rate.toStringAsFixed(1)}%',
+            presetValues: [6.5, 6.8, 7.2, 7.8],
+            presetLabels: ['6.5%', '6.8% (SBI)', '7.2% (HDFC)', '7.8% (Senior)'],
+            onChanged: (v) => setState(() => _rate = v),
+          ),
+          _buildSliderField(
+            title: 'Tenure (Months)',
+            value: _months,
+            min: 6,
+            max: 120,
+            step: 6,
+            display: '${_months.round()} Months (${(_months / 12).toStringAsFixed(1)}Y)',
+            presetValues: [12, 24, 36, 60],
+            presetLabels: ['1 Year', '2 Years', '3 Years', '5 Years'],
+            onChanged: (v) => setState(() => _months = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 9. COMPOUND INTEREST CALCULATOR
+// ============================================================================
+class CompoundInterestCalculatorView extends StatefulWidget {
+  const CompoundInterestCalculatorView({super.key});
+  @override
+  State<CompoundInterestCalculatorView> createState() => _CompoundInterestCalculatorViewState();
+}
+
+class _CompoundInterestCalculatorViewState extends State<CompoundInterestCalculatorView> {
+  double _principal = 100000;
+  double _rate = 10.0;
+  double _years = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    final finalAmount = _principal * pow(1 + (_rate / 100.0), _years);
+    final totalInterest = finalAmount - _principal;
+    final ratio = _principal / finalAmount;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Compound Future Value',
+            primaryValue: '₹${finalAmount.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            ratioPrimary: ratio,
+            ratioLabelPrimary: 'Principal',
+            ratioLabelSecondary: 'Compound Interest',
+            subValues: [
+              {'label': 'Principal Investment', 'val': '₹${_principal.round()}'},
+              {'label': 'Total Compound Growth', 'val': '₹${totalInterest.round()}'},
+              {'label': 'Growth Multiplier', 'val': '${(finalAmount / _principal).toStringAsFixed(2)}x'},
+            ],
+            accentColor: const Color(0xFFD97706),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Initial Principal Amount',
+            value: _principal,
+            min: 1000,
+            max: 2000000,
+            step: 5000,
+            display: '₹${_principal.round()}',
+            onChanged: (v) => setState(() => _principal = v),
+          ),
+          _buildSliderField(
+            title: 'Annual Rate of Return (%)',
+            value: _rate,
+            min: 1.0,
+            max: 30.0,
+            step: 0.5,
+            display: '${_rate.toStringAsFixed(1)}%',
+            onChanged: (v) => setState(() => _rate = v),
+          ),
+          _buildSliderField(
+            title: 'Compounding Horizon (Years)',
+            value: _years,
+            min: 1,
+            max: 40,
+            step: 1,
+            display: '${_years.round()} Years',
+            onChanged: (v) => setState(() => _years = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 10. INFLATION CALCULATOR
+// ============================================================================
+class InflationCalculatorView extends StatefulWidget {
+  const InflationCalculatorView({super.key});
+  @override
+  State<InflationCalculatorView> createState() => _InflationCalculatorViewState();
+}
+
+class _InflationCalculatorViewState extends State<InflationCalculatorView> {
+  double _currentAmount = 100000;
+  double _inflationRate = 6.0;
+  double _years = 10;
+
+  @override
+  Widget build(BuildContext context) {
+    final futureCost = _currentAmount * pow(1 + (_inflationRate / 100.0), _years);
+    final purchasingPower = _currentAmount / pow(1 + (_inflationRate / 100.0), _years);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Future Equivalent Cost',
+            primaryValue: '₹${futureCost.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}',
+            subValues: [
+              {'label': 'Today\'s Value', 'val': '₹${_currentAmount.round()}'},
+              {'label': 'Future Cost to Buy Same Goods', 'val': '₹${futureCost.round()}'},
+              {'label': 'Purchasing Power of Today\'s Money', 'val': '₹${purchasingPower.round()}'},
+            ],
+            accentColor: const Color(0xFFDC2626),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Current Cost of Goods',
+            value: _currentAmount,
+            min: 5000,
+            max: 2000000,
+            step: 5000,
+            display: '₹${_currentAmount.round()}',
+            onChanged: (v) => setState(() => _currentAmount = v),
+          ),
+          _buildSliderField(
+            title: 'Expected Annual Inflation (%)',
+            value: _inflationRate,
+            min: 2.0,
+            max: 12.0,
+            step: 0.2,
+            display: '${_inflationRate.toStringAsFixed(1)}% p.a.',
+            onChanged: (v) => setState(() => _inflationRate = v),
+          ),
+          _buildSliderField(
+            title: 'Years in Future',
+            value: _years,
+            min: 1,
+            max: 30,
+            step: 1,
+            display: '${_years.round()} Years',
+            onChanged: (v) => setState(() => _years = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 11. GOAL PLANNER CALCULATOR
+// ============================================================================
+class SavingsGoalCalculatorView extends StatefulWidget {
+  const SavingsGoalCalculatorView({super.key});
+  @override
+  State<SavingsGoalCalculatorView> createState() => _SavingsGoalCalculatorViewState();
+}
+
+class _SavingsGoalCalculatorViewState extends State<SavingsGoalCalculatorView> {
+  double _targetGoal = 1000000;
+  double _years = 5;
+  double _cagr = 12.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final months = (_years * 12).round();
+    final i = (_cagr / 12) / 100;
+    // Required monthly SIP: Target / [ ((1+i)^n - 1) / i * (1+i) ]
+    final factor = ((pow(1 + i, months) - 1) / i) * (1 + i);
+    final requiredMonthly = _targetGoal / factor;
+    final totalInvested = requiredMonthly * months;
+    final totalGain = _targetGoal - totalInvested;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildResultCard(
+            title: 'Required Monthly SIP to Hit Goal',
+            primaryValue: '₹${requiredMonthly.round().toString().replaceAllMapped(RegExp(r'(\d+?)(?=(\d\d)+(\d)(?!\d))'), (m) => '${m[1]},')}/mo',
+            ratioPrimary: totalInvested > 0 ? (totalInvested / _targetGoal) : 0.6,
+            ratioLabelPrimary: 'Your Investment',
+            ratioLabelSecondary: 'Market Gains',
+            subValues: [
+              {'label': 'Target Wealth Goal', 'val': '₹${_targetGoal.round()}'},
+              {'label': 'Your Total Contribution', 'val': '₹${totalInvested.round()}'},
+              {'label': 'Compounded Wealth Created', 'val': '₹${totalGain.round()}'},
+            ],
+            accentColor: const Color(0xFFDB2777),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSliderField(
+            title: 'Target Financial Goal Amount',
+            value: _targetGoal,
+            min: 50000,
+            max: 50000000,
+            step: 50000,
+            display: '₹${_targetGoal.round()}',
+            presetValues: [500000, 1000000, 2500000, 5000000, 10000000],
+            presetLabels: ['₹5L', '₹10L', '₹25L', '₹50L', '₹1Cr'],
+            onChanged: (v) => setState(() => _targetGoal = v),
+          ),
+          _buildSliderField(
+            title: 'Time to Reach Goal (Years)',
+            value: _years,
+            min: 1,
+            max: 30,
+            step: 1,
+            display: '${_years.round()} Years (${months} Months)',
+            presetValues: [2, 3, 5, 10, 15],
+            presetLabels: ['2Y', '3Y', '5Y', '10Y', '15Y'],
+            onChanged: (v) => setState(() => _years = v),
+          ),
+          _buildSliderField(
+            title: 'Expected CAGR Return (%)',
+            value: _cagr,
+            min: 5.0,
+            max: 20.0,
+            step: 0.5,
+            display: '${_cagr.toStringAsFixed(1)}%',
+            onChanged: (v) => setState(() => _cagr = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// MATH EVALUATION ENGINE (RECURSIVE DESCENT PARSER)
+// ============================================================================
 class MathEvaluator {
   static double evaluate(String expression) {
     String clean = expression
