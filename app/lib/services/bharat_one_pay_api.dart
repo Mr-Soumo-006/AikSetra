@@ -1047,8 +1047,10 @@ class BharatOnePayApi {
   static bool hasBusinessAccount = false;
 
   static Map<String, dynamic> businessProfile = {
-    'companyName': 'AikSetra Digital Store',
-    'businessType': 'Retail & Technology',
+    'companyName': 'Pentile',
+    'businessType': 'Information Technology & Software',
+    'website': 'https://pentile.in',
+    'logo': null,
     'gstin': '19AAECN1234F1Z5',
     'pan': 'AAECN1234F',
     'businessAddress': 'Plot 42, Tech Park, Sector V, Kolkata, WB',
@@ -1170,6 +1172,24 @@ class BharatOnePayApi {
       'isPrimary': false,
     },
   ];
+
+  static Future<void> updateBusinessLogo(String logoData) async {
+    businessProfile['logo'] = logoData;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('aiksetra_business_logo', logoData);
+      await prefs.setString('aiksetra_business_profile', jsonEncode(businessProfile));
+    } catch (_) {}
+  }
+
+  static Future<void> updateBusinessWebsite(String website) async {
+    businessProfile['website'] = website;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('aiksetra_business_website', website);
+      await prefs.setString('aiksetra_business_profile', jsonEncode(businessProfile));
+    } catch (_) {}
+  }
 
   static Future<void> registerBusinessAccount({
     required String ownerName,
@@ -1456,6 +1476,14 @@ class BharatOnePayApi {
         final bizProfJson = prefs.getString('aiksetra_business_profile');
         if (bizProfJson != null) {
           businessProfile = Map<String, dynamic>.from(jsonDecode(bizProfJson));
+        }
+        final savedBizLogo = prefs.getString('aiksetra_business_logo');
+        if (savedBizLogo != null && savedBizLogo.isNotEmpty) {
+          businessProfile['logo'] = savedBizLogo;
+        }
+        final savedBizWeb = prefs.getString('aiksetra_business_website');
+        if (savedBizWeb != null && savedBizWeb.isNotEmpty) {
+          businessProfile['website'] = savedBizWeb;
         }
         final bizLedgJson = prefs.getString('aiksetra_business_ledger');
         if (bizLedgJson != null) {

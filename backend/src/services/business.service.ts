@@ -22,7 +22,7 @@ export class BusinessService {
         businessName: user ? `${user.fullName} Digital Enterprise` : 'AikSetra Business Store',
         gstin: '19AAECN1234F1Z5',
         pan: 'AAECN1234F',
-        category: 'Retail & Electronics',
+        category: 'Information Technology & Software',
         merchantVpa: user?.primaryVpa ? user.primaryVpa.replace('@', '.biz@') : 'merchant.store@aiksetra',
         qrCodeUrl: `upi://pay?pa=${user?.primaryVpa || 'merchant@aiksetra'}&pn=${encodeURIComponent(user?.fullName || 'Merchant')}&mc=5411&cu=INR`,
         verified: true,
@@ -31,6 +31,7 @@ export class BusinessService {
         monthlyVolume: 485200.0,
         settlementAccountId: accId,
         memberSince: '2025-04-12',
+        website: 'https://pentile.in',
       };
       db.insert('businessProfiles', profile);
     }
@@ -73,6 +74,8 @@ export class BusinessService {
       bankAccountNo?: string;
       ifsc?: string;
       merchantVpa?: string;
+      website?: string;
+      logo?: string;
     }
   ): BusinessProfile {
     let profiles = db.get('businessProfiles') || [];
@@ -105,6 +108,8 @@ export class BusinessService {
       bankName: data.bankName || (accounts.length > 0 ? accounts[0].bankName : 'HDFC Bank'),
       bankAccountNo: data.bankAccountNo || (accounts.length > 0 ? accounts[0].maskedAccountNumber : '•••• 4589'),
       ifsc: data.ifsc || (accounts.length > 0 ? accounts[0].ifsc : 'HDFC0001234'),
+      website: data.website || 'https://pentile.in',
+      logo: data.logo,
     };
 
     if (existingIndex >= 0) {

@@ -347,6 +347,8 @@ export interface BusinessProfile {
   bankName?: string;
   bankAccountNo?: string;
   ifsc?: string;
+  logo?: string;
+  website?: string;
 }
 
 export interface InvoiceItem {

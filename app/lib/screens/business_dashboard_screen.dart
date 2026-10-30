@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../services/bharat_one_pay_api.dart';
 import '../services/theme_manager.dart';
@@ -54,6 +57,369 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
         _isLoading = false;
       });
     }
+  }
+
+  // ==========================================
+  // BUSINESS LOGO & WEBSITE HELPERS
+  // ==========================================
+  Widget _buildBusinessLogoAvatar(String? logo, {double size = 52}) {
+    if (logo != null && logo.isNotEmpty) {
+      if (logo.startsWith('preset:')) {
+        final key = logo.replaceFirst('preset:', '');
+        IconData icon = Icons.storefront_rounded;
+        List<Color> colors = const [Color(0xFF046A38), Color(0xFF024424)];
+        switch (key) {
+          case 'tech':
+            icon = Icons.laptop_chromebook_rounded;
+            colors = const [Color(0xFF0F172A), Color(0xFF2563EB)];
+            break;
+          case 'store':
+            icon = Icons.storefront_rounded;
+            colors = const [Color(0xFF046A38), Color(0xFF059669)];
+            break;
+          case 'cafe':
+            icon = Icons.coffee_rounded;
+            colors = const [Color(0xFFD97706), Color(0xFFF59E0B)];
+            break;
+          case 'finance':
+            icon = Icons.bar_chart_rounded;
+            colors = const [Color(0xFF4F46E5), Color(0xFF7C3AED)];
+            break;
+          case 'health':
+            icon = Icons.local_hospital_rounded;
+            colors = const [Color(0xFFE11D48), Color(0xFFF43F5E)];
+            break;
+          case 'consulting':
+            icon = Icons.business_center_rounded;
+            colors = const [Color(0xFF0284C7), Color(0xFF0EA5E9)];
+            break;
+        }
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(size * 0.28),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, color: Colors.white, size: size * 0.52),
+        );
+      } else if (logo.startsWith('data:image')) {
+        try {
+          final base64Str = logo.contains(',') ? logo.split(',').last : logo;
+          final bytes = base64Decode(base64Str.trim());
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(size * 0.28),
+              border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.26),
+              child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover),
+            ),
+          );
+        } catch (_) {}
+      } else if (logo.startsWith('http://') || logo.startsWith('https://')) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(size * 0.28),
+            border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(size * 0.26),
+            child: Image.network(logo, width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _defaultLogoContainer(size)),
+          ),
+        );
+      } else if (File(logo).existsSync()) {
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(size * 0.28),
+            border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(size * 0.26),
+            child: Image.file(File(logo), width: size, height: size, fit: BoxFit.cover),
+          ),
+        );
+      }
+    }
+    return _defaultLogoContainer(size);
+  }
+
+  Widget _defaultLogoContainer(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF046A38), Color(0xFF024424)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.28),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Icon(Icons.storefront_rounded, color: Colors.white, size: size * 0.52),
+    );
+  }
+
+  Future<void> _pickAndUploadBusinessLogo(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? file = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final b64 = base64Encode(bytes);
+      final ext = file.name.contains('.') ? file.name.split('.').last : 'jpg';
+      final dataUri = 'data:image/$ext;base64,$b64';
+
+      await BharatOnePayApi.updateBusinessLogo(dataUri);
+      setState(() {
+        _profile['logo'] = dataUri;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Business company logo updated successfully'),
+            backgroundColor: Color(0xFF046A38),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating logo: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  void _showBusinessLogoOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: ThemeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Company Logo & Photo',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Text(
+                'Upload your official business brand logo or choose a professional preset.',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickAndUploadBusinessLogo(ImageSource.gallery);
+                      },
+                      icon: const Icon(Icons.photo_library_rounded, color: Color(0xFF046A38)),
+                      label: const Text('Choose Photo', style: TextStyle(color: Color(0xFF046A38), fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF046A38)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _pickAndUploadBusinessLogo(ImageSource.camera);
+                      },
+                      icon: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0284C7)),
+                      label: const Text('Take Photo', style: TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF0284C7)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Or Choose a Business Brand Preset:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _buildPresetChoice(ctx, 'preset:tech', '💻 Tech & Software'),
+                  _buildPresetChoice(ctx, 'preset:store', '🛍️ Retail & Store'),
+                  _buildPresetChoice(ctx, 'preset:cafe', '☕ Cafe & Food'),
+                  _buildPresetChoice(ctx, 'preset:finance', '📊 Finance & CA'),
+                  _buildPresetChoice(ctx, 'preset:health', '🏥 Healthcare'),
+                  _buildPresetChoice(ctx, 'preset:consulting', '💼 Professional'),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if ((BharatOnePayApi.businessProfile['logo'] ?? _profile['logo']) != null)
+                TextButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await BharatOnePayApi.updateBusinessLogo('');
+                    setState(() {
+                      _profile['logo'] = null;
+                    });
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                  label: const Text('Remove Logo', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresetChoice(BuildContext ctx, String presetKey, String title) {
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(ctx);
+        await BharatOnePayApi.updateBusinessLogo(presetKey);
+        setState(() {
+          _profile['logo'] = presetKey;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Preset logo applied: $title'),
+              backgroundColor: const Color(0xFF046A38),
+            ),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFCBD5E1)),
+        ),
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+        ),
+      ),
+    );
+  }
+
+  void _showEditWebsiteDialog() {
+    final currentWeb = _profile['website'] ?? BharatOnePayApi.businessProfile['website'] ?? 'https://pentile.in';
+    final ctrl = TextEditingController(text: currentWeb.toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.language_rounded, color: Color(0xFF0284C7), size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('Company Website', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add your official business website or online store link. It will be showcased on your store profile and invoices.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.link_rounded),
+                hintText: 'https://pentile.in or www.yourbusiness.com',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF046A38),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final newWeb = ctrl.text.trim();
+              Navigator.pop(ctx);
+              await BharatOnePayApi.updateBusinessWebsite(newWeb);
+              setState(() {
+                _profile['website'] = newWeb;
+              });
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Business website updated successfully'),
+                    backgroundColor: Color(0xFF046A38),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save Website', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _simulateSoundbox([double amount = 1450.0]) {
@@ -759,11 +1125,49 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
     return Scaffold(
       backgroundColor: bgScaffold,
       appBar: AppBar(
-        title: Text(companyName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Row(
+          children: [
+            _buildBusinessLogoAvatar(BharatOnePayApi.businessProfile['logo'] ?? _profile['logo'], size: 28),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                companyName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         backgroundColor: const Color(0xFF0D1B2A),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                setState(() => BharatOnePayApi.isBusinessMode = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Switched back to Personal Account mode'),
+                    backgroundColor: Color(0xFF0F172A),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.person_rounded, size: 14, color: Colors.white),
+              label: const Text(
+                'Personal',
+                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF00E676)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              ),
+            ),
+          ),
           IconButton(
             icon: Icon(_soundboxActive ? Icons.volume_up : Icons.volume_off),
             tooltip: 'Soundbox Audio Simulation',
@@ -836,6 +1240,41 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Active Mode Announcement Bar
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF046A38).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF046A38).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.storefront_rounded, color: Color(0xFF00E676), size: 18),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Merchant Account Active • 0% MDR Enabled',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF00E676)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => BharatOnePayApi.isBusinessMode = false);
+                    Navigator.pop(context);
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Switch to Personal >', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+
           // Company Header Card
           Container(
             padding: const EdgeInsets.all(18),
@@ -851,8 +1290,34 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Business Logo / Photo with Camera overlay
+                    GestureDetector(
+                      onTap: _showBusinessLogoOptionsModal,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _buildBusinessLogoAvatar(
+                            BharatOnePayApi.businessProfile['logo'] ?? _profile['logo'],
+                            size: 56,
+                          ),
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF671F),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,18 +1333,49 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
                               ),
                               const SizedBox(width: 6),
                               const Icon(Icons.verified, color: Color(0xFF00E676), size: 18),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(8)),
+                                child: const Text('ACTIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text('Category: $category', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                          Text('GSTIN: $gstin', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                          const SizedBox(height: 3),
+                          Text('Category: $category', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                          Text('GSTIN: $gstin', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                          const SizedBox(height: 5),
+                          // Business Website Row
+                          InkWell(
+                            onTap: _showEditWebsiteDialog,
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.language_rounded, color: Color(0xFF38BDF8), size: 14),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      (_profile['website'] ?? BharatOnePayApi.businessProfile['website'] ?? 'https://pentile.in').toString(),
+                                      style: const TextStyle(
+                                        color: Color(0xFF38BDF8),
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit_outlined, size: 12, color: Colors.white70),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: const Color(0xFF046A38), borderRadius: BorderRadius.circular(8)),
-                      child: const Text('ACTIVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                     ),
                   ],
                 ),

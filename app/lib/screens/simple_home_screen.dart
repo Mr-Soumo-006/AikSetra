@@ -295,6 +295,40 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
     Widget _buildHomeTopBarAvatar() {
+    if (BharatOnePayApi.isBusinessMode) {
+      final bizLogo = BharatOnePayApi.businessProfile['logo'];
+      if (bizLogo != null && bizLogo.toString().isNotEmpty) {
+        final logoStr = bizLogo.toString();
+        if (logoStr.startsWith('data:image')) {
+          try {
+            final b64 = logoStr.contains(',') ? logoStr.split(',').last : logoStr;
+            return Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(base64Decode(b64.trim()), fit: BoxFit.cover),
+              ),
+            );
+          } catch (_) {}
+        }
+      }
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFF046A38),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+      );
+    }
     final avatar = BharatOnePayApi.currentUser?.profilePicture ?? BharatOnePayApi.savedLocalAvatar;
     if (avatar != null && avatar.isNotEmpty) {
       Widget? imageWidget;
@@ -467,17 +501,41 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${_t('namaste')}, ${_userName.split(' ').first}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            BharatOnePayApi.isBusinessMode
+                                ? (BharatOnePayApi.businessProfile['companyName'] ?? 'Pentile')
+                                : '${_t('namaste')}, ${_userName.split(' ').first}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (BharatOnePayApi.isBusinessMode) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF046A38),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'MERCHANT',
+                              style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
-                      _userVpa,
+                      BharatOnePayApi.isBusinessMode
+                          ? (BharatOnePayApi.businessProfile['merchantVpa'] ?? 'merchant@aiksetra')
+                          : _userVpa,
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF94A3B8),
@@ -493,6 +551,81 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
       ),
       actions: [
+        // Mode Switcher Pill in Top Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF334155)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    if (BharatOnePayApi.isBusinessMode) {
+                      setState(() => BharatOnePayApi.isBusinessMode = false);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Switched to Personal Account'),
+                          duration: Duration(seconds: 1),
+                          backgroundColor: Color(0xFF0F172A),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: !BharatOnePayApi.isBusinessMode ? const Color(0xFFFF671F) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Personal',
+                      style: TextStyle(
+                        color: !BharatOnePayApi.isBusinessMode ? Colors.white : const Color(0xFF94A3B8),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    if (!BharatOnePayApi.isBusinessMode) {
+                      setState(() => BharatOnePayApi.isBusinessMode = true);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Switched to ${BharatOnePayApi.businessProfile['companyName'] ?? 'Pentile'} Business Mode'),
+                          duration: const Duration(seconds: 1),
+                          backgroundColor: const Color(0xFF046A38),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: BharatOnePayApi.isBusinessMode ? const Color(0xFF046A38) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Business',
+                      style: TextStyle(
+                        color: BharatOnePayApi.isBusinessMode ? Colors.white : const Color(0xFF94A3B8),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         IconButton(
           onPressed: () {
             Navigator.push(
@@ -1611,6 +1744,10 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ),
         const SizedBox(height: 16),
 
+        // AIKSETRA BUSINESS ACCOUNT SECTION BANNER
+        _buildHomepageBusinessCard(),
+        const SizedBox(height: 16),
+
         // 5. FINANCIAL TOOLS & CALCULATORS
         _buildPhonePeSectionCard(
           categoryKey: 'tools',
@@ -1647,16 +1784,238 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               'routeKey': 'calc_gst',
               'badge': 'Tax',
             },
-            {
-              'label': 'Income Tax\nCalculator',
-              'icon': Icons.account_balance_rounded,
-              'color': const Color(0xFFFF671F),
-              'routeKey': 'calc_tax',
-              'badge': 'FY 24-25',
-            },
           ],
         ),
       ],
+    );
+  }
+
+  // ===========================================================================
+  // HOMEPAGE BUSINESS ACCOUNT BANNER (Positioned between Insurance & Calculators)
+  // ===========================================================================
+  Widget _buildHomepageBusinessCard() {
+    final isBiz = BharatOnePayApi.isBusinessMode;
+    final companyName = BharatOnePayApi.businessProfile['companyName'] ?? 'Pentile';
+    final ownerName = BharatOnePayApi.businessProfile['ownerName'] ?? _userName;
+    final website = (BharatOnePayApi.businessProfile['website'] ?? 'https://pentile.in').toString();
+    final bizLogo = BharatOnePayApi.businessProfile['logo'];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isBiz
+              ? const [Color(0xFF046A38), Color(0xFF012B16)]
+              : const [Color(0xFF046A38), Color(0xFF02361D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isBiz ? const Color(0xFF00E676) : const Color(0xFF059669),
+          width: isBiz ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF046A38).withValues(alpha: 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+            ).then((_) {
+              if (mounted) setState(() {});
+            });
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Business Logo or Store Icon
+                Builder(builder: (_) {
+                  if (bizLogo != null && bizLogo.toString().isNotEmpty) {
+                    final logoStr = bizLogo.toString();
+                    if (logoStr.startsWith('data:image')) {
+                      try {
+                        final b64 = logoStr.contains(',') ? logoStr.split(',').last : logoStr;
+                        return Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.memory(base64Decode(b64.trim()), fit: BoxFit.cover),
+                          ),
+                        );
+                      } catch (_) {}
+                    }
+                  }
+                  return Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.storefront_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  );
+                }),
+                const SizedBox(width: 12),
+                // Center details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              companyName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: isBiz ? const Color(0xFF10B981) : const Color(0xFF065F46),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              isBiz ? 'LIVE' : 'VERIFIED',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Owner: $ownerName • Tap for Ledger, Sheet & QR',
+                        style: const TextStyle(
+                          color: Color(0xFFCBD5E1),
+                          fontSize: 10.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (website.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.language_rounded, size: 11, color: Color(0xFF86EFAC)),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                website,
+                                style: const TextStyle(
+                                  color: Color(0xFF86EFAC),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Right buttons
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.dashboard_rounded, color: Colors.white70, size: 20),
+                      tooltip: 'Business Dashboard',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                        ).then((_) {
+                          if (mounted) setState(() {});
+                        });
+                      },
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (!isBiz) {
+                          setState(() => BharatOnePayApi.isBusinessMode = true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Switched to $companyName Business Mode'),
+                              backgroundColor: const Color(0xFF046A38),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
+                          ).then((_) {
+                            if (mounted) setState(() {});
+                          });
+                        } else {
+                          setState(() => BharatOnePayApi.isBusinessMode = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Switched back to Personal Account mode'),
+                              backgroundColor: Color(0xFF0F172A),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isBiz ? Colors.white : const Color(0xFF0F172A),
+                        foregroundColor: isBiz ? const Color(0xFF046A38) : Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isBiz ? 'Personal' : 'Switch',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2141,6 +2500,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
       case 'calc_tax':
+      case 'calc_income_tax':
         Navigator.push(
           context,
           MaterialPageRoute(

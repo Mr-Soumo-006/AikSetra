@@ -3138,22 +3138,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 widget.onRefreshParent?.call();
               });
             },
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: isBiz
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : const Color(0xFF046A38).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                isBiz ? Icons.storefront_rounded : Icons.business_center_rounded,
-                color: isBiz ? Colors.white : const Color(0xFF00E676),
-                size: 22,
-              ),
-            ),
+            child: Builder(builder: (_) {
+              final bizLogo = BharatOnePayApi.businessProfile['logo'];
+              if (bizLogo != null && bizLogo.toString().isNotEmpty) {
+                final logoStr = bizLogo.toString();
+                if (logoStr.startsWith('data:image')) {
+                  try {
+                    final b64 = logoStr.contains(',') ? logoStr.split(',').last : logoStr;
+                    return Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.memory(base64Decode(b64.trim()), fit: BoxFit.cover),
+                      ),
+                    );
+                  } catch (_) {}
+                }
+              }
+              return Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isBiz
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : const Color(0xFF046A38).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  isBiz ? Icons.storefront_rounded : Icons.business_center_rounded,
+                  color: isBiz ? Colors.white : const Color(0xFF00E676),
+                  size: 22,
+                ),
+              );
+            }),
           ),
           const SizedBox(width: 12),
           Expanded(
