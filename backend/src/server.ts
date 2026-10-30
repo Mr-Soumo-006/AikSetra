@@ -220,6 +220,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Direct PDF download & convenience rewrite middleware
+app.use((req, res, next) => {
+  if (
+    req.path.startsWith('/account/statement/pdf') ||
+    req.path.startsWith('/business/audit/') ||
+    req.path.startsWith('/audit/report/pdf') ||
+    req.path.startsWith('/business/invoices/')
+  ) {
+    req.url = '/api/v1' + req.url;
+  }
+  next();
+});
+
 // API Routes
 app.use('/api/v1', apiRouter);
 

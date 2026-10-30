@@ -4074,11 +4074,31 @@ class _BusinessDashboardScreenState extends State<BusinessDashboardScreen> with 
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Downloading Statutory Audit Compliance Certificate PDF...')),
-              );
+              final pdfUrl = BharatOnePayApi.getAuditCertificatePdfUrl();
+              try {
+                final uri = Uri.parse(pdfUrl);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  await launchUrl(uri);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Statutory Audit Compliance Certificate opened for download.'),
+                      backgroundColor: Color(0xFF046A38),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not open audit certificate PDF: ')),
+                  );
+                }
+              }
             },
             child: const Text('Download PDF'),
           ),

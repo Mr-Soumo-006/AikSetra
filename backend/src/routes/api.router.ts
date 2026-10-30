@@ -1500,3 +1500,40 @@ const handleStatementPdfRequest = (req: any, res: any) => {
 
 apiRouter.get('/account/statement/pdf', handleStatementPdfRequest);
 apiRouter.post('/account/statement/pdf', handleStatementPdfRequest);
+
+// 23. STATUTORY AUDIT & COMPLIANCE CERTIFICATE PDF GENERATION
+const handleAuditReportPdfRequest = (req: any, res: any) => {
+  const params = req.method === 'GET' ? req.query : req.body;
+  const companyName = params.companyName || 'Pentile Business Solutions';
+  const ownerName = params.ownerName || 'Soumo Naskar';
+  const gstin = params.gstin || '19AAECN1234F1Z5';
+  const pan = params.pan || 'AAECN1234F';
+  const udin = params.udin || '26034871AKST99281';
+  const financialYear = params.financialYear || 'FY 2026-27';
+  const assessmentYear = params.assessmentYear || 'AY 2027-28';
+
+  PdfGeneratorService.generateAuditReportPdf({
+    companyName,
+    ownerName,
+    gstin,
+    pan,
+    udin,
+    financialYear,
+    assessmentYear,
+    auditorName: 'Amit Ghosh, FCA',
+    auditorMembership: '034871',
+    firmName: 'Ghosh & Associates',
+    firmRegNo: '320141E',
+    turnover: 482500.0,
+    itcVerified: 43425.0,
+    statutoryDuesPaid: 38900.0,
+    settlementBalance: 48250.0,
+    date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+  }, res);
+};
+
+apiRouter.get('/business/audit/certificate/pdf', handleAuditReportPdfRequest);
+apiRouter.get('/business/audit/report/pdf', handleAuditReportPdfRequest);
+apiRouter.get('/audit/report/pdf', handleAuditReportPdfRequest);
+apiRouter.post('/business/audit/certificate/pdf', handleAuditReportPdfRequest);
+

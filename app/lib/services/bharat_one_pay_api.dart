@@ -2391,6 +2391,34 @@ class BharatOnePayApi {
     return uri.toString();
   }
 
+
+  static String getAuditCertificatePdfUrl({
+    String? companyName,
+    String? ownerName,
+    String? gstin,
+    String? pan,
+    String? udin,
+  }) {
+    final effectiveCompany = companyName ?? (businessProfile['companyName'] ?? 'Pentile Business Solutions');
+    final effectiveOwner = ownerName ?? (businessProfile['ownerName'] ?? (currentUser?.fullName ?? 'Soumo Naskar'));
+    final effectiveGstin = gstin ?? (businessProfile['gstin'] ?? '19AAECN1234F1Z5');
+    final effectivePan = pan ?? (businessProfile['pan'] ?? 'AAECN1234F');
+    final effectiveUdin = udin ?? '26034871AKST99281';
+
+    final qParams = <String, String>{
+      'companyName': effectiveCompany,
+      'ownerName': effectiveOwner,
+      'gstin': effectiveGstin,
+      'pan': effectivePan,
+      'udin': effectiveUdin,
+      'financialYear': 'FY 2026-27',
+      'assessmentYear': 'AY 2027-28',
+    };
+
+    final uri = Uri.parse('\/business/audit/certificate/pdf').replace(queryParameters: qParams);
+    return uri.toString();
+  }
+
   static Future<void> saveSessionToDisk() async {
     try {
       final prefs = await SharedPreferences.getInstance();
