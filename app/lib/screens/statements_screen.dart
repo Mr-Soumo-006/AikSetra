@@ -1,3 +1,4 @@
+import '../services/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/bharat_one_pay_api.dart';
@@ -109,6 +110,13 @@ class _StatementsScreenState extends State<StatementsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeManager.isDarkMode;
+    final scaffoldBg = isDark ? const Color(0xFF090D16) : const Color(0xFFF8FAFC);
+    final cardBg = isDark ? const Color(0xFF131B2E) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0D1B2A);
+    final textSecondary = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
     final filtered = _transactions.where((t) {
       if (_selectedAccount != 'All Accounts' && t['account'] != _selectedAccount) {
         return false;
@@ -135,7 +143,7 @@ class _StatementsScreenState extends State<StatementsScreen> {
     final netFlow = totalIn - totalOut;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
         title: const Text('Combined Statements & Passbook', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
         backgroundColor: const Color(0xFF0D1B2A),
@@ -234,14 +242,14 @@ class _StatementsScreenState extends State<StatementsScreen> {
           // Cashflow Summary Metrics
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
+            color: cardBg,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildMetricColumn('Money In (Credits)', '+₹${totalIn.toStringAsFixed(0)}', const Color(0xFF046A38)),
-                Container(width: 1, height: 32, color: const Color(0xFFE2E8F0)),
+                Container(width: 1, height: 32, color: cardBorder),
                 _buildMetricColumn('Money Out (Debits)', '-₹${totalOut.toStringAsFixed(0)}', const Color(0xFFDC2626)),
-                Container(width: 1, height: 32, color: const Color(0xFFE2E8F0)),
+                Container(width: 1, height: 32, color: cardBorder),
                 _buildMetricColumn('Net Cashflow', '${netFlow >= 0 ? '+' : ''}₹${netFlow.toStringAsFixed(0)}', netFlow >= 0 ? const Color(0xFF046A38) : const Color(0xFFDC2626)),
               ],
             ),
@@ -271,9 +279,9 @@ class _StatementsScreenState extends State<StatementsScreen> {
                       return Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardBg,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: cardBorder),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,10 +290,10 @@ class _StatementsScreenState extends State<StatementsScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 18,
-                                  backgroundColor: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                  backgroundColor: isCredit ? (isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7)) : (isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFEE2E2)),
                                   child: Icon(
                                     isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                                    color: isCredit ? const Color(0xFF046A38) : const Color(0xFFDC2626),
+                                    color: isCredit ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
                                     size: 18,
                                   ),
                                 ),
@@ -294,9 +302,9 @@ class _StatementsScreenState extends State<StatementsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(txn['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0D1B2A))),
+                                      Text(txn['title'] as String, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textPrimary)),
                                       const SizedBox(height: 2),
-                                      Text('${txn['account']} • ${txn['date']}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                      Text('${txn['account']} • ${txn['date']}', style: TextStyle(fontSize: 11, color: textSecondary)),
                                     ],
                                   ),
                                 ),

@@ -376,6 +376,37 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     );
   }
 
+  void _downloadDateWiseStatementPdf() async {
+    final pdfUrl = BharatOnePayApi.getStatementPdfUrl();
+    try {
+      final uri = Uri.parse(pdfUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            BharatOnePayApi.isBusinessMode
+                ? 'Downloading Today\'s Official Pentile Business Ledger PDF...'
+                : 'Downloading Official Date-Wise Account Statement PDF...',
+          ),
+          backgroundColor: const Color(0xFF046A38),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening PDF statement download...'),
+          backgroundColor: Color(0xFF0D1B2A),
+        ),
+      );
+    }
+  }
+
   Widget _buildFinemanFloatingButton() {
     return Container(
       margin: const EdgeInsets.only(bottom: 6, right: 2),
@@ -2798,6 +2829,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -3258,9 +3290,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       builder: (ctx) {
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -3691,9 +3723,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _isDark ? const Color(0xFF131B2E) : Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: _cardBorder),
               ),
               child: const Row(
                 children: [
@@ -5888,7 +5920,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -7830,6 +7862,64 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 0. DATE-WISE AUDIT STATEMENT & LEDGER PDF EXPORT BAR
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isDark ? const Color(0xFF131B2E) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _cardBorder),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF671F).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFFF671F), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          BharatOnePayApi.isBusinessMode
+                              ? 'Business Ledger & Audit PDF'
+                              : 'Passbook & Statement PDF',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: _textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Date-wise ledger statement compliant with IT audits',
+                          style: TextStyle(fontSize: 10.5, color: _textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF046A38),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _downloadDateWiseStatementPdf(),
+                    icon: const Icon(Icons.download_rounded, size: 15),
+                    label: const Text('Export PDF', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+
             // 1. Spends Summary Cards
             Row(
               children: [
@@ -7837,7 +7927,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _isDark ? const Color(0xFF131B2E) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
@@ -7890,9 +7980,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: _isDark ? const Color(0xFF131B2E) : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: _cardBorder),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
@@ -7947,13 +8037,13 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             Container(
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _isDark ? const Color(0xFF131B2E) : Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFCBD5E1)),
+                border: Border.all(color: _cardBorder),
               ),
               child: TextField(
                 controller: _historySearchCtrl,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+                style: TextStyle(fontSize: 13, color: _textPrimary),
                 onChanged: (val) => setState(() => _historySearchQuery = val),
                 decoration: InputDecoration(
                   hintText: 'Search by name, UPI ID, or RRN...',
@@ -8017,9 +8107,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   horizontal: 20,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _isDark ? const Color(0xFF131B2E) : Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: _cardBorder),
                 ),
                 child: Column(
                   children: [
@@ -8536,7 +8626,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
@@ -8703,7 +8793,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
@@ -9163,7 +9253,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -9304,7 +9394,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -10048,7 +10138,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: _cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
@@ -10130,7 +10220,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -10303,7 +10393,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -10444,7 +10534,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -10530,7 +10620,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -10779,7 +10869,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   void _showTransactionReceiptModal(Map<String, dynamic> t) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -11078,7 +11168,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: _cardBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),

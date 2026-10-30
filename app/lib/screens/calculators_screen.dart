@@ -1,3 +1,4 @@
+import '../services/theme_manager.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -49,7 +50,7 @@ class _CalculatorsScreenState extends State<CalculatorsScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: ThemeManager.isDarkMode ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Financial Calculator Centre', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF0D1B2A),
@@ -301,7 +302,7 @@ class _GstCalculatorViewState extends State<GstCalculatorView> {
                   selected: !_isInclusive,
                   onSelected: (val) => setState(() => _isInclusive = !val),
                   selectedColor: const Color(0xFF046A38),
-                  labelStyle: TextStyle(color: !_isInclusive ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                  labelStyle: TextStyle(color: !_isInclusive ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 8),
@@ -311,7 +312,7 @@ class _GstCalculatorViewState extends State<GstCalculatorView> {
                   selected: _isInclusive,
                   onSelected: (val) => setState(() => _isInclusive = val),
                   selectedColor: const Color(0xFF046A38),
-                  labelStyle: TextStyle(color: _isInclusive ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                  labelStyle: TextStyle(color: _isInclusive ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -337,11 +338,11 @@ class _GstCalculatorViewState extends State<GstCalculatorView> {
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: OutlinedButton(
+child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: sel ? const Color(0xFF0D1B2A) : Colors.white,
-                      foregroundColor: sel ? Colors.white : const Color(0xFF0D1B2A),
-                      side: BorderSide(color: sel ? const Color(0xFF0D1B2A) : const Color(0xFFCBD5E1)),
+                      backgroundColor: sel ? const Color(0xFFFF671F) : (ThemeManager.isDarkMode ? const Color(0xFF1E293B) : Colors.white),
+                      foregroundColor: sel ? Colors.white : (ThemeManager.isDarkMode ? Colors.white : const Color(0xFF0D1B2A)),
+                      side: BorderSide(color: sel ? const Color(0xFFFF671F) : (ThemeManager.isDarkMode ? const Color(0xFF334155) : const Color(0xFFCBD5E1))),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () => setState(() => _gstRate = rate),
@@ -532,7 +533,7 @@ class _FxCalculatorViewState extends State<FxCalculatorView> {
                 label: Text('$curr (₹${_rates[curr]})'),
                 selected: sel,
                 selectedColor: const Color(0xFF0D1B2A),
-                labelStyle: TextStyle(color: sel ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
+                labelStyle: TextStyle(color: sel ? Colors.white : (ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : Colors.black87), fontWeight: FontWeight.bold),
                 onSelected: (val) {
                   if (val) setState(() => _targetCurrency = curr);
                 },
@@ -961,6 +962,7 @@ class _TdsCalculatorViewState extends State<TdsCalculatorView> {
     final effectiveRate = !_hasPan ? 20.0 : baseRate;
     final tdsAmount = isThresholdCrossed ? (amount * effectiveRate / 100.0) : 0.0;
     final netPayable = amount - tdsAmount;
+    final isDark = ThemeManager.isDarkMode;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -968,12 +970,12 @@ class _TdsCalculatorViewState extends State<TdsCalculatorView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFF86EFAC)),
-            ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFF86EFAC)),
+                  ),
             child: Row(
               children: [
                 const Icon(Icons.verified, color: Color(0xFF16A34A), size: 16),
@@ -995,7 +997,7 @@ class _TdsCalculatorViewState extends State<TdsCalculatorView> {
             subValues: [
               {'label': 'Gross Bill Amount', 'val': '₹${amount.toStringAsFixed(2)}'},
               {'label': 'TDS Section', 'val': '${currentRule['section']}'},
-              {'label': 'Applicable Rate', 'val': '!$_hasPan ? "20% (No PAN)" : "$effectiveRate%"'},
+              {'label': 'Applicable Rate', 'val': !_hasPan ? '20% (No PAN)' : '$effectiveRate%'},
               {'label': 'Exemption Threshold', 'val': '₹${threshold.toStringAsFixed(0)}'},
               {'label': 'Net Amount Payable', 'val': '₹${netPayable.toStringAsFixed(2)}'},
             ],
@@ -1081,15 +1083,19 @@ Widget _buildResultCard({
   required List<Map<String, String>> subValues,
   Color accentColor = const Color(0xFF0D1B2A),
 }) {
+  final isDark = ThemeManager.isDarkMode;
   return Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [accentColor, const Color(0xFF1E293B)],
+        colors: isDark
+            ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+            : [accentColor, const Color(0xFF1E293B)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
       borderRadius: BorderRadius.circular(20),
+      border: isDark ? Border.all(color: const Color(0xFF334155), width: 1.2) : null,
       boxShadow: [
         BoxShadow(
           color: accentColor.withOpacity(0.3),
@@ -1131,13 +1137,14 @@ Widget _buildSliderField({
   required String display,
   required ValueChanged<double> onChanged,
 }) {
+  final isDark = ThemeManager.isDarkMode;
   return Container(
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: isDark ? const Color(0xFF131B2E) : Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE2E8F0)),
+      border: Border.all(color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1145,8 +1152,8 @@ Widget _buildSliderField({
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-            Text(display, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569))),
+            Text(display, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0D1B2A))),
           ],
         ),
         Slider(
@@ -1154,8 +1161,8 @@ Widget _buildSliderField({
           min: min,
           max: max,
           divisions: ((max - min) / step).round(),
-          activeColor: const Color(0xFF046A38),
-          inactiveColor: const Color(0xFFE2E8F0),
+          activeColor: const Color(0xFFFF671F),
+          inactiveColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
           onChanged: onChanged,
         ),
       ],
@@ -1427,7 +1434,7 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            color: Colors.white,
+            color: ThemeManager.isDarkMode ? const Color(0xFF131B2E) : Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.end,
@@ -1499,9 +1506,9 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
                 // Expression line
                 Text(
                   _expression.isEmpty ? ' ' : _expression,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF64748B),
+                    color: ThemeManager.isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 2,
@@ -1515,10 +1522,10 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
                   alignment: Alignment.centerRight,
                   child: Text(
                     _display,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A),
+                      color: ThemeManager.isDarkMode ? Colors.white : const Color(0xFF0F172A),
                       letterSpacing: -1,
                     ),
                   ),
@@ -1553,7 +1560,7 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
         Expanded(
           flex: 6,
           child: Container(
-            color: const Color(0xFFF8FAFC),
+            color: ThemeManager.isDarkMode ? const Color(0xFF090D16) : const Color(0xFFF8FAFC),
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
@@ -1657,6 +1664,8 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
   }
 
   Widget _buildCalcBtn(String label, Color color, {bool isAccent = false, bool isEquals = false, required VoidCallback onTap}) {
+    final isDark = ThemeManager.isDarkMode;
+    final isStandardDigit = color == const Color(0xFF0F172A);
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1664,8 +1673,12 @@ class _NormalCalculatorViewState extends State<NormalCalculatorView> {
           style: ElevatedButton.styleFrom(
             backgroundColor: isEquals
                 ? const Color(0xFF046A38)
-                : (isAccent ? color.withValues(alpha: 0.12) : Colors.white),
-            foregroundColor: isEquals ? Colors.white : color,
+                : (isAccent
+                    ? color.withValues(alpha: isDark ? 0.25 : 0.12)
+                    : (isDark ? const Color(0xFF1E293B) : Colors.white)),
+            foregroundColor: isEquals
+                ? Colors.white
+                : (isDark && isStandardDigit ? Colors.white : color),
             elevation: isEquals ? 3 : 1,
             shadowColor: Colors.black12,
             shape: RoundedRectangleBorder(
