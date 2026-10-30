@@ -2,6 +2,8 @@ import { db } from '../../../db/database.js';
 import { FinancialToolsService } from '../../financialTools.service.js';
 import { AIToolResult } from '../ai.types.js';
 import { MarketResearchService } from './market_research.service.js';
+import { LiveStockMarketEngine } from '../../live_stock_market.service.js';
+import { LiveTaxSyncService } from '../../live_tax_sync.service.js';
 
 export const AI_AVAILABLE_TOOLS = [
   {
@@ -108,19 +110,22 @@ export async function executeAITool(
         const limit = Math.min(Math.max(Number(args.limit) || 5, 1), 10);
         const txns = db
           .get('transactions')
-          .filter((t) => t.fromUserId === userId || t.toUserId === userId)
+          .filter((t) => (t as any).fromUserId === userId || (t as any).toUserId === userId || (t as any).senderUserId === userId || (t as any).receiverUserId === userId)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, limit)
-          .map((t) => ({
-            id: t.id,
-            amount: t.amount,
-            type: t.fromUserId === userId ? 'DEBIT' : 'CREDIT',
-            counterpartyVpa: t.fromUserId === userId ? t.toVpa : t.fromVpa,
-            counterpartyName: t.counterpartyName || 'Contact',
-            status: t.status,
-            createdAt: t.createdAt,
-            note: t.note || '',
-          }));
+          .map((rawT: any) => {
+            const isDebit = rawT.fromUserId === userId || rawT.senderUserId === userId;
+            return {
+              id: rawT.id,
+              amount: rawT.amount,
+              type: isDebit ? 'DEBIT' : 'CREDIT',
+              counterpartyVpa: isDebit ? (rawT.toVpa || rawT.receiverVpa || 'UPI') : (rawT.fromVpa || rawT.senderVpa || 'UPI'),
+              counterpartyName: rawT.counterpartyName || rawT.receiverName || rawT.senderName || 'Contact',
+              status: rawT.status,
+              createdAt: rawT.createdAt,
+              note: rawT.remark || rawT.note || '',
+            };
+          });
         return {
           name,
           success: true,
@@ -141,7 +146,7 @@ export async function executeAITool(
           const res = FinancialToolsService.calculateFd(principal, ratePct, tenure);
           return { name, success: true, data: res };
         } else if (toolType === 'RD') {
-          const res = FinancialToolsService.calculateRd(principal, ratePct, tenure);
+          const res = FinancialToolsService.calculateFd(principal, ratePct, tenure, 12);
           return { name, success: true, data: res };
         } else if (toolType === 'EMI') {
           const res = FinancialToolsService.calculateEmi(principal, ratePct, tenure);
@@ -150,7 +155,7 @@ export async function executeAITool(
           const res = FinancialToolsService.calculateGst(principal, ratePct);
           return { name, success: true, data: res };
         }
-        return { name, success: false, error: `Unsupported toolType: ${toolType}` };
+        return { name, success: false, error: `Unsupported toolType: ${toolType}`, data: {} };
       }
 
       case 'get_market_quote': {
@@ -183,11 +188,37 @@ export async function executeAITool(
       }
 
       case 'get_stock_investment_ideas': {
-        const ideas = MarketResearchService.getInvestmentIdeas(args.category, args.sector);
+        const ideas = await LiveStockMarketEngine.generateDynamicMarketIdeas(args.category);
         return {
           name,
           success: true,
-          data: ideas,
+          data: {
+            timestamp: ideas.timestamp,
+            marketCondition: ideas.marketStatus,
+            totalIdeas: ideas.totalIdeas,
+            disclaimer: ideas.disclaimer,
+            ideas: ideas.ideas.map((i) => ({
+              symbol: i.symbol,
+              name: i.name,
+              sector: i.sector,
+              currentPrice: i.currentPrice,
+              changePct: i.changePct,
+              isBullish: i.isBullish,
+              investmentCategory: i.strategy,
+              timeHorizon: i.timeHorizon,
+              targetPriceZone: i.targetPriceZone,
+              supportLevel: i.supportLevel,
+              peRatio: i.peRatio,
+              thesis: i.technicalThesis,
+              riskRating: i.peRatio < 20 ? 'Low' : 'Moderate',
+              keyIndicators: [
+                `P/E: ${i.peRatio}x`,
+                `RSI: ${i.rsi14}`,
+                `Signal: ${i.volumeSignal}`,
+                `Stop Loss: ₹${i.stopLoss}`
+              ],
+            })),
+          },
         };
       }
 
@@ -201,9 +232,9 @@ export async function executeAITool(
       }
 
       default:
-        return { name, success: false, error: `Unknown tool: ${name}` };
+        return { name, success: false, error: `Unknown tool: ${name}`, data: {} };
     }
   } catch (err: any) {
-    return { name, success: false, error: err.message };
+    return { name, success: false, error: err.message, data: {} };
   }
 }

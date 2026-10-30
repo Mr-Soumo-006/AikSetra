@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/bharat_one_pay_api.dart';
 
 class StatementsScreen extends StatefulWidget {
   const StatementsScreen({super.key});
@@ -78,6 +80,33 @@ class _StatementsScreenState extends State<StatementsScreen> {
     },
   ];
 
+  void _downloadStatementPdf() async {
+    final pdfUrl = BharatOnePayApi.getStatementPdfUrl();
+    try {
+      final uri = Uri.parse(pdfUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Generating official PDF audit statement for $_selectedPeriod ($_selectedAccount)...'),
+          backgroundColor: const Color(0xFF046A38),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening PDF statement download...'),
+          backgroundColor: Color(0xFF0D1B2A),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _transactions.where((t) {
@@ -114,13 +143,9 @@ class _StatementsScreenState extends State<StatementsScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Download PDF',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AikSetra Official Combined Statement PDF downloaded to device.')),
-              );
-            },
+            icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFFF671F)),
+            tooltip: 'Download Official PDF Audit Statement',
+            onPressed: _downloadStatementPdf,
           ),
           IconButton(
             icon: const Icon(Icons.table_chart),

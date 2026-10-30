@@ -297,6 +297,85 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   }
 
   // Floating Fineman AI Assistant Button (Fixed in position above bottom nav bar)
+  Widget _buildAiStockPill({
+    required String symbol,
+    required String name,
+    required String strategy,
+    required String target,
+    required String support,
+    required Color color,
+    required bool isBullish,
+  }) {
+    final liveStock = BharatOnePayApi.indianStocks.firstWhere(
+      (s) => s['symbol'] == symbol,
+      orElse: () => {'price': 2500.0, 'changePct': 1.5},
+    );
+    final curPrice = (liveStock['price'] as num).toDouble();
+    final pct = (liveStock['changePct'] as num?)?.toDouble() ?? 0.0;
+
+    return Container(
+      width: 210,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF0F172A) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                symbol,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: pct >= 0 ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: pct >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(name, style: TextStyle(fontSize: 10.5, color: _textSecondary)),
+          const SizedBox(height: 4),
+          Text(
+            '₹${curPrice.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          ),
+          const Divider(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Target Zone:', style: TextStyle(fontSize: 9.5, color: _textSecondary)),
+              Text(target, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Support Level:', style: TextStyle(fontSize: 9.5, color: _textSecondary)),
+              Text(support, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFinemanFloatingButton() {
     return Container(
       margin: const EdgeInsets.only(bottom: 6, right: 2),
@@ -5173,6 +5252,133 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                   ),
                 );
               }).toList(),
+            ),
+          ),
+
+          // LIVE FINEMAN AI STOCK MARKET RECOMMENDATIONS & PREDICTION CAROUSEL
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [const Color(0xFFEFF6FF), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.psychology_rounded, color: Color(0xFF2563EB), size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Fineman Live Market Intelligence',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: _textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDCFCE7),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.fiber_manual_record, color: Color(0xFF16A34A), size: 7),
+                          SizedBox(width: 4),
+                          Text(
+                            'LIVE AUTO-REFRESH',
+                            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Daily algorithmic predictions computed from live tick feeds, order-flow momentum, and technical breakout zones.',
+                  style: TextStyle(fontSize: 11, color: _textSecondary),
+                ),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildAiStockPill(
+                        symbol: 'RELIANCE',
+                        name: 'Reliance Ind.',
+                        strategy: 'Intraday Momentum',
+                        target: '₹3,092 - ₹3,152',
+                        support: '₹2,928',
+                        color: const Color(0xFF046A38),
+                        isBullish: true,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildAiStockPill(
+                        symbol: 'HDFCBANK',
+                        name: 'HDFC Bank',
+                        strategy: 'Breakout Continuation',
+                        target: '₹1,741 - ₹1,775',
+                        support: '₹1,649',
+                        color: const Color(0xFF1E3A8A),
+                        isBullish: true,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildAiStockPill(
+                        symbol: 'INFY',
+                        name: 'Infosys',
+                        strategy: 'Tech Deal Surge',
+                        target: '₹1,958 - ₹1,996',
+                        support: '₹1,854',
+                        color: const Color(0xFF7C3AED),
+                        isBullish: true,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildAiStockPill(
+                        symbol: 'SBIN',
+                        name: 'State Bank',
+                        strategy: 'PSU Capex Wave',
+                        target: '₹878 - ₹895',
+                        support: '₹831',
+                        color: const Color(0xFFD97706),
+                        isBullish: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 

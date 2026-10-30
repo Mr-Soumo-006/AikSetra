@@ -18,7 +18,34 @@ class BharatOnePayApi {
   static UserModel? currentUser;
   static BankAccountModel? currentAccount;
   static BankAccountModel? currentBusinessAccount;
-  static BankAccountModel? get primaryAccount => currentAccount ?? (linkedAccounts.where((a) => a.isPrimary).isNotEmpty ? linkedAccounts.firstWhere((a) => a.isPrimary) : (linkedAccounts.isNotEmpty ? linkedAccounts.first : null));
+  // Context-aware primary account: Automatically shifts between Business Current Account and Personal Savings Account
+  static BankAccountModel? get primaryAccount {
+    if (isBusinessMode) {
+      // Find business/current account first
+      final bizAcc = linkedAccounts.firstWhere(
+        (a) => a.isBusiness || a.accountType == 'CURRENT',
+        orElse: () => linkedAccounts.isNotEmpty ? linkedAccounts.first : BankAccountModel(
+          id: 'acc_pentile_biz',
+          bankName: 'HDFC Bank (Pentile Business Current)',
+          bankCode: 'HDFC',
+          ifsc: 'HDFC0001234',
+          maskedAccountNumber: '•••• •••• 4589',
+          balance: 128450.00,
+          accountType: 'CURRENT',
+          isBusiness: true,
+          isPrimary: true,
+        ),
+      );
+      return bizAcc;
+    }
+
+    if (currentAccount != null) return currentAccount;
+    final personalPrimary = linkedAccounts.where((a) => a.isPrimary && !a.isBusiness).toList();
+    if (personalPrimary.isNotEmpty) return personalPrimary.first;
+    final anySavings = linkedAccounts.where((a) => a.accountType == 'SAVINGS').toList();
+    if (anySavings.isNotEmpty) return anySavings.first;
+    return linkedAccounts.isNotEmpty ? linkedAccounts.first : null;
+  }
   static List<BankAccountModel> linkedAccounts = [
     BankAccountModel(
       id: 'acc_sbi_01',
@@ -1594,6 +1621,60 @@ class BharatOnePayApi {
 
   static void setActiveDevUser(String userId) {
     _activeUserId = userId;
+  }
+
+  // =========================================================================
+  // LIVE TAX RATES & OFFICIAL PORTAL INTEGRATION (GST / TDS / INCOME TAX)
+  // =========================================================================
+  static Map<String, dynamic> officialTaxRates = {};
+  static bool isOfficialTaxSyncing = false;
+
+  static Future<Map<String, dynamic>> fetchLiveOfficialTaxRates() async {
+    isOfficialTaxSyncing = true;
+    try {
+      final res = await _getWithFailover('/tools/tax-rates/live', timeout: const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['success'] == true) {
+          officialTaxRates = data;
+          isOfficialTaxSyncing = false;
+          return data;
+        }
+      }
+    } catch (_) {}
+    isOfficialTaxSyncing = false;
+    return officialTaxRates;
+  }
+
+  // =========================================================================
+  // LIVE STOCK MARKET & ALGORITHMIC PREDICTIONS ENGINE
+  // =========================================================================
+  static List<dynamic> liveStockMarketIdeas = [];
+
+  static Future<List<dynamic>> fetchLiveMarketIdeas({String? category}) async {
+    try {
+      final endpoint = category != null ? '/stocks/market-ideas?category=${Uri.encodeComponent(category)}' : '/stocks/market-ideas';
+      final res = await _getWithFailover(endpoint, timeout: const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['success'] == true && data['ideas'] is List) {
+          liveStockMarketIdeas = data['ideas'];
+          return liveStockMarketIdeas;
+        }
+      }
+    } catch (_) {}
+    return liveStockMarketIdeas;
+  }
+
+  // =========================================================================
+  // PDF DOWNLOAD URL BUILDERS
+  // =========================================================================
+  static String getInvoicePdfUrl(String invoiceId) {
+    return '${ApiConfig.baseUrl}/business/invoices/$invoiceId/pdf';
+  }
+
+  static String getStatementPdfUrl() {
+    return '${ApiConfig.baseUrl}/account/statement/pdf';
   }
 
   static Future<void> saveSessionToDisk() async {
