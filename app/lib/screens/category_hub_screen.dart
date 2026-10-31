@@ -374,6 +374,16 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
   }
 
   void _triggerAction(String routeKey) {
+    if (routeKey == 'invest_stocks' ||
+        routeKey == 'stocks' ||
+        routeKey == 'investments' ||
+        routeKey == 'forex' ||
+        routeKey == 'global_fx' ||
+        routeKey == 'abroad' ||
+        routeKey == 'remittance' ||
+        routeKey == 'history') {
+      Navigator.pop(context);
+    }
     widget.onSelectService(routeKey);
   }
 
@@ -462,7 +472,6 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
                       return Expanded(
                         child: InkWell(
                           onTap: () {
-                            Navigator.pop(context);
                             _triggerAction(item['routeKey'] as String);
                           },
                           borderRadius: BorderRadius.circular(16),
@@ -573,7 +582,6 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
                       final s = items[i];
                       return InkWell(
                         onTap: () {
-                          Navigator.pop(context);
                           _triggerAction(s['routeKey'] as String);
                         },
                         borderRadius: BorderRadius.circular(16),

@@ -2441,7 +2441,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
 
   void _handleServiceRoute(String routeKey) {
     switch (routeKey) {
-      // Payments
+      // 1. UPI & Direct Payments
       case 'scan_pay':
         _openRealCameraQrScanner();
         break;
@@ -2492,7 +2492,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         _openRealCameraQrScanner();
         break;
 
-      // Bills & Utilities
+      // 2. Bharat Connect (BBPS) Bills & Utilities
       case 'electricity':
         _selectBillCategoryAndOpen('ELECTRICITY');
         break;
@@ -2507,28 +2507,45 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         break;
       case 'mobile':
       case 'mobile_recharge':
+      case 'postpaid':
         _selectBillCategoryAndOpen('MOBILE');
         break;
       case 'dth':
         _selectBillCategoryAndOpen('DTH');
         break;
+      case 'cable':
+        _selectBillCategoryAndOpen('CABLE');
+        break;
       case 'fastag':
         _selectBillCategoryAndOpen('FASTAG');
         break;
-      case 'postpaid':
-        _selectBillCategoryAndOpen('MOBILE');
+      case 'housing_society':
+        _selectBillCategoryAndOpen('HOUSING');
+        break;
+      case 'insurance_bill':
+        _selectBillCategoryAndOpen('INSURANCE');
+        break;
+      case 'education_fees':
+        _selectBillCategoryAndOpen('EDUCATION');
+        break;
+      case 'traffic_challan':
+        _selectBillCategoryAndOpen('CHALLAN');
+        break;
+      case 'municipal_taxes':
+      case 'municipal_tax':
+        _selectBillCategoryAndOpen('MUNICIPAL');
         break;
       case 'landline':
         _selectBillCategoryAndOpen('BROADBAND');
         break;
       case 'subscriptions':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AutoPayScreen()),
-        );
+        _selectBillCategoryAndOpen('SUBSCRIPTION');
+        break;
+      case 'donation':
+        _showDonationModal();
         break;
 
-      // Loans & Credit
+      // 3. Loans, Credit & Financial Assessments
       case 'loan_personal':
       case 'loan_mf':
       case 'loan_gold':
@@ -2539,15 +2556,19 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'loan_education':
       case 'loan_credit_card':
       case 'loan_repayment':
+      case 'loan_consumer':
+      case 'working_capital':
+      case 'kisan_credit':
         _showLoanApplicationModal(routeKey);
         break;
       case 'credit_score':
         _showCreditScoreModal();
         break;
 
-      // Investments, Savings & Precious Metals
+      // 4. Investments, Savings & Precious Metals
       case 'investments':
       case 'stocks':
+      case 'invest_stocks':
         setState(() => _bottomNavIndex = 2);
         break;
       case 'invest_gold':
@@ -2566,14 +2587,17 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       case 'sip_invest':
       case 'mutual_funds':
       case 'sip_mutual_funds':
+      case 'invest_sip':
         _showMfInvestmentModal();
         break;
       case 'fd':
       case 'fixed_deposits':
+      case 'invest_fd':
         _showFdInvestmentModal();
         break;
       case 'rd':
       case 'recurring_deposits':
+      case 'invest_rd':
         _showRdInvestmentModal();
         break;
       case 'gullak':
@@ -2581,25 +2605,81 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         _showGullakModal();
         break;
 
-      // Insurance & Protect
-      case 'health_insurance':
-      case 'life_insurance':
-      case 'vehicle_insurance':
-      case 'travel_insurance':
-      case 'insurance':
+      // 5. Insurance & Vehicle Protection (Direct Purchase + Discovery)
+      case 'road_tax':
+      case 'vahan_tax':
+        _showRoadTaxModal();
+        break;
+      case 'ins_bike':
       case 'bike_insurance':
+        _showDirectInsuranceModal(
+          'Bike Insurance',
+          'Comprehensive Own Damage + ₹15 Lakh PA Cover',
+          '₹499/yr',
+          Icons.two_wheeler_rounded,
+          const Color(0xFF14B8A6),
+        );
+        break;
+      case 'ins_car':
       case 'car_insurance':
+        _showDirectInsuranceModal(
+          'Car Insurance',
+          'Zero Depreciation + Engine Protect + 24x7 Roadside Assist',
+          '₹2,499/yr',
+          Icons.directions_car_rounded,
+          const Color(0xFF2563EB),
+        );
+        break;
+      case 'ins_health':
+      case 'health_insurance':
+        _showDirectInsuranceModal(
+          'Family Health Insurance',
+          '₹10 Lakh Cashless Cover across 10,000+ Network Hospitals',
+          '₹550/mo',
+          Icons.local_hospital_rounded,
+          const Color(0xFF10B981),
+        );
+        break;
+      case 'ins_life':
+      case 'life_insurance':
       case 'term_life_insurance':
-      case 'personal_accident':
+        _showDirectInsuranceModal(
+          '₹1 Crore Term Life Insurance',
+          'Pure Life Protection with 99.3% Claim Settlement Ratio',
+          '₹490/mo',
+          Icons.family_restroom_rounded,
+          const Color(0xFF8B5CF6),
+        );
+        break;
+      case 'ins_travel':
+      case 'travel_insurance':
+        _showDirectInsuranceModal(
+          'International Travel Insurance',
+          'Emergency Medical, Baggage Loss & Flight Delay Cover',
+          '₹299/trip',
+          Icons.flight_rounded,
+          const Color(0xFF0EA5E9),
+        );
+        break;
       case 'cyber_insurance':
+        _showDirectInsuranceModal(
+          'Cyber Fraud Shield',
+          'UPI, Net Banking & Phishing Fraud Protection up to ₹5 Lakh',
+          '₹199/yr',
+          Icons.security_rounded,
+          const Color(0xFF0284C7),
+        );
+        break;
+      case 'insurance':
+      case 'vehicle_insurance':
+      case 'personal_accident':
         _showInsuranceDiscoveryModal(routeKey);
         break;
 
-      // Taxes & Government
+      // 6. Taxes & Official Portals
       case 'income_tax':
       case 'gst':
       case 'property_tax':
-      case 'municipal_taxes':
       case 'taxes':
         Navigator.push(
           context,
@@ -2615,7 +2695,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
 
-      // AI Financial Assistant
+      // 7. AI Financial Assistant
       case 'ai_assistant':
       case 'ai':
       case 'assistant':
@@ -2625,7 +2705,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
 
-      // Financial Calculators
+      // 8. Financial Calculators (All 12 Precision Engines)
       case 'calculator':
       case 'calc_standard':
       case 'normal_calculator':
@@ -2719,7 +2799,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
 
-      // Travel
+      // 9. Travel & Entertainment Ticketing
       case 'travel':
       case 'flights':
       case 'trains':
@@ -2740,7 +2820,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         );
         break;
 
-      // Other Services
+      // 10. Passbook, Statements & Business Account
       case 'rewards':
       case 'coupons':
         Navigator.push(
@@ -2756,6 +2836,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         break;
       case 'statements':
       case 'documents':
+      case 'expense_tracking':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const StatementsScreen()),
@@ -2772,12 +2853,6 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
           ),
         );
         break;
-      case 'expense_tracking':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const StatementsScreen()),
-        );
-        break;
       case 'forex':
       case 'global_fx':
       case 'remittance':
@@ -2792,6 +2867,381 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         ).showSnackBar(SnackBar(content: Text('Opening service: $routeKey')));
         break;
     }
+  }
+
+  void _showDirectInsuranceModal(
+    String title,
+    String desc,
+    String price,
+    IconData icon,
+    Color color,
+  ) {
+    _showPolicyPurchaseModal(title, price, icon, color);
+  }
+
+  void _showDonationModal() {
+    final trusts = [
+      {
+        'name': 'PM CARES Fund',
+        'sub': 'Prime Minister Citizen Assistance & Relief in Emergency Situations',
+        'vpa': 'pmcares@sbi',
+        'icon': Icons.account_balance_rounded,
+        'color': const Color(0xFF046A38),
+        'exemption': '100% Tax Exemption u/s 80G',
+        'regNo': 'DIT(E)/80G/PMCARES/2020',
+      },
+      {
+        'name': 'Shri Ram Janmbhoomi Teerth Kshetra',
+        'sub': 'Ayodhya Mandir Development & Pilgrim Welfare Trust',
+        'vpa': 'shriramteerth@sbi',
+        'icon': Icons.temple_hindu_rounded,
+        'color': const Color(0xFFFF671F),
+        'exemption': '50% Tax Exemption u/s 80G',
+        'regNo': 'SRJBTK/80G/AYODHYA/2020',
+      },
+      {
+        'name': 'The Akshaya Patra Foundation',
+        'sub': 'Unlimited Food for Education (Mid-Day Meals for School Children)',
+        'vpa': 'akshayapatra@icici',
+        'icon': Icons.soup_kitchen_rounded,
+        'color': const Color(0xFFD97706),
+        'exemption': '50% Tax Exemption u/s 80G',
+        'regNo': 'AAATA0123M/80G/2022',
+      },
+      {
+        'name': 'CRY - Child Rights and You',
+        'sub': 'Child Education, Healthcare & Protection against Child Labour',
+        'vpa': 'cryindia@hdfcbank',
+        'icon': Icons.volunteer_activism_rounded,
+        'color': const Color(0xFFEC4899),
+        'exemption': '50% Tax Exemption u/s 80G',
+        'regNo': 'AAATC1979A/80G/2021',
+      },
+      {
+        'name': 'Bharat Ke Veer Corpus Fund',
+        'sub': 'Ministry of Home Affairs - Indian Armed Forces & CAPF Martyrs',
+        'vpa': 'bharatkeveer@sbi',
+        'icon': Icons.military_tech_rounded,
+        'color': const Color(0xFF2563EB),
+        'exemption': '100% Tax Exemption u/s 80G',
+        'regNo': 'MHA/BKV/80G/2017',
+      },
+    ];
+
+    Map<String, dynamic> selectedTrust = trusts.first;
+    double donationAmount = 500.0;
+    final panCtrl = TextEditingController(text: 'ABCDE1234F');
+    final amountCtrl = TextEditingController(text: '500');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final isDark = _isDark;
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.88,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF046A38),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 24),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Verified Donations & 80G Tax Exemption',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+                              ),
+                              Text(
+                                'Govt Recognized Trusts • Instant 80G Digital Certificate',
+                                style: TextStyle(color: Color(0xFF86EFAC), fontSize: 10.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Select Verified Charitable Trust',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 10),
+                          ...trusts.map((t) {
+                            final isSel = selectedTrust['name'] == t['name'];
+                            return InkWell(
+                              onTap: () => setModalState(() => selectedTrust = t),
+                              borderRadius: BorderRadius.circular(14),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isSel
+                                      ? const Color(0xFF046A38).withValues(alpha: 0.1)
+                                      : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSel ? const Color(0xFF046A38) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                                    width: isSel ? 1.5 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: (t['color'] as Color).withValues(alpha: 0.15),
+                                      child: Icon(t['icon'] as IconData, color: t['color'] as Color, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  t['name'] as String,
+                                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF046A38),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: const Text('VERIFIED', style: TextStyle(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.w900)),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            t['sub'] as String,
+                                            style: TextStyle(fontSize: 10.5, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            t['exemption'] as String,
+                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      isSel ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                                      color: isSel ? const Color(0xFF046A38) : const Color(0xFF94A3B8),
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Donation Amount (INR)',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [100, 250, 500, 1000, 2500].map((amt) {
+                              final isSel = donationAmount == amt.toDouble();
+                              return Expanded(
+                                child: InkWell(
+                                  onTap: () {
+                                    setModalState(() {
+                                      donationAmount = amt.toDouble();
+                                      amountCtrl.text = amt.toString();
+                                    });
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSel ? const Color(0xFF046A38) : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isSel ? const Color(0xFF046A38) : Colors.transparent,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      '₹$amt',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSel ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF0F172A)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: amountCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Custom Donation Amount',
+                              prefixText: '₹ ',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                            onChanged: (val) {
+                              final p = double.tryParse(val);
+                              if (p != null) setModalState(() => donationAmount = p);
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: panCtrl,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              labelText: 'Donor PAN Number (for 80G Certificate)',
+                              hintText: 'ABCDE1234F',
+                              helperText: 'Mandatory for income tax exemption claim',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _processDonationPayment(selectedTrust, donationAmount, panCtrl.text.trim());
+                              },
+                              icon: const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
+                              label: Text(
+                                'Donate ₹${donationAmount.toStringAsFixed(0)} & Get 80G Certificate',
+                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF046A38),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _processDonationPayment(Map<String, dynamic> trust, double amount, String pan) {
+    final ref = 'DON-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+    BharatOnePayApi.recordTransaction(
+      title: 'Donation: ${trust['name']}',
+      type: 'DEBIT',
+      category: 'DONATION',
+      amount: amount,
+      reference: ref,
+      status: 'SUCCESS',
+    );
+
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: _isDark ? const Color(0xFF0F172A) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.verified_rounded, color: Color(0xFF046A38), size: 28),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                '80G Donation Receipt',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF046A38), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Donation of ₹${amount.toStringAsFixed(2)} Successful!',
+                      style: const TextStyle(color: Color(0xFF046A38), fontWeight: FontWeight.w900, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('Beneficiary: ${trust['name']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Text('Registration No: ${trust['regNo']}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            Text('Tax Exemption: ${trust['exemption']}', style: const TextStyle(color: Color(0xFF059669), fontWeight: FontWeight.bold, fontSize: 11)),
+            Text('Donor PAN: $pan', style: const TextStyle(fontSize: 11)),
+            Text('Receipt Reference: $ref', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+            const SizedBox(height: 8),
+            const Text(
+              'A digital 80G Certificate with QR code has been saved to your Statements and emailed to your registered address.',
+              style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(c),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF046A38), foregroundColor: Colors.white),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
 
