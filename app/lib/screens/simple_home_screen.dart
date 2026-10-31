@@ -2146,12 +2146,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                               duration: const Duration(seconds: 1),
                             ),
                           );
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const BusinessDashboardScreen()),
-                          ).then((_) {
-                            if (mounted) setState(() {});
-                          });
+
                         } else {
                           setState(() => BharatOnePayApi.isBusinessMode = false);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -2799,6 +2794,423 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     }
   }
 
+
+  // ===========================================================================
+  // GOVT VAHAN ROAD TAX (MV TAX) ASSESSMENT & DIGITAL TOKEN
+  // ===========================================================================
+  void _showRoadTaxModal() {
+    final vehicleCtrl = TextEditingController(text: 'WB02AK1234');
+    String selectedClass = 'Private Car (LMV)';
+    String selectedRto = 'West Bengal (WB RTO Kolkata)';
+    String selectedTenure = '1 Year (Annual Tax)';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            double baseTax = 3200.0;
+            if (selectedClass.contains('Two-Wheeler')) {
+              baseTax = selectedTenure.contains('1 Year') ? 950.0 : (selectedTenure.contains('5 Years') ? 4200.0 : 8500.0);
+            } else if (selectedClass.contains('Private Car')) {
+              baseTax = selectedTenure.contains('1 Year') ? 3200.0 : (selectedTenure.contains('5 Years') ? 14500.0 : 32000.0);
+            } else if (selectedClass.contains('Commercial')) {
+              baseTax = selectedTenure.contains('1 Year') ? 5800.0 : (selectedTenure.contains('5 Years') ? 26000.0 : 58000.0);
+            } else {
+              baseTax = selectedTenure.contains('1 Year') ? 450.0 : (selectedTenure.contains('5 Years') ? 2000.0 : 4500.0);
+            }
+            const greenCess = 150.0;
+            const roadSafetySurcharge = 100.0;
+            final grandTotal = baseTax + greenCess + roadSafetySurcharge;
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.90,
+              decoration: BoxDecoration(
+                color: _isDark ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF046A38),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.car_repair_rounded, color: Colors.white, size: 24),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Parivahan Road Tax (MV Tax)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Ministry of Road Transport & Highways • State RTO Tax Assessment',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.verified_rounded, color: Color(0xFF1E40AF), size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Authorized Vahan 4.0 Online Tax Collection Switch. Instant digital tax token and Form 23 clearance certificate.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF1E3A8A),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '1. Vehicle Registration Number',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: vehicleCtrl,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. WB02AK1234 / MH01AB1234',
+                              filled: true,
+                              fillColor: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              prefixIcon: const Icon(Icons.badge_rounded, color: Color(0xFF046A38)),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            '2. Vehicle Classification',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedClass,
+                                isExpanded: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'Two-Wheeler (Motorcycle / Scooter)', child: Text('🏍️ Two-Wheeler (Motorcycle / Scooter)')),
+                                  DropdownMenuItem(value: 'Private Car (LMV)', child: Text('🚗 Private Car / SUV (LMV)')),
+                                  DropdownMenuItem(value: 'Commercial Goods Carrier', child: Text('🚚 Commercial Goods Carrier')),
+                                  DropdownMenuItem(value: 'Electric Vehicle (EV)', child: Text('⚡ Electric Vehicle (EV - Subsidized)')),
+                                ],
+                                onChanged: (v) {
+                                  if (v != null) setModalState(() => selectedClass = v);
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            '3. State RTO Jurisdiction',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedRto,
+                                isExpanded: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'West Bengal (WB RTO Kolkata)', child: Text('🏛️ West Bengal (WB RTO Kolkata)')),
+                                  DropdownMenuItem(value: 'Maharashtra (MH RTO Mumbai)', child: Text('🏛️ Maharashtra (MH RTO Mumbai)')),
+                                  DropdownMenuItem(value: 'Delhi NCR (DL RTO Delhi)', child: Text('🏛️ Delhi NCR (DL RTO Delhi)')),
+                                  DropdownMenuItem(value: 'Karnataka (KA RTO Bengaluru)', child: Text('🏛️ Karnataka (KA RTO Bengaluru)')),
+                                  DropdownMenuItem(value: 'Tamil Nadu (TN RTO Chennai)', child: Text('🏛️ Tamil Nadu (TN RTO Chennai)')),
+                                  DropdownMenuItem(value: 'Uttar Pradesh (UP RTO Lucknow)', child: Text('🏛️ Uttar Pradesh (UP RTO Lucknow)')),
+                                ],
+                                onChanged: (v) {
+                                  if (v != null) setModalState(() => selectedRto = v);
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            '4. Road Tax Assessment Tenure',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _buildTenureChoiceChip('1 Year (Annual Tax)', selectedTenure, (v) => setModalState(() => selectedTenure = v)),
+                              const SizedBox(width: 8),
+                              _buildTenureChoiceChip('5 Years', selectedTenure, (v) => setModalState(() => selectedTenure = v)),
+                              const SizedBox(width: 8),
+                              _buildTenureChoiceChip('15 Years (Life Time Tax)', selectedTenure, (v) => setModalState(() => selectedTenure = v)),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _cardBorder),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Base Motor Vehicle Tax:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                    Text('₹${baseTax.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Green Environmental Cess:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                    Text('₹${greenCess.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Road Safety Surcharge:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                    Text('₹${roadSafetySurcharge.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                const Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Late Penalty / Arrears:', style: TextStyle(fontSize: 12, color: Color(0xFF046A38))),
+                                    Text('₹0.00 (Nil)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF046A38))),
+                                  ],
+                                ),
+                                const Divider(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Total Tax Payable:', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                                    Text(
+                                      '₹${grandTotal.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF046A38)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF046A38),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              icon: const Icon(Icons.check_circle_rounded),
+                              label: Text(
+                                'Pay Road Tax ₹${grandTotal.toStringAsFixed(2)} via Bharat One Pay',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: () {
+                                final vNo = vehicleCtrl.text.trim().toUpperCase();
+                                if (vNo.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please enter vehicle registration number')),
+                                  );
+                                  return;
+                                }
+                                Navigator.pop(ctx);
+                                _processRoadTaxPayment(
+                                  vehicleNo: vNo,
+                                  vehicleClass: selectedClass,
+                                  rto: selectedRto,
+                                  tenure: selectedTenure,
+                                  amount: grandTotal,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTenureChoiceChip(String label, String currentVal, Function(String) onSelect) {
+    final isSelected = currentVal == label;
+    return Expanded(
+      child: InkWell(
+        onTap: () => onSelect(label),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF046A38) : (_isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF046A38) : _cardBorder,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.white : _textPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _processRoadTaxPayment({
+    required String vehicleNo,
+    required String vehicleClass,
+    required String rto,
+    required String tenure,
+    required double amount,
+  }) {
+    final receiptId = 'VAHAN-RT-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+    final ref = 'UPI/VAHAN/${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+
+    BharatOnePayApi.recordTransaction(
+      title: 'MoRTH Vahan Road Tax • $vehicleNo',
+      type: 'DEBIT',
+      category: 'GOVT_TAX',
+      amount: amount,
+      reference: ref,
+      status: 'SUCCESS',
+    );
+    int validityYears = 1;
+    if (tenure.contains('5 Years')) validityYears = 5;
+    if (tenure.contains('15 Years')) validityYears = 15;
+    final validUntil = '${DateTime.now().day} Oct ${DateTime.now().year + validityYears}';
+
+    showDialog(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_rounded, color: Color(0xFF046A38), size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Road Tax Paid & Cleared',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('GOVERNMENT OF INDIA • MoRTH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF166534))),
+                  const Text('Form 23 Vahan Motor Vehicle Tax Token & Clearance', style: TextStyle(fontSize: 10, color: Color(0xFF046A38))),
+                  const Divider(height: 12),
+                  Text('Receipt No: $receiptId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  Text('Vehicle Reg: $vehicleNo', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF1E3A8A))),
+                  Text('RTO Circle: $rto', style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                  Text('Tax Tenure: $tenure', style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                  Text('Tax Valid Until: $validUntil', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: Color(0xFF046A38))),
+                  const SizedBox(height: 6),
+                  Text('Amount Paid: ₹${amount.toStringAsFixed(2)} (BBPS Cleared)', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0D1B2A))),
+                  Text('Ref / UTR: $ref', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF046A38),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(dlgCtx),
+            child: const Text('Done & Save Receipt'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showInsuranceDiscoveryModal(String routeKey) {
     showModalBottomSheet(
       context: context,
@@ -2871,6 +3283,17 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               const Color(0xFF046A38),
             ),
             _buildInsuranceCard(
+              'Road Tax (Vahan RTO)',
+              'State Motor Vehicle Tax assessment, Green Cess & instant digital tax token',
+              'Govt Vahan 4.0 Portal',
+              Icons.car_repair_rounded,
+              const Color(0xFF046A38),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRoadTaxModal();
+              },
+            ),
+            _buildInsuranceCard(
               'Motor & Bike Insurance',
               'Zero inspection instant policy renewal with 24x7 roadside assist',
               'Starting ₹652/yr',
@@ -2895,8 +3318,9 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     String desc,
     String price,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    VoidCallback? onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -2952,7 +3376,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            onPressed: () {
+            onPressed: onTap ?? () {
               Navigator.pop(context);
               _showPolicyPurchaseModal(title, price, icon, color);
             },
@@ -2982,13 +3406,29 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       maxAmount = 1500000;
       rate = 9.0;
     } else if (routeKey == 'loan_home') {
-      loanTitle = 'Home Loan';
+      loanTitle = 'Home Loan & Property Credit';
       maxAmount = 7500000;
       rate = 8.4;
     } else if (routeKey == 'loan_auto' || routeKey == 'loan_bike') {
-      loanTitle = 'Vehicle / Auto Loan';
-      maxAmount = 1200000;
+      loanTitle = routeKey == 'loan_bike' ? 'Two-Wheeler Loan' : 'Vehicle / Auto Loan';
+      maxAmount = routeKey == 'loan_bike' ? 250000 : 1200000;
       rate = 9.25;
+    } else if (routeKey == 'loan_education') {
+      loanTitle = 'Education & Study Loan';
+      maxAmount = 2500000;
+      rate = 8.85;
+    } else if (routeKey == 'loan_consumer') {
+      loanTitle = 'Consumer Durable Instant Loan';
+      maxAmount = 250000;
+      rate = 11.0;
+    } else if (routeKey == 'loan_business' || routeKey == 'working_capital') {
+      loanTitle = 'Business & Working Capital Loan';
+      maxAmount = 5000000;
+      rate = 11.5;
+    } else if (routeKey == 'kisan_credit') {
+      loanTitle = 'Kisan Credit / Agri Loan';
+      maxAmount = 300000;
+      rate = 7.0;
     } else if (routeKey == 'loan_repayment') {
       _selectBillCategoryAndOpen('LOAN');
       return;
@@ -4068,19 +4508,28 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   Widget _buildBillsTab() {
     final categories = [
       {'id': 'ELECTRICITY', 'label': '⚡ Electricity'},
-      {'id': 'WATER', 'label': '💧 Water'},
-      {'id': 'GAS', 'label': '🔥 Gas / LPG'},
-      {'id': 'BROADBAND', 'label': '🌐 Broadband'},
       {'id': 'MOBILE', 'label': '📱 Mobile 5G'},
-      {'id': 'FASTAG', 'label': '🚗 FASTag'},
       {'id': 'DTH', 'label': '📺 DTH TV'},
+      {'id': 'FASTAG', 'label': '🚗 FASTag'},
+      {'id': 'GAS', 'label': '🔥 Gas / LPG'},
+      {'id': 'WATER', 'label': '💧 Water'},
+      {'id': 'BROADBAND', 'label': '🌐 Broadband'},
+      {'id': 'LOAN', 'label': '🏦 Loan EMI'},
+      {'id': 'CREDIT_CARD', 'label': '💳 Credit Card'},
+      {'id': 'INSURANCE', 'label': '🛡️ LIC / Insurance'},
+      {'id': 'MUNICIPAL', 'label': '🏛️ Municipal Tax'},
+      {'id': 'CHALLAN', 'label': '🚦 Traffic Challan'},
+      {'id': 'EDUCATION', 'label': '🎓 Education Fees'},
+      {'id': 'HOUSING', 'label': '🏢 Housing Society'},
+      {'id': 'CABLE', 'label': '📡 Cable TV'},
+      {'id': 'SUBSCRIPTION', 'label': '🎁 Play & OTT'},
     ];
 
     final filteredBillers = BharatOnePayApi.bbpsBillers
         .where((b) => b['category'] == _selectedBillCategory)
         .toList();
 
-    if (_selectedBiller == null && filteredBillers.isNotEmpty) {
+    if (filteredBillers.isNotEmpty && (_selectedBiller == null || _selectedBiller!['category'] != _selectedBillCategory)) {
       _selectedBiller = filteredBillers.first;
     }
 

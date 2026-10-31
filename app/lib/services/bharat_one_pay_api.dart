@@ -1068,6 +1068,36 @@ class BharatOnePayApi {
     // FASTag & DTH
     {'id': 'fastag_nhai', 'name': 'NHAI / ICICI / SBI FASTag', 'category': 'FASTAG', 'stateOrCircle': 'All India Toll Plaza', 'consumerIdLabel': 'Vehicle Registration No (e.g. WB02AB1234)'},
     {'id': 'dth_tataplay', 'name': 'Tata Play / Airtel Digital TV', 'category': 'DTH', 'stateOrCircle': 'All India', 'consumerIdLabel': '10-Digit Subscriber ID'},
+    {'id': 'dth_dishtv', 'name': 'Dish TV / D2H Direct', 'category': 'DTH', 'stateOrCircle': 'All India', 'consumerIdLabel': '11-Digit Viewing Card Number'},
+    // Loan EMI Repayment
+    {'id': 'loan_bajaj', 'name': 'Bajaj Finance / Finserv EMI', 'category': 'LOAN', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Loan Account Number'},
+    {'id': 'loan_hdfc', 'name': 'HDFC Bank Personal & Home Loans', 'category': 'LOAN', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Loan Agreement / A/C No'},
+    {'id': 'loan_sbi', 'name': 'SBI Home / Auto Loans', 'category': 'LOAN', 'stateOrCircle': 'All India', 'consumerIdLabel': '11-Digit Loan Account No'},
+    // Credit Cards
+    {'id': 'cc_sbi', 'name': 'SBI Card Credit Card Bill', 'category': 'CREDIT_CARD', 'stateOrCircle': 'All India', 'consumerIdLabel': '16-Digit Card Number'},
+    {'id': 'cc_hdfc', 'name': 'HDFC Bank Credit Card Bill', 'category': 'CREDIT_CARD', 'stateOrCircle': 'All India', 'consumerIdLabel': '16-Digit Card Number'},
+    {'id': 'cc_icici', 'name': 'ICICI Bank Credit Card Bill', 'category': 'CREDIT_CARD', 'stateOrCircle': 'All India', 'consumerIdLabel': '16-Digit Card Number'},
+    // Insurance
+    {'id': 'ins_lic', 'name': 'Life Insurance Corporation (LIC)', 'category': 'INSURANCE', 'stateOrCircle': 'All India', 'consumerIdLabel': '9-Digit Policy Number'},
+    {'id': 'ins_hdfc_life', 'name': 'HDFC Life Insurance', 'category': 'INSURANCE', 'stateOrCircle': 'All India', 'consumerIdLabel': '8-Digit Policy Number'},
+    {'id': 'ins_star_health', 'name': 'Star Health Insurance', 'category': 'INSURANCE', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Policy Number'},
+    // Municipal & Property Taxes
+    {'id': 'mun_kmc', 'name': 'Kolkata Municipal Corp (KMC Tax)', 'category': 'MUNICIPAL', 'stateOrCircle': 'Kolkata', 'consumerIdLabel': 'Assessee / Property No'},
+    {'id': 'mun_mcgm', 'name': 'MCGM Mumbai Property Tax', 'category': 'MUNICIPAL', 'stateOrCircle': 'Mumbai', 'consumerIdLabel': 'Property SAC No'},
+    {'id': 'mun_bbmp', 'name': 'BBMP Bengaluru Property Tax', 'category': 'MUNICIPAL', 'stateOrCircle': 'Bengaluru', 'consumerIdLabel': '10-Digit SAS PID'},
+    // Traffic Challan
+    {'id': 'challan_parivahan', 'name': 'Parivahan Traffic E-Challan', 'category': 'CHALLAN', 'stateOrCircle': 'All India (MoRTH)', 'consumerIdLabel': 'Challan No / Vehicle No'},
+    {'id': 'challan_kolkata', 'name': 'Kolkata Traffic Police Challan', 'category': 'CHALLAN', 'stateOrCircle': 'West Bengal', 'consumerIdLabel': 'Notice / Vehicle Reg No'},
+    // Education Fees
+    {'id': 'edu_dps', 'name': 'Delhi Public School (DPS Fees)', 'category': 'EDUCATION', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Student Admission No'},
+    {'id': 'edu_xavier', 'name': "St. Xavier's Collegiate School", 'category': 'EDUCATION', 'stateOrCircle': 'Kolkata', 'consumerIdLabel': 'Student ID / Roll No'},
+    // Housing Society
+    {'id': 'house_mygate', 'name': 'MyGate / Society Maintenance', 'category': 'HOUSING', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Flat / Unit Number'},
+    // Cable TV
+    {'id': 'cable_hathway', 'name': 'Hathway Digital Cable TV', 'category': 'CABLE', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Account / STB Mac No'},
+    // Subscriptions & Play Code
+    {'id': 'sub_gplay', 'name': 'Google Play Store Recharge Code', 'category': 'SUBSCRIPTION', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Email / Mobile Number'},
+    {'id': 'sub_apple', 'name': 'Apple Gift Code / App Store', 'category': 'SUBSCRIPTION', 'stateOrCircle': 'All India', 'consumerIdLabel': 'Apple ID Mobile Number'},
   ];
   static List<ProtectedPayEscrowModel> activeEscrows = [];
   static bool isBusinessMode = false;
@@ -3841,6 +3871,81 @@ class BharatOnePayApi {
       breakdown = {
         'Wallet Credit': '₹500.00',
         'Platform Convenience Fee': '₹0.00 (Free)',
+      };
+    } else if (cat == 'LOAN') {
+      amt = 4850.0;
+      usage = 'Monthly Equated Monthly Installment (EMI)';
+      breakdown = {
+        'Principal Component': '₹3,620.00',
+        'Interest Component': '₹1,230.00',
+        'Loan Outstanding': '₹1,42,850.00',
+        'Tenure Remaining': '32 Months',
+      };
+    } else if (cat == 'CREDIT_CARD') {
+      amt = 2450.0;
+      usage = 'Monthly Credit Card Statement (Minimum Due)';
+      breakdown = {
+        'Minimum Amount Due': '₹2,450.00',
+        'Total Outstanding Due': '₹18,920.00',
+        'Available Credit Limit': '₹81,080.00',
+        'Reward Points Balance': '3,450 Pts',
+      };
+    } else if (cat == 'INSURANCE') {
+      amt = 3850.0;
+      usage = 'Annual Premium Installment (IRDAI Certified)';
+      breakdown = {
+        'Base Premium': '₹3,262.71',
+        'GST (18%)': '₹587.29',
+        'Sum Assured Cover': '₹10,00,000.00',
+        'Policy Status': 'ACTIVE & IN FORCE',
+      };
+    } else if (cat == 'MUNICIPAL') {
+      amt = 1850.0;
+      usage = 'Quarterly Municipal Property Tax Assessment';
+      breakdown = {
+        'General Tax': '₹1,400.00',
+        'Sewerage / Drainage Cess': '₹250.00',
+        'Lighting Cess': '₹120.00',
+        'Rebate Applied (5% Early Pay)': '-₹80.00',
+      };
+    } else if (cat == 'CHALLAN') {
+      amt = 1000.0;
+      usage = 'Motor Vehicles Act Traffic Violation E-Challan';
+      breakdown = {
+        'Offence': 'Over-Speeding / Signal Violation',
+        'Section': 'Sec 183(1) MV Act 1988',
+        'Location': 'EM Bypass Signal Intersection',
+        'Status': 'PENDING AT VIRTUAL COURT',
+      };
+    } else if (cat == 'EDUCATION') {
+      amt = 4500.0;
+      usage = 'Quarterly Academic Tuition & Lab Session Fees';
+      breakdown = {
+        'Tuition Fee': '₹3,500.00',
+        'Library & IT Laboratory': '₹700.00',
+        'Sports & Extracurricular': '₹300.00',
+      };
+    } else if (cat == 'HOUSING') {
+      amt = 2200.0;
+      usage = 'Monthly Housing Society Maintenance & Utilities';
+      breakdown = {
+        'Maintenance Charges': '₹1,600.00',
+        'Sinking Fund': '₹300.00',
+        'Common Area Security & Power': '₹300.00',
+      };
+    } else if (cat == 'CABLE') {
+      amt = 350.0;
+      usage = 'Digital Cable TV 250+ HD Channels Monthly';
+      breakdown = {
+        'NCF Basic Tier': '₹153.40',
+        'HD Tier Channels': '₹196.60',
+      };
+    } else if (cat == 'SUBSCRIPTION') {
+      amt = 399.0;
+      usage = 'Digital Prepaid Play Store Recharge Code';
+      breakdown = {
+        'Wallet Code Value': '₹399.00',
+        'Convenience Fee': '₹0.00 (Zero Fee)',
       };
     } else {
       amt = 450.0;

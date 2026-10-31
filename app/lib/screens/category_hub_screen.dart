@@ -150,6 +150,13 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
       case 'insurance':
         return [
           {
+            'label': 'Road Tax (Vahan)',
+            'icon': Icons.car_repair_rounded,
+            'color': const Color(0xFF046A38),
+            'routeKey': 'road_tax',
+            'badge': 'Govt Tax',
+          },
+          {
             'label': 'Comprehensive Bike',
             'icon': Icons.two_wheeler_rounded,
             'color': const Color(0xFF14B8A6),
@@ -169,13 +176,6 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
             'color': const Color(0xFF10B981),
             'routeKey': 'ins_health',
             'badge': 'No Copay',
-          },
-          {
-            'label': '₹1 Cr Term Life',
-            'icon': Icons.family_restroom_rounded,
-            'color': const Color(0xFF8B5CF6),
-            'routeKey': 'ins_life',
-            'badge': 'Tax Saver',
           },
         ];
       default: // tools
@@ -225,7 +225,7 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
               {'label': 'DTH TV', 'icon': Icons.tv_rounded, 'color': const Color(0xFFA855F7), 'routeKey': 'dth'},
               {'label': 'Mobile Postpaid', 'icon': Icons.receipt_rounded, 'color': const Color(0xFF34D399), 'routeKey': 'postpaid'},
               {'label': 'Google Play', 'icon': Icons.shop_two_rounded, 'color': const Color(0xFFFB7185), 'routeKey': 'subscriptions'},
-              {'label': 'Cable TV', 'icon': Icons.live_tv_rounded, 'color': const Color(0xFFFBBF24), 'routeKey': 'dth'},
+              {'label': 'Cable TV', 'icon': Icons.live_tv_rounded, 'color': const Color(0xFFFBBF24), 'routeKey': 'cable'},
               {'label': 'International Roaming', 'icon': Icons.flight_takeoff_rounded, 'color': const Color(0xFF60A5FA), 'routeKey': 'mobile_recharge'},
               {'label': 'Get SIM', 'icon': Icons.sim_card_rounded, 'color': const Color(0xFFFF671F), 'routeKey': 'mobile_recharge', 'badge': 'Prepaid'},
               {'label': 'App Store Code', 'icon': Icons.apple_rounded, 'color': Colors.white70, 'routeKey': 'subscriptions'},
@@ -240,7 +240,7 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
               {'label': 'LPG Cylinder', 'icon': Icons.propane_tank_rounded, 'color': const Color(0xFFF97316), 'routeKey': 'gas'},
               {'label': 'Broadband', 'icon': Icons.router_rounded, 'color': const Color(0xFF10B981), 'routeKey': 'broadband'},
               {'label': 'Municipal Tax', 'icon': Icons.domain_rounded, 'color': const Color(0xFF8B5CF6), 'routeKey': 'municipal_taxes'},
-              {'label': 'Housing Society', 'icon': Icons.apartment_rounded, 'color': const Color(0xFF3B82F6), 'routeKey': 'electricity'},
+              {'label': 'Housing Society', 'icon': Icons.apartment_rounded, 'color': const Color(0xFF3B82F6), 'routeKey': 'housing_society'},
               {'label': 'Hospital & Labs', 'icon': Icons.local_hospital_rounded, 'color': const Color(0xFFEC4899), 'routeKey': 'water'},
             ],
           },
@@ -249,12 +249,12 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
             'items': [
               {'label': 'Loan Repayment', 'icon': Icons.currency_rupee_rounded, 'color': const Color(0xFF10B981), 'routeKey': 'loan_repayment'},
               {'label': 'Credit Card Bill', 'icon': Icons.credit_card_rounded, 'color': const Color(0xFF6366F1), 'routeKey': 'cards'},
-              {'label': 'Insurance Premium', 'icon': Icons.shield_rounded, 'color': const Color(0xFF0EA5E9), 'routeKey': 'insurance'},
-              {'label': 'Education Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFFF43F5E), 'routeKey': 'cards'},
-              {'label': 'Traffic Challan', 'icon': Icons.traffic_rounded, 'color': const Color(0xFFEF4444), 'routeKey': 'property_tax'},
-              {'label': 'Recurring Deposit', 'icon': Icons.savings_rounded, 'color': const Color(0xFF046A38), 'routeKey': 'rd'},
-              {'label': 'Donation & Trust', 'icon': Icons.volunteer_activism_rounded, 'color': const Color(0xFFEC4899), 'routeKey': 'send_money'},
-              {'label': 'NPS Contribution', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFFF671F), 'routeKey': 'sip_mutual_funds'},
+              {'label': 'Insurance Premium', 'icon': Icons.shield_rounded, 'color': const Color(0xFF0EA5E9), 'routeKey': 'insurance_bill'},
+              {'label': 'Education Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFFF43F5E), 'routeKey': 'education_fees'},
+              {'label': 'Traffic Challan', 'icon': Icons.traffic_rounded, 'color': const Color(0xFFEF4444), 'routeKey': 'traffic_challan'},
+              {'label': 'Recurring Deposit', 'icon': Icons.savings_rounded, 'color': const Color(0xFF046A38), 'routeKey': 'invest_rd'},
+              {'label': 'Donation & Trust', 'icon': Icons.volunteer_activism_rounded, 'color': const Color(0xFFEC4899), 'routeKey': 'donation'},
+              {'label': 'NPS Contribution', 'icon': Icons.account_balance_rounded, 'color': const Color(0xFFFF671F), 'routeKey': 'invest_sip'},
             ],
           },
         ];
@@ -279,10 +279,10 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
             'items': [
               {'label': 'Gold Loan', 'icon': Icons.shield_moon_rounded, 'color': const Color(0xFFD97706), 'routeKey': 'loan_gold', 'badge': 'Zero Docs'},
               {'label': 'Mutual Funds Loan', 'icon': Icons.insert_chart_rounded, 'color': const Color(0xFF10B981), 'routeKey': 'loan_mf', 'badge': '10% p.a.'},
-              {'label': 'Business Loan', 'icon': Icons.storefront_rounded, 'color': const Color(0xFFFF671F), 'routeKey': 'business'},
+              {'label': 'Business Loan', 'icon': Icons.storefront_rounded, 'color': const Color(0xFFFF671F), 'routeKey': 'loan_business'},
               {'label': 'Loan vs Property', 'icon': Icons.domain_rounded, 'color': const Color(0xFF6366F1), 'routeKey': 'loan_home'},
-              {'label': 'Working Capital', 'icon': Icons.account_balance_wallet_rounded, 'color': const Color(0xFF0EA5E9), 'routeKey': 'business'},
-              {'label': 'Kisan Agri Credit', 'icon': Icons.agriculture_rounded, 'color': const Color(0xFF84CC16), 'routeKey': 'loan_personal'},
+              {'label': 'Working Capital', 'icon': Icons.account_balance_wallet_rounded, 'color': const Color(0xFF0EA5E9), 'routeKey': 'working_capital'},
+              {'label': 'Kisan Agri Credit', 'icon': Icons.agriculture_rounded, 'color': const Color(0xFF84CC16), 'routeKey': 'kisan_credit'},
             ],
           },
         ];
@@ -321,12 +321,14 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
       case 'insurance':
         return [
           {
-            'title': 'Vehicle & Motor Insurance',
+            'title': 'Vehicle & Motor Protection',
             'items': [
               {'label': 'Bike Insurance', 'icon': Icons.two_wheeler_rounded, 'color': const Color(0xFF14B8A6), 'routeKey': 'ins_bike', 'badge': '₹499/yr'},
               {'label': 'Car Insurance', 'icon': Icons.directions_car_rounded, 'color': const Color(0xFF2563EB), 'routeKey': 'ins_car', 'badge': 'Zero Dep'},
+              {'label': 'Road Tax (Vahan)', 'icon': Icons.car_repair_rounded, 'color': const Color(0xFF046A38), 'routeKey': 'road_tax', 'badge': 'Govt Tax'},
               {'label': 'Commercial Vehicle', 'icon': Icons.local_shipping_rounded, 'color': const Color(0xFFF59E0B), 'routeKey': 'ins_car'},
               {'label': 'EV Insurance', 'icon': Icons.electric_car_rounded, 'color': const Color(0xFF10B981), 'routeKey': 'ins_car'},
+              {'label': 'FASTag Topup', 'icon': Icons.toll_rounded, 'color': const Color(0xFF7C3AED), 'routeKey': 'fastag'},
             ],
           },
           {
@@ -336,7 +338,7 @@ class _CategoryHubScreenState extends State<CategoryHubScreen> {
               {'label': '₹1 Cr Term Life', 'icon': Icons.family_restroom_rounded, 'color': const Color(0xFF8B5CF6), 'routeKey': 'ins_life', 'badge': '₹550/mo'},
               {'label': 'Personal Accident', 'icon': Icons.healing_rounded, 'color': const Color(0xFFF43F5E), 'routeKey': 'ins_health'},
               {'label': 'International Travel', 'icon': Icons.flight_rounded, 'color': const Color(0xFF0EA5E9), 'routeKey': 'ins_travel'},
-              {'label': 'Cancer Care Shield', 'icon': Icons.favorite_rounded, 'color': const Color(0xFFEC4899), 'routeKey': 'ins_health'},
+              {'label': 'Cyber Fraud Shield', 'icon': Icons.security_rounded, 'color': const Color(0xFF0284C7), 'routeKey': 'cyber_insurance'},
               {'label': 'Super Top-up Health', 'icon': Icons.add_moderator_rounded, 'color': const Color(0xFF046A38), 'routeKey': 'ins_health'},
             ],
           },
